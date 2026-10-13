@@ -1,0 +1,12 @@
+[package]
+name = "vitral"
+description = "Reference implementation of the Vitral image format: PNG-compatible images that carry their own blend behaviour"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[dependencies]
+crc32fast = "1.5.2"
+png = "0.18.1"
