@@ -24,34 +24,35 @@ fundação  spec+core  web   │  Figma    outras   v2       normalização
 * [x] Decisões: nome, contentor, modelo, stack ([03](03-decisoes.md))
 * [x] Plano (este documento)
 
-## Fase 1 — Especificação v0.1 + implementação de referência (Rust)
+## Fase 1 — Especificação v0.1 + implementação de referência (Rust) ✅
 
 **Objetivo**: um formato definido ao bit e uma implementação que o prova.
 
-* [ ] `SPEC.md` v0.1: modelo K/W, chunk `vITR`, codificação residual, CRC,
+* [x] `SPEC.md` v0.1: modelo K/W, chunk `vITR`, codificação residual, CRC,
       fallback, pilha de renderização, conformidade.
-* [ ] Crate `vitral`: codificar/descodificar, compositor de referência, planos de
+* [x] Crate `vitral`: codificar/descodificar, compositor de referência, planos de
       renderização, conversão de modos W3C → K/W, composição de camadas.
-* [ ] CLI `vitral`: `encode`, `from-image`, `decode`, `render`, `inspect`.
-* [ ] Testes: ida e volta exata, deteção de corrupção, exatidão dos modos afins,
+* [x] CLI `vitral`: `encode`, `from-image`, `compose`, `decode`, `render`,
+      `inspect`, `diff`.
+* [x] Testes: ida e volta exata, deteção de corrupção, exatidão dos modos afins,
       erro da pilha ≤ 2.
-* [ ] Exemplos gerados (`examples/`).
+* [x] Exemplos gerados (`examples/`).
 * [ ] **Seguinte**: vetores de conformidade publicados e *fuzzing* do parser
       (`cargo fuzz`).
 
 **Critério de saída**: qualquer pessoa consegue criar um `.vitral.png` a partir
 de dois exports (preto/branco) e vê-lo sobre qualquer fundo com `vitral render`.
 
-## Fase 2 — Web: WASM + polyfill + demo
+## Fase 2 — Web: WASM + polyfill + demo 🟡 (núcleo feito)
 
-* [ ] Crate `vitral-wasm`, com bindings para o browser.
-* [ ] Polyfill `vitral.js`: transforma `<img data-vitral>` numa pilha de 3
+* [x] Crate `vitral-wasm`, com bindings para o browser.
+* [x] Polyfill `vitral.js`: transforma `<img data-vitral>` numa pilha de 3
       canvases com `mix-blend-mode`. O HTML continua válido e o fallback aparece
       sem JS.
-* [ ] Página de demonstração: o mesmo objeto sobre vários fundos, com
+* [x] Página de demonstração: o mesmo objeto sobre vários fundos, com
       comparação PNG ↔ Vitral e objetos arrastáveis.
-* [ ] Teste automático em Chromium (Playwright): o browser bate com o compositor
-      Rust.
+* [x] Teste automático em Chromium (Playwright): o browser bate com o compositor
+      Rust (erro máximo de 2 níveis, médio < 0,05).
 * [ ] **Seguinte**: *playground* (arrastar os PNG preto/branco e descarregar o
       Vitral), publicação no npm e no crates.io, GitHub Pages.
 

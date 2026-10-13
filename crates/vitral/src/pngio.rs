@@ -106,13 +106,21 @@ pub(crate) fn read_rgba8_with_info(bytes: &[u8]) -> Result<(RgbaImage, SourceInf
     ))
 }
 
-/// Decodes a PNG that must be 8-bit RGB (used for the embedded residual).
-pub(crate) fn read_rgb8_strict(bytes: &[u8]) -> Result<(u32, u32, Vec<u8>), Error> {
+/// Decodes a PNG that must be 8-bit RGB with exactly the given dimensions
+/// (used for the embedded residual). Dimensions are checked before any pixel
+/// buffer is allocated, so a hostile header cannot force a large allocation.
+pub(crate) fn read_rgb8_exact(bytes: &[u8], width: u32, height: u32) -> Result<Vec<u8>, Error> {
     let decoder = png::Decoder::new(Cursor::new(bytes));
     let mut reader = decoder.read_info()?;
     let info = reader.info();
     if info.color_type != png::ColorType::Rgb || info.bit_depth != png::BitDepth::Eight {
         return Err(Error::Png("residual must be 8-bit RGB".into()));
+    }
+    if (info.width, info.height) != (width, height) {
+        return Err(Error::Png(format!(
+            "residual is {}x{}, expected {width}x{height}",
+            info.width, info.height
+        )));
     }
     let size = reader
         .output_buffer_size()
@@ -120,7 +128,7 @@ pub(crate) fn read_rgb8_strict(bytes: &[u8]) -> Result<(u32, u32, Vec<u8>), Erro
     let mut buf = vec![0; size];
     let frame = reader.next_frame(&mut buf)?;
     buf.truncate(frame.buffer_size());
-    Ok((frame.width, frame.height, buf))
+    Ok(buf)
 }
 
 fn encoder<'a>(

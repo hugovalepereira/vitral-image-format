@@ -1,0 +1,377 @@
+# Vitral Image Format — Specification
+
+**Version:** 0.1 (draft) · **Date:** October 2026 · **Editor:** Hugo Vale Pereira
+**Status:** Working draft. Anything may change before 1.0. Feedback is welcome as
+GitHub issues.
+
+The key words MUST, MUST NOT, SHOULD, SHOULD NOT and MAY are to be interpreted as
+described in RFC 2119.
+
+---
+
+## 1. Introduction
+
+PNG lets an image say *how much* of the backdrop shows through each pixel
+(alpha). Vitral lets an image say *how each pixel transforms the backdrop*: tint
+it, lighten it, darken it or invert it, per colour channel. This is what design
+tools do with blend modes, carried inside the file so that it survives export.
+
+A Vitral file is a valid PNG datastream:
+
+* the main image is a **fallback** that any PNG decoder displays;
+* an ancillary chunk, `vITR`, carries a **residual** that lets a Vitral decoder
+  recover the exact transfer function of every pixel.
+
+### 1.1 Goals
+
+* Carry blend behaviour inside the image, per pixel.
+* Remain a valid PNG that degrades gracefully in software without support.
+* Be renderable with blend modes that hosts already support (no new compositor
+  primitives required).
+* Be authorable with any tool, without plugins.
+
+### 1.2 Non-goals for 0.1
+
+* Non-affine blend modes (overlay, soft light, HSL modes), neighbourhood effects
+  (backdrop blur, refraction), animation, more than 8 bits per sample, linear-light
+  blending. See §12.
+
+---
+
+## 2. Pixel model
+
+### 2.1 Transfer function
+
+For every pixel and every colour channel *c* ∈ {R, G, B}, a Vitral image defines a
+function from the backdrop value *b* to the result value *r*, all normalised to
+[0, 1]:
+
+```
+r = K + (W − K) · b
+```
+
+* **K** is the result over a black backdrop (*b* = 0).
+* **W** is the result over a white backdrop (*b* = 1).
+
+K and W are each in [0, 1], so *r* is always in [0, 1] and no clamping is needed.
+Every affine function from [0, 1] to [0, 1] has exactly one (K, W) pair, including
+decreasing ones (W < K), which invert the backdrop.
+
+In this version, K and W are stored as 8-bit integers (0–255).
+
+### 2.2 Relation to PNG transparency
+
+A straight-alpha RGBA pixel with colour *C* and alpha *α* composited normally is
+the special case `K = α·C`, `W = α·C + (1 − α)`, with the same W − K on all three
+channels. Every PNG image is therefore a Vitral image; Vitral adds per-channel
+transmission (coloured filters), emission without occlusion (light), and
+inversion.
+
+### 2.3 Backdrop assumptions
+
+The model is defined for an **opaque** backdrop. Results over a non-opaque
+backdrop are undefined in 0.1. A renderer SHOULD flatten the backdrop first; if it
+cannot, it MAY display the fallback image instead.
+
+### 2.4 Colour space
+
+Sample values are interpreted in the colour space of the PNG (sRGB when no colour
+space chunk says otherwise). Blending operates on **encoded** values, as in CSS
+Compositing and Blending Level 1, the Canvas 2D API and the default settings of
+common design tools. Renderers SHOULD NOT convert to linear light before applying
+the transfer function. Encoders SHOULD write an `sRGB` chunk.
+
+---
+
+## 3. Arithmetic
+
+All normative computations use integers. Define, for integers *a*, *b* in 0–255:
+
+```
+mul255(a, b) = round(a · b / 255)
+```
+
+The quotient *a·b/255* is never exactly halfway between two integers, so the
+rounding direction is unambiguous. An exact integer implementation is
+`t = a·b + 128; (t + (t >> 8)) >> 8`.
+
+---
+
+## 4. File structure
+
+A Vitral file MUST be a valid PNG datastream (PNG Specification, Third Edition)
+that contains exactly one `vITR` chunk.
+
+### 4.1 Main image (fallback)
+
+The main image (`IHDR`, `PLTE`, `tRNS`, `IDAT`) is the fallback. It MAY use any
+colour type, with a bit depth of 8 or less. Before use, decoders normalise it to
+**RGBA8**:
+
+* palette indices are expanded and `tRNS` is applied as alpha;
+* bit depths below 8 are scaled to 8 bits as the PNG specification describes;
+* greyscale is replicated to R, G and B;
+* a missing alpha channel is filled with 255;
+* no gamma correction or colour management is applied to the samples.
+
+Call the normalised fallback *F*, with channels *F*c and *F*a. Define, per
+channel:
+
+```
+Fk = mul255(Fc, Fa)          (the fallback over black)
+Fw = Fk + 255 − Fa           (the fallback over white)
+```
+
+In 0.1, the main image MUST NOT have a bit depth of 16, and the file MUST NOT be an
+animated PNG (an `acTL` chunk is present). Decoders that find either MUST ignore
+the `vITR` chunk.
+
+### 4.2 The `vITR` chunk
+
+| Property | Value |
+|---|---|
+| Chunk type | `vITR` (0x76 0x49 0x54 0x52) |
+| Ancillary | yes (lowercase first letter): decoders without support skip it |
+| Private | yes (uppercase second letter): not yet registered |
+| Reserved bit | clear (uppercase third letter), as required |
+| Safe to copy | **no** (uppercase fourth letter): the chunk depends on the image data, so editors that change critical chunks MUST drop it |
+| Position | after `IHDR`, before `IEND`; encoders SHOULD place it after the last `IDAT` |
+| Multiplicity | exactly one |
+
+If the chunk type is registered as a public chunk in the future, the second
+letter becomes lowercase (`viTR`).
+
+### 4.3 Payload
+
+All multi-byte integers are big-endian, as in PNG.
+
+| Offset | Size | Field | Value in 0.1 |
+|---|---|---|---|
+| 0 | 1 | major version | 0 |
+| 1 | 1 | minor version | 1 |
+| 2 | 1 | model | 1 = affine, black/white (this document) |
+| 3 | 1 | flags | 0 |
+| 4 | 4 | fallback CRC | CRC-32 of the normalised fallback (§4.4) |
+| 8 | *n* | residual | a complete PNG datastream (§4.5) |
+
+* A decoder MUST ignore the chunk if the major version is not one it implements.
+  Minor versions within a major version are backward compatible.
+* A decoder MUST ignore the chunk if the model is unknown. Model values 2–255 are
+  reserved.
+* Encoders MUST write flags as 0. Decoders MUST ignore flag bits they do not
+  understand.
+
+### 4.4 Fallback CRC
+
+The fallback CRC is the CRC-32 used by PNG (ISO 3309 / ITU-T V.42), computed over
+the bytes of the normalised RGBA8 fallback: rows top to bottom, pixels left to
+right, bytes in R, G, B, A order, with no filter bytes.
+
+It detects files whose main image was re-encoded with changes (lossy
+optimisation, editing) by software that kept the `vITR` chunk. When it does not
+match, the decoder MUST ignore the chunk.
+
+### 4.5 Residual
+
+The residual field is a PNG datastream (signature included) with:
+
+* width equal to the main image width;
+* height equal to **twice** the main image height;
+* colour type 2 (truecolour), bit depth 8;
+* any interlace method.
+
+Rows 0 to H − 1 hold **DK**; rows H to 2H − 1 hold **DW**, where H is the main
+image height. The residual MAY contain ancillary chunks, which decoders ignore. It
+MUST NOT contain a `vITR` chunk.
+
+Decoders MUST check the residual's `IHDR` (type, depth, dimensions) before
+decompressing it, so that a hostile header cannot force a large allocation.
+
+---
+
+## 5. Encoding
+
+Given K and W (8-bit, per pixel and channel) and a fallback F chosen by the
+encoder:
+
+```
+DK = (K − Fk) mod 256
+DW = (W − Fw) mod 256
+```
+
+Any fallback yields a lossless file; the choice only affects what software
+without Vitral support shows, and the file size (the residual is zero wherever
+the fallback is already exact).
+
+### 5.1 Default fallback (informative)
+
+The reference encoder picks, per pixel, the RGBA colour whose normal compositing
+best approximates the transfer function in the least-squares sense over a
+uniformly distributed backdrop value:
+
+```
+t_c   = W_c − K_c
+τ     = clamp(round((t_R + t_G + t_B) / 3), 0, 255)     shared transmission
+α     = 255 − τ
+p2_c  = clamp(2·K_c + t_c − τ, 0, 2α)                    twice the premultiplied colour
+C_c   = min(255, round(255 · p2_c / (2α)))               (F = 0,0,0,0 when α = 0)
+```
+
+For pixels that already behave like plain PNG pixels, this reproduces them
+exactly, so their residual is zero.
+
+---
+
+## 6. Decoding
+
+1. Decode the main image and normalise it to RGBA8 (§4.1). If this fails, the file
+   is not a usable PNG.
+2. Find the `vITR` chunk. If there is none, more than one, or its chunk CRC is
+   wrong, treat the file as a plain PNG.
+3. Apply the version, model and flag rules (§4.3) and the restrictions of §4.1.
+4. Compare the fallback CRC (§4.4). On mismatch, treat the file as a plain PNG.
+5. Decode the residual (§4.5). On any error, treat the file as a plain PNG.
+6. For every pixel and channel:
+
+```
+K = (Fk + DK) mod 256
+W = (Fw + DW) mod 256
+```
+
+"Treat the file as a plain PNG" means: use K = Fk and W = Fw, which is exactly
+the normal compositing of the fallback. Decoders SHOULD report why the Vitral
+data was ignored.
+
+---
+
+## 7. Rendering
+
+### 7.1 Reference compositing (normative)
+
+With the image placed over an opaque backdrop pixel *B* (8-bit):
+
+```
+r = round((255·K + (W − K)·B) / 255)
+```
+
+The numerator is always in 0–65025 and the quotient is never exactly halfway
+between two integers. Integer form: `r = (255·K + (W − K)·B + 127) div 255`.
+
+### 7.2 Blend-mode stack (recommended)
+
+Hosts that offer blend modes but no custom compositing (CSS, Canvas 2D, SVG,
+design and video tools) can render a Vitral image as three layers stacked over
+the backdrop, bottom to top. Per pixel and channel:
+
+```
+lo = min(K, W)      hi = max(K, W)
+N  = 255 if W < K, else 0
+S  = 0 if hi = 0, else round(255 · lo / hi)
+M  = hi
+```
+
+| Order | Layer | Blend mode | Effect on backdrop value b (normalised) |
+|---|---|---|---|
+| 1 | N | difference | b → 1 − b where W < K |
+| 2 | S | screen | b → S + (1 − S)·b |
+| 3 | M | multiply | b → M·b |
+
+The composition gives `M·S + M·(1 − S)·b' = lo + (hi − lo)·b'`, which is the
+transfer function of §2.1.
+
+* A layer pixel whose three channels have no effect (N = 0, S = 0, or M = 255
+  respectively) SHOULD have alpha 0; every other layer pixel MUST have alpha 255.
+  This keeps the stack exact while minimising artefacts over transparent areas.
+* When no pixel needs inverting, the difference layer MAY be omitted.
+* With 8-bit blending that rounds to nearest, the stack differs from §7.1 by at
+  most **2** levels. The reference implementation verifies this for all 2²⁴
+  combinations of K, W and B.
+* The layers blend with whatever the host considers the backdrop. In CSS, that is
+  the content of the same stacking context.
+
+### 7.3 Alternative stack (informative)
+
+Where `plus-lighter` (additive compositing) is available, a more precise stack
+is: difference with N, then multiply with |W − K|, then plus-lighter with
+min(K, W).
+
+### 7.4 GPU rendering (informative)
+
+With dual-source blending (`out = src0 + src1 · dst`), draw the inversion pass
+with blend factors (ONE_MINUS_DST_COLOR, ONE_MINUS_SRC_COLOR) and N as the source
+(only where N ≠ 0), then draw a second pass with factors (ONE, SRC1_COLOR),
+src0 = min(K, W) and src1 = |W − K|.
+
+---
+
+## 8. Authoring (informative)
+
+### 8.1 From two exports
+
+Render the artwork over a black background and over a white background, with
+every layer's blend mode active against that background, and export both as
+PNG. The two exports are K and W directly. Any pixel with alpha below 255 in an
+export is first composited over that export's background.
+
+### 8.2 From layers
+
+A layer stack is flattened twice, over black and over white. The result is exact
+for modes that are affine in the backdrop and approximate for the others:
+
+| Mode (W3C name) | Captured by 0.1 |
+|---|---|
+| normal, multiply, screen, hard-light, exclusion | exactly |
+| plus-lighter, plus-darker, darken, lighten, difference | exactly over black and white, linearly in between (plus-lighter behaves like screen, difference like exclusion) |
+| overlay, soft-light, color-dodge, color-burn, hue, saturation, color | **not at all**: these modes leave black and white backdrops unchanged |
+| luminosity | incorrectly (as a flat grey) |
+
+Tools SHOULD warn when a mode is not captured.
+
+---
+
+## 9. Naming and identification
+
+* Recommended file name extension: **`.vitral.png`**. The media type is
+  `image/png`.
+* Software MUST identify Vitral files by the presence of a valid `vITR` chunk, not
+  by the file name.
+
+---
+
+## 10. Security considerations
+
+* The format adds no capability beyond the blend modes hosts already implement.
+  Rendering needs no access to backdrop pixels by script, and the arithmetic is
+  data-independent (constant time), unlike the timing side channels reported for
+  some blend modes in 2018.
+* Decoders MUST bound memory by the dimensions in the main `IHDR` and MUST verify
+  the residual's dimensions before decompressing it (§4.5).
+* Decoders MUST treat a damaged chunk as absent, never as a fatal error, so that
+  a hostile `vITR` cannot prevent the fallback from displaying.
+
+---
+
+## 11. Conformance
+
+* A **conforming encoder** writes files that satisfy §4 and decode (§6) to the K
+  and W it was given.
+* A **conforming decoder** recovers K and W exactly, follows the error handling of
+  §6, and falls back to the main image whenever §4 or §6 says to ignore the chunk.
+* A **conforming renderer** produces, over an opaque backdrop, results within 2
+  levels of §7.1.
+
+The `examples/` directory contains test files. The reference implementation's
+command-line tool reproduces them: `vitral decode` writes K, W, the fallback and
+the three layers; `vitral render` applies §7.1; `vitral diff` compares renders.
+
+---
+
+## 12. Future work
+
+* **Model 2, layered**: layers with named non-affine blend modes (overlay, soft
+  light, HSL modes), each composited by the host.
+* **Backdrop effects**: per-pixel masks for backdrop blur and refraction (in CSS:
+  `backdrop-filter`).
+* 16-bit samples, wide gamut, HDR and a linear-light flag.
+* Animation (APNG) and video.
+* Public chunk registration.

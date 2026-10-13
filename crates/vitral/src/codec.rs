@@ -13,7 +13,7 @@
 
 use crate::fallback::least_squares_fallback;
 use crate::math::mul255;
-use crate::pngio::{chunks, read_rgb8_strict, read_rgba8_with_info, write_rgb8, write_with_chunk};
+use crate::pngio::{chunks, read_rgb8_exact, read_rgba8_with_info, write_rgb8, write_with_chunk};
 use crate::{Error, RgbaImage, VitralImage};
 
 /// The PNG chunk type: ancillary, private, reserved bit clear, unsafe to copy
@@ -153,15 +153,12 @@ fn parse_payload(payload: &[u8], fallback: &RgbaImage) -> Result<VitralImage, Vi
     if crc32fast::hash(&fallback.data) != stored_crc {
         return Err(VitralStatus::FallbackMismatch);
     }
-    let (rw, rh, residual) = read_rgb8_strict(&payload[HEADER_LEN..])
+    let residual_height = fallback
+        .height
+        .checked_mul(2)
+        .ok_or_else(|| VitralStatus::Unsupported("image too tall".into()))?;
+    let residual = read_rgb8_exact(&payload[HEADER_LEN..], fallback.width, residual_height)
         .map_err(|e| VitralStatus::Corrupt(format!("residual: {e}")))?;
-    if rw != fallback.width || rh as u64 != fallback.height as u64 * 2 {
-        return Err(VitralStatus::Corrupt(format!(
-            "residual is {rw}x{rh}, expected {}x{}",
-            fallback.width,
-            fallback.height as u64 * 2
-        )));
-    }
 
     let pixels = fallback.width as usize * fallback.height as usize;
     let mut black = vec![0u8; pixels * 3];
@@ -324,7 +321,28 @@ mod tests {
         let img = VitralImage::from_layers(8, 8, &[layer]).unwrap();
         let bytes = encode(&img).unwrap();
         let payload = chunks(&bytes).find(|c| c.0 == CHUNK_TYPE).unwrap().1;
-        let (_, _, residual) = read_rgb8_strict(&payload[HEADER_LEN..]).unwrap();
+        let residual = read_rgb8_exact(&payload[HEADER_LEN..], 8, 16).unwrap();
         assert!(residual.iter().all(|&v| v == 0));
+    }
+
+    #[test]
+    fn residual_with_wrong_dimensions_is_rejected() {
+        let img = sample();
+        let fallback = least_squares_fallback(&img);
+        // A residual that claims to be far larger than the image.
+        let mut payload = vec![VERSION_MAJOR, VERSION_MINOR, MODEL_AFFINE_KW, 0];
+        payload.extend_from_slice(&crc32fast::hash(&fallback.data).to_be_bytes());
+        payload.extend_from_slice(&write_rgb8(1, 1, &[0, 0, 0]).unwrap());
+        let mut big = payload.clone();
+        // Patch the embedded IHDR width/height (bytes 16..24 of the PNG).
+        big[HEADER_LEN + 16..HEADER_LEN + 24].copy_from_slice(&[0, 1, 0, 0, 0, 1, 0, 0]);
+        for p in [payload, big] {
+            let file =
+                write_with_chunk(&fallback, Some((png::chunk::ChunkType(CHUNK_TYPE), &p))).unwrap();
+            assert!(matches!(
+                decode(&file).unwrap().status,
+                VitralStatus::Corrupt(_)
+            ));
+        }
     }
 }
