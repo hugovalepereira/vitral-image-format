@@ -152,8 +152,10 @@ fn icc_description(profile: &[u8]) -> Option<String> {
             let (len, offset) = (read_u32(20)?, read_u32(24)?);
             let units: Vec<u16> = data
                 .get(offset..offset + len)?
-                .chunks_exact(2)
-                .map(|c| u16::from_be_bytes([c[0], c[1]]))
+                .as_chunks::<2>()
+                .0
+                .iter()
+                .map(|&pair| u16::from_be_bytes(pair))
                 .collect();
             String::from_utf16_lossy(&units)
         }
@@ -241,7 +243,8 @@ mod tests {
             [0.2920, 0.6922, 0.0419],
             [0.1571, 0.0666, 0.7841],
         ];
-        let cases: [(&str, Vec<(&[u8; 4], Vec<u8>)>, ColourSpace); 6] = [
+        type Chunks = Vec<(&'static [u8; 4], Vec<u8>)>;
+        let cases: [(&str, Chunks, ColourSpace); 6] = [
             ("none", vec![], ColourSpace::Unspecified),
             ("sRGB chunk", vec![(b"sRGB", vec![0])], ColourSpace::Srgb),
             (
