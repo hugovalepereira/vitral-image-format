@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Vitral browser conformance</title>
+<!-- Places one sample over examples/backdrop.png at (x, y), at 1:1 scale, so a
+     screenshot can be compared with `vitral render`. Used by run.mjs. -->
+<style>
+  html, body { margin: 0; }
+  body { width: 640px; height: 400px; background: url(../../examples/backdrop.png) no-repeat 0 0; }
+  .at { position: absolute; }
+  img { display: block; }
+</style>
+</head>
+<body>
+<script type="module">
+  const q = new URLSearchParams(location.search);
+  const holder = document.createElement('div');
+  holder.className = 'at';
+  holder.style.left = `${q.get('x')}px`;
+  holder.style.top = `${q.get('y')}px`;
+  const img = new Image();
+  img.src = `../../examples/${q.get('sample')}.vitral.png`;
+  holder.append(img);
+  document.body.append(holder);
+  if (q.get('mode') !== 'legacy') await import('../vitral.js');
+</script>
+</body>
+</html>

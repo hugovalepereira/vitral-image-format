@@ -8,3 +8,11 @@ edition = "2021"
 license = "MIT"
 repository = "https://github.com/hugovalepereira/gfi-image-format"
 authors = ["Hugo Vale Pereira"]
+
+# Small, fast WebAssembly builds: cargo build --profile wasm --target wasm32-unknown-unknown
+[profile.wasm]
+inherits = "release"
+opt-level = "s"
+lto = true
+codegen-units = 1
+panic = "abort"

@@ -82,6 +82,14 @@ enum Command {
     },
     /// Print information about a file.
     Inspect { input: PathBuf },
+    /// Compare two images of the same size channel by channel (RGB). Exits
+    /// with an error if any channel differs by more than the tolerance.
+    Diff {
+        a: PathBuf,
+        b: PathBuf,
+        #[arg(long, default_value_t = 0)]
+        tolerance: u8,
+    },
 }
 
 fn main() -> ExitCode {
@@ -98,7 +106,12 @@ type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
 fn run(command: Command) -> Result<()> {
     match command {
-        Command::Encode { black, white, fallback, output } => {
+        Command::Encode {
+            black,
+            white,
+            fallback,
+            output,
+        } => {
             let img = VitralImage::from_renders(&read_png(&black)?, &read_png(&white)?)?;
             let bytes = match fallback {
                 Some(path) => vitral::encode_with_fallback(&img, &read_png(&path)?)?,
@@ -106,20 +119,39 @@ fn run(command: Command) -> Result<()> {
             };
             write(&output, &bytes)
         }
-        Command::FromImage { input, mode, opacity, force, output } => {
+        Command::FromImage {
+            input,
+            mode,
+            opacity,
+            force,
+            output,
+        } => {
             let image = read_png(&input)?;
             let (w, h) = (image.width, image.height);
             check_fidelity(mode, force)?;
             let layer = Layer::new(image, mode).with_opacity(opacity);
-            write(&output, &vitral::encode(&VitralImage::from_layers(w, h, &[layer])?)?)
+            write(
+                &output,
+                &vitral::encode(&VitralImage::from_layers(w, h, &[layer])?)?,
+            )
         }
-        Command::Compose { layers, force, output } => {
-            let layers = layers.iter().map(|spec| parse_layer(spec)).collect::<Result<Vec<_>>>()?;
+        Command::Compose {
+            layers,
+            force,
+            output,
+        } => {
+            let layers = layers
+                .iter()
+                .map(|spec| parse_layer(spec))
+                .collect::<Result<Vec<_>>>()?;
             for layer in &layers {
                 check_fidelity(layer.mode, force)?;
             }
             let (w, h) = (layers[0].image.width, layers[0].image.height);
-            write(&output, &vitral::encode(&VitralImage::from_layers(w, h, &layers)?)?)
+            write(
+                &output,
+                &vitral::encode(&VitralImage::from_layers(w, h, &layers)?)?,
+            )
         }
         Command::Decode { input, out_dir } => {
             let decoded = vitral::decode(&fs::read(&input)?)?;
@@ -129,19 +161,42 @@ fn run(command: Command) -> Result<()> {
             let planes = img.render_planes();
             let rgba = |data: Vec<u8>| RgbaImage::new(img.width, img.height, data);
             let files: [(&str, Vec<u8>); 6] = [
-                ("black.png", vitral::write_rgb8(img.width, img.height, &img.black)?),
-                ("white.png", vitral::write_rgb8(img.width, img.height, &img.white)?),
+                (
+                    "black.png",
+                    vitral::write_rgb8(img.width, img.height, &img.black)?,
+                ),
+                (
+                    "white.png",
+                    vitral::write_rgb8(img.width, img.height, &img.white)?,
+                ),
                 ("fallback.png", vitral::write_rgba8(&decoded.fallback)?),
-                ("plane-1-difference.png", vitral::write_rgba8(&rgba(planes.difference)?)?),
-                ("plane-2-screen.png", vitral::write_rgba8(&rgba(planes.screen)?)?),
-                ("plane-3-multiply.png", vitral::write_rgba8(&rgba(planes.multiply)?)?),
+                (
+                    "plane-1-difference.png",
+                    vitral::write_rgba8(&rgba(planes.difference)?)?,
+                ),
+                (
+                    "plane-2-screen.png",
+                    vitral::write_rgba8(&rgba(planes.screen)?)?,
+                ),
+                (
+                    "plane-3-multiply.png",
+                    vitral::write_rgba8(&rgba(planes.multiply)?)?,
+                ),
             ];
             for (name, bytes) in files {
                 write(&out_dir.join(name), &bytes)?;
             }
             Ok(())
         }
-        Command::Render { input, backdrop, color, x, y, legacy, output } => {
+        Command::Render {
+            input,
+            backdrop,
+            color,
+            x,
+            y,
+            legacy,
+            output,
+        } => {
             let decoded = vitral::decode(&fs::read(&input)?)?;
             report_status(&decoded.status);
             let img = if legacy {
@@ -173,13 +228,49 @@ fn run(command: Command) -> Result<()> {
             let total = (stats.identity + stats.normal + stats.vitral).max(1) as f64;
             let pct = |n: u64| 100.0 * n as f64 / total;
             println!("file:        {}", input.display());
-            println!("size:        {} x {} px, {} bytes", img.width, img.height, bytes.len());
+            println!(
+                "size:        {} x {} px, {} bytes",
+                img.width,
+                img.height,
+                bytes.len()
+            );
             println!("status:      {}", status_text(&decoded.status));
             println!("pixels:");
             println!("  transparent      {:6.2}%", pct(stats.identity));
             println!("  plain (PNG-like) {:6.2}%", pct(stats.normal));
             println!("  vitral-only      {:6.2}%", pct(stats.vitral));
-            println!("needs difference layer: {}", img.render_planes().uses_difference);
+            println!(
+                "needs difference layer: {}",
+                img.render_planes().uses_difference
+            );
+            Ok(())
+        }
+        Command::Diff { a, b, tolerance } => {
+            let (a, b) = (read_png(&a)?, read_png(&b)?);
+            if (a.width, a.height) != (b.width, b.height) {
+                return Err(format!(
+                    "sizes differ: {}x{} vs {}x{}",
+                    a.width, a.height, b.width, b.height
+                )
+                .into());
+            }
+            let (mut max, mut sum, mut over) = (0u8, 0u64, 0u64);
+            for (pa, pb) in a.data.chunks_exact(4).zip(b.data.chunks_exact(4)) {
+                for c in 0..3 {
+                    let d = pa[c].abs_diff(pb[c]);
+                    max = max.max(d);
+                    sum += d as u64;
+                    over += (d > tolerance) as u64;
+                }
+            }
+            let channels = (a.width as u64 * a.height as u64 * 3).max(1);
+            println!(
+                "max difference {max}, mean {:.4}, channels over tolerance {over}",
+                sum as f64 / channels as f64
+            );
+            if max > tolerance {
+                return Err(format!("difference {max} exceeds tolerance {tolerance}").into());
+            }
             Ok(())
         }
     }
@@ -196,7 +287,10 @@ fn check_fidelity(mode: BlendMode, force: bool) -> Result<()> {
             Ok(())
         }
         Fidelity::Lost if force => {
-            eprintln!("warning: '{}' cannot be represented in Vitral v0.1", mode.name());
+            eprintln!(
+                "warning: '{}' cannot be represented in Vitral v0.1",
+                mode.name()
+            );
             Ok(())
         }
         Fidelity::Lost => Err(format!(

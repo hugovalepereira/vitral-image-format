@@ -25,7 +25,20 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         ("light-leak", light_leak()),
         ("invert-ring", invert_ring()),
     ];
+    fs::create_dir_all(root.join("sources"))?;
     for (name, img) in samples {
+        if name == "stained-glass" {
+            // The two exports a designer would make to author this file.
+            let (w, h) = (img.width, img.height);
+            fs::write(
+                root.join("sources/stained-glass-over-black.png"),
+                vitral::write_rgb8(w, h, &img.black)?,
+            )?;
+            fs::write(
+                root.join("sources/stained-glass-over-white.png"),
+                vitral::write_rgb8(w, h, &img.white)?,
+            )?;
+        }
         let bytes = vitral::encode(&img)?;
         fs::write(root.join(format!("{name}.vitral.png")), &bytes)?;
 
@@ -35,12 +48,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let y = (backdrop.height as i64 - img.height as i64) / 2;
         let mut legacy = backdrop.clone();
         let fallback = Layer::new(decoded.fallback.clone(), BlendMode::Normal);
-        VitralImage::from_layers(img.width, img.height, &[fallback])?
-            .composite_onto(&mut legacy, x, y);
+        VitralImage::from_layers(img.width, img.height, &[fallback])?.composite_onto(
+            &mut legacy,
+            x,
+            y,
+        );
         let mut vitral_view = backdrop.clone();
         decoded.image().composite_onto(&mut vitral_view, x, y);
         let pair = side_by_side(&legacy, &vitral_view, 16);
-        fs::write(root.join(format!("renders/{name}.png")), vitral::write_rgba8(&pair)?)?;
+        fs::write(
+            root.join(format!("renders/{name}.png")),
+            vitral::write_rgba8(&pair)?,
+        )?;
 
         let stats = img.stats();
         println!(
@@ -71,13 +90,29 @@ fn stained_glass() -> VitralImage {
         }
     };
     let seeds = [
-        (150.0, 40.0), (95.0, 85.0), (205.0, 85.0), (150.0, 120.0), (60.0, 160.0),
-        (240.0, 160.0), (115.0, 190.0), (185.0, 195.0), (55.0, 250.0), (150.0, 250.0),
-        (245.0, 250.0), (95.0, 305.0), (205.0, 305.0), (150.0, 330.0),
+        (150.0, 40.0),
+        (95.0, 85.0),
+        (205.0, 85.0),
+        (150.0, 120.0),
+        (60.0, 160.0),
+        (240.0, 160.0),
+        (115.0, 190.0),
+        (185.0, 195.0),
+        (55.0, 250.0),
+        (150.0, 250.0),
+        (245.0, 250.0),
+        (95.0, 305.0),
+        (205.0, 305.0),
+        (150.0, 330.0),
     ];
     let palette = [
-        [200, 40, 55], [40, 85, 205], [245, 185, 40], [40, 160, 95], [135, 60, 175],
-        [40, 170, 195], [235, 110, 40],
+        [200, 40, 55],
+        [40, 85, 205],
+        [245, 185, 40],
+        [40, 160, 95],
+        [135, 60, 175],
+        [40, 170, 195],
+        [235, 110, 40],
     ];
     let voronoi = move |x: f32, y: f32| {
         let mut best = (f32::MAX, f32::MAX, 0usize);
@@ -123,13 +158,26 @@ fn stained_glass() -> VitralImage {
 /// highlight and a thin white rim.
 fn glass_badge() -> VitralImage {
     let (w, h) = (360, 260);
-    let card = |dy: f32| move |x: f32, y: f32| rounded_rect(x, y - dy, 180.0, 120.0, 140.0, 80.0, 36.0);
-    let shadow_alpha = blur(&alpha_mask(w, h, |x, y| coverage(card(16.0)(x, y))), w, h, 14.0);
-    let shadow = paint(w, h, |x, y| rgba([10, 20, 40], shadow_alpha[idx(w, x, y)] * 0.55));
-    let body = paint(w, h, |x, y| rgba([255, 175, 70], coverage(card(0.0)(x, y)) * 0.9));
+    let card =
+        |dy: f32| move |x: f32, y: f32| rounded_rect(x, y - dy, 180.0, 120.0, 140.0, 80.0, 36.0);
+    let shadow_alpha = blur(
+        &alpha_mask(w, h, |x, y| coverage(card(16.0)(x, y))),
+        w,
+        h,
+        14.0,
+    );
+    let shadow = paint(w, h, |x, y| {
+        rgba([10, 20, 40], shadow_alpha[idx(w, x, y)] * 0.55)
+    });
+    let body = paint(w, h, |x, y| {
+        rgba([255, 175, 70], coverage(card(0.0)(x, y)) * 0.9)
+    });
     let highlight = paint(w, h, |x, y| {
         let fade = ((150.0 - y) / 110.0).clamp(0.0, 1.0).powf(1.5);
-        rgba([255, 255, 255], coverage(card(0.0)(x, y) - 3.0) * fade * 0.55)
+        rgba(
+            [255, 255, 255],
+            coverage(card(0.0)(x, y) - 3.0) * fade * 0.55,
+        )
     });
     let rim = paint(w, h, |x, y| {
         let d = card(0.0)(x, y);
@@ -158,9 +206,18 @@ fn light_leak() -> VitralImage {
         })
     };
     let layers = [
-        Layer::new(blob(90.0, 70.0, 150.0, [255, 110, 30], 0.95), BlendMode::Screen),
-        Layer::new(blob(300.0, 200.0, 120.0, [255, 40, 120], 0.8), BlendMode::Screen),
-        Layer::new(blob(200.0, 120.0, 60.0, [255, 230, 150], 0.9), BlendMode::Screen),
+        Layer::new(
+            blob(90.0, 70.0, 150.0, [255, 110, 30], 0.95),
+            BlendMode::Screen,
+        ),
+        Layer::new(
+            blob(300.0, 200.0, 120.0, [255, 40, 120], 0.8),
+            BlendMode::Screen,
+        ),
+        Layer::new(
+            blob(200.0, 120.0, 60.0, [255, 230, 150], 0.9),
+            BlendMode::Screen,
+        ),
     ];
     VitralImage::from_layers(w, h, &layers).unwrap()
 }
@@ -193,10 +250,18 @@ fn scene(w: u32, h: u32) -> RgbaImage {
             hue(v + 0.15 * (x / 40.0).sin())
         } else if v < 0.5 {
             let stripe = ((x + y) / 18.0).floor() as i32 % 2 == 0;
-            if stripe { [245.0; 3] } else { [20.0; 3] }
+            if stripe {
+                [245.0; 3]
+            } else {
+                [20.0; 3]
+            }
         } else {
             let check = ((x / 24.0).floor() + (y / 24.0).floor()) as i32 % 2 == 0;
-            if check { [235.0, 225.0, 205.0] } else { [70.0, 110.0, 90.0] }
+            if check {
+                [235.0, 225.0, 205.0]
+            } else {
+                [70.0, 110.0, 90.0]
+            }
         };
         [c[0] / 255.0, c[1] / 255.0, c[2] / 255.0, 1.0]
     })
@@ -218,7 +283,12 @@ fn paint(w: u32, h: u32, f: impl Fn(f32, f32) -> [f32; 4]) -> RgbaImage {
 }
 
 fn rgba(c: [u8; 3], alpha: f32) -> [f32; 4] {
-    [c[0] as f32 / 255.0, c[1] as f32 / 255.0, c[2] as f32 / 255.0, alpha]
+    [
+        c[0] as f32 / 255.0,
+        c[1] as f32 / 255.0,
+        c[2] as f32 / 255.0,
+        alpha,
+    ]
 }
 
 /// Antialiased coverage from a signed distance (positive inside).

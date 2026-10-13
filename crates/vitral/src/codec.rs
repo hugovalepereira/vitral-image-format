@@ -55,7 +55,9 @@ impl Decoded {
     /// The Vitral image if present, otherwise the fallback interpreted as a
     /// plain normal-blended image. Always usable for rendering.
     pub fn image(&self) -> VitralImage {
-        self.vitral.clone().unwrap_or_else(|| from_fallback(&self.fallback))
+        self.vitral
+            .clone()
+            .unwrap_or_else(|| from_fallback(&self.fallback))
     }
 }
 
@@ -69,7 +71,9 @@ pub fn encode(img: &VitralImage) -> Result<Vec<u8>, Error> {
 /// result lossless whatever the fallback is.
 pub fn encode_with_fallback(img: &VitralImage, fallback: &RgbaImage) -> Result<Vec<u8>, Error> {
     if fallback.width != img.width || fallback.height != img.height {
-        return Err(Error::InvalidInput("fallback size differs from image size".into()));
+        return Err(Error::InvalidInput(
+            "fallback size differs from image size".into(),
+        ));
     }
     let pixels = img.width as usize * img.height as usize;
     let mut residual = vec![0u8; pixels * 6];
@@ -90,7 +94,10 @@ pub fn encode_with_fallback(img: &VitralImage, fallback: &RgbaImage) -> Result<V
     payload.extend_from_slice(&crc32fast::hash(&fallback.data).to_be_bytes());
     payload.extend_from_slice(&residual_png);
 
-    write_with_chunk(fallback, Some((png::chunk::ChunkType(CHUNK_TYPE), &payload)))
+    write_with_chunk(
+        fallback,
+        Some((png::chunk::ChunkType(CHUNK_TYPE), &payload)),
+    )
 }
 
 /// Decodes any PNG. Fails only if the main image itself cannot be decoded;
@@ -113,12 +120,20 @@ pub fn decode(bytes: &[u8]) -> Result<Decoded, Error> {
         _ if source.animated => VitralStatus::Unsupported("animated PNG".into()),
         (Some((payload, true)), _) => match parse_payload(payload, &fallback) {
             Ok(img) => {
-                return Ok(Decoded { fallback, vitral: Some(img), status: VitralStatus::Ok });
+                return Ok(Decoded {
+                    fallback,
+                    vitral: Some(img),
+                    status: VitralStatus::Ok,
+                });
             }
             Err(status) => status,
         },
     };
-    Ok(Decoded { fallback, vitral: None, status })
+    Ok(Decoded {
+        fallback,
+        vitral: None,
+        status,
+    })
 }
 
 fn parse_payload(payload: &[u8], fallback: &RgbaImage) -> Result<VitralImage, VitralStatus> {
@@ -127,7 +142,9 @@ fn parse_payload(payload: &[u8], fallback: &RgbaImage) -> Result<VitralImage, Vi
     }
     let (major, minor, model) = (payload[0], payload[1], payload[2]);
     if major != VERSION_MAJOR {
-        return Err(VitralStatus::Unsupported(format!("version {major}.{minor}")));
+        return Err(VitralStatus::Unsupported(format!(
+            "version {major}.{minor}"
+        )));
     }
     if model != MODEL_AFFINE_KW {
         return Err(VitralStatus::Unsupported(format!("model {model}")));
@@ -159,7 +176,12 @@ fn parse_payload(payload: &[u8], fallback: &RgbaImage) -> Result<VitralImage, Vi
             white[i * 3 + c] = fw.wrapping_add(bottom[i * 3 + c]);
         }
     }
-    Ok(VitralImage { width: fallback.width, height: fallback.height, black, white })
+    Ok(VitralImage {
+        width: fallback.width,
+        height: fallback.height,
+        black,
+        white,
+    })
 }
 
 /// Interprets a plain RGBA image as a Vitral image with normal blending.
@@ -174,7 +196,12 @@ fn from_fallback(fallback: &RgbaImage) -> VitralImage {
             white.push(fk + (255 - px[3]));
         }
     }
-    VitralImage { width: fallback.width, height: fallback.height, black, white }
+    VitralImage {
+        width: fallback.width,
+        height: fallback.height,
+        black,
+        white,
+    }
 }
 
 #[cfg(test)]
@@ -240,7 +267,11 @@ mod tests {
         // as a careless tool would.
         let mut main = read_rgba8(&bytes).unwrap();
         main.data[0] ^= 0xff;
-        let payload: Vec<u8> = chunks(&bytes).find(|c| c.0 == CHUNK_TYPE).unwrap().1.to_vec();
+        let payload: Vec<u8> = chunks(&bytes)
+            .find(|c| c.0 == CHUNK_TYPE)
+            .unwrap()
+            .1
+            .to_vec();
         let tampered =
             write_with_chunk(&main, Some((png::chunk::ChunkType(CHUNK_TYPE), &payload))).unwrap();
         let decoded = decode(&tampered).unwrap();
@@ -263,12 +294,22 @@ mod tests {
     fn unknown_major_version_is_unsupported() {
         let img = sample();
         let bytes = encode(&img).unwrap();
-        let mut payload: Vec<u8> = chunks(&bytes).find(|c| c.0 == CHUNK_TYPE).unwrap().1.to_vec();
+        let mut payload: Vec<u8> = chunks(&bytes)
+            .find(|c| c.0 == CHUNK_TYPE)
+            .unwrap()
+            .1
+            .to_vec();
         payload[0] = 9;
         let fallback = read_rgba8(&bytes).unwrap();
-        let file =
-            write_with_chunk(&fallback, Some((png::chunk::ChunkType(CHUNK_TYPE), &payload))).unwrap();
-        assert!(matches!(decode(&file).unwrap().status, VitralStatus::Unsupported(_)));
+        let file = write_with_chunk(
+            &fallback,
+            Some((png::chunk::ChunkType(CHUNK_TYPE), &payload)),
+        )
+        .unwrap();
+        assert!(matches!(
+            decode(&file).unwrap().status,
+            VitralStatus::Unsupported(_)
+        ));
     }
 
     #[test]

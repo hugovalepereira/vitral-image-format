@@ -53,13 +53,23 @@ impl VitralImage {
                 "K/W buffers must have {expected} bytes for {width}x{height}"
             )));
         }
-        Ok(VitralImage { width, height, black, white })
+        Ok(VitralImage {
+            width,
+            height,
+            black,
+            white,
+        })
     }
 
     /// An image with no effect on its backdrop.
     pub fn identity(width: u32, height: u32) -> Self {
         let n = width as usize * height as usize * 3;
-        VitralImage { width, height, black: vec![0; n], white: vec![255; n] }
+        VitralImage {
+            width,
+            height,
+            black: vec![0; n],
+            white: vec![255; n],
+        }
     }
 
     /// Builds a Vitral image from two renders of the same artwork: one over a
@@ -99,7 +109,9 @@ impl VitralImage {
     pub fn from_layers(width: u32, height: u32, layers: &[Layer]) -> Result<Self, Error> {
         for (i, layer) in layers.iter().enumerate() {
             if layer.image.width != width || layer.image.height != height {
-                return Err(Error::InvalidInput(format!("layer {i} is not {width}x{height}")));
+                return Err(Error::InvalidInput(format!(
+                    "layer {i} is not {width}x{height}"
+                )));
             }
         }
         Ok(VitralImage {

@@ -21,12 +21,20 @@ impl RgbaImage {
                 data.len()
             )));
         }
-        Ok(RgbaImage { width, height, data })
+        Ok(RgbaImage {
+            width,
+            height,
+            data,
+        })
     }
 
     pub fn filled(width: u32, height: u32, rgba: [u8; 4]) -> Self {
         let data = rgba.repeat(width as usize * height as usize);
-        RgbaImage { width, height, data }
+        RgbaImage {
+            width,
+            height,
+            data,
+        }
     }
 }
 
@@ -88,7 +96,14 @@ pub(crate) fn read_rgba8_with_info(bytes: &[u8]) -> Result<(RgbaImage, SourceInf
             return Err(Error::Png("indexed PNG was not expanded".into()));
         }
     };
-    Ok((RgbaImage { width, height, data }, source))
+    Ok((
+        RgbaImage {
+            width,
+            height,
+            data,
+        },
+        source,
+    ))
 }
 
 /// Decodes a PNG that must be 8-bit RGB (used for the embedded residual).
@@ -164,7 +179,11 @@ pub fn write_rgb8(width: u32, height: u32, rgb: &[u8]) -> Result<Vec<u8>, Error>
 /// `(type, data, crc_ok)`. Stops at `IEND` or at the first malformed chunk.
 pub(crate) fn chunks(bytes: &[u8]) -> impl Iterator<Item = ([u8; 4], &[u8], bool)> {
     const SIGNATURE: [u8; 8] = [137, 80, 78, 71, 13, 10, 26, 10];
-    let mut pos = if bytes.starts_with(&SIGNATURE) { 8 } else { bytes.len() };
+    let mut pos = if bytes.starts_with(&SIGNATURE) {
+        8
+    } else {
+        bytes.len()
+    };
     std::iter::from_fn(move || {
         if pos + 12 > bytes.len() {
             return None;
@@ -182,7 +201,11 @@ pub(crate) fn chunks(bytes: &[u8]) -> impl Iterator<Item = ([u8; 4], &[u8], bool
         hasher.update(&kind);
         hasher.update(data);
         let crc_ok = hasher.finalize() == stored;
-        pos = if &kind == b"IEND" { bytes.len() } else { data_end + 4 };
+        pos = if &kind == b"IEND" {
+            bytes.len()
+        } else {
+            data_end + 4
+        };
         Some((kind, data, crc_ok))
     })
 }

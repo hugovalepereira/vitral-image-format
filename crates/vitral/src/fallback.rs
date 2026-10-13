@@ -30,7 +30,11 @@ pub fn least_squares_fallback(img: &VitralImage) -> RgbaImage {
         }
         data.push(alpha as u8);
     }
-    RgbaImage { width: img.width, height: img.height, data }
+    RgbaImage {
+        width: img.width,
+        height: img.height,
+        data,
+    }
 }
 
 #[cfg(test)]

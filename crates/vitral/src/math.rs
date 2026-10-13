@@ -49,8 +49,7 @@ mod tests {
         for k in (0..=255u32).step_by(3) {
             for w in (0..=255u32).step_by(5) {
                 for b in 0..=255u32 {
-                    let exact =
-                        (k as f64 + (w as f64 - k as f64) * b as f64 / 255.0).round() as u8;
+                    let exact = (k as f64 + (w as f64 - k as f64) * b as f64 / 255.0).round() as u8;
                     assert_eq!(composite(k as u8, w as u8, b as u8), exact);
                 }
             }

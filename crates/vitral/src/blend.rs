@@ -196,7 +196,11 @@ trait MapWith {
 
 impl MapWith for [f32; 3] {
     fn map_with(self, other: Self, f: impl Fn(f32, f32) -> f32) -> Self {
-        [f(self[0], other[0]), f(self[1], other[1]), f(self[2], other[2])]
+        [
+            f(self[0], other[0]),
+            f(self[1], other[1]),
+            f(self[2], other[2]),
+        ]
     }
 }
 
@@ -264,7 +268,11 @@ pub struct Layer {
 
 impl Layer {
     pub fn new(image: RgbaImage, mode: BlendMode) -> Self {
-        Layer { image, mode, opacity: 1.0 }
+        Layer {
+            image,
+            mode,
+            opacity: 1.0,
+        }
     }
 
     pub fn with_opacity(mut self, opacity: f32) -> Self {
@@ -308,7 +316,12 @@ mod tests {
     /// match direct blending over every grey backdrop (within rounding).
     #[test]
     fn affine_modes_are_exact_over_any_backdrop() {
-        let sources = [[255, 0, 0, 255], [30, 140, 220, 200], [250, 240, 10, 90], [128, 128, 128, 255]];
+        let sources = [
+            [255, 0, 0, 255],
+            [30, 140, 220, 200],
+            [250, 240, 10, 90],
+            [128, 128, 128, 255],
+        ];
         for mode in BlendMode::ALL.into_iter().filter(|m| m.is_exact()) {
             for src in sources {
                 let layer = Layer::new(solid(src), mode);
@@ -331,7 +344,12 @@ mod tests {
     /// others must not be: this keeps `fidelity()` honest.
     #[test]
     fn fidelity_matches_black_and_white_capture() {
-        let sources = [[255, 0, 0, 255], [30, 140, 220, 255], [250, 240, 10, 255], [90, 90, 90, 255]];
+        let sources = [
+            [255, 0, 0, 255],
+            [30, 140, 220, 255],
+            [250, 240, 10, 255],
+            [90, 90, 90, 255],
+        ];
         for mode in BlendMode::ALL {
             let changes = sources.iter().any(|&src| {
                 let layer = Layer::new(solid(src), mode);
@@ -350,8 +368,14 @@ mod tests {
 
     #[test]
     fn parses_css_names_and_aliases() {
-        assert_eq!("multiply".parse::<BlendMode>().unwrap(), BlendMode::Multiply);
-        assert_eq!("Hard Light".parse::<BlendMode>().unwrap(), BlendMode::HardLight);
+        assert_eq!(
+            "multiply".parse::<BlendMode>().unwrap(),
+            BlendMode::Multiply
+        );
+        assert_eq!(
+            "Hard Light".parse::<BlendMode>().unwrap(),
+            BlendMode::HardLight
+        );
         assert_eq!("add".parse::<BlendMode>().unwrap(), BlendMode::PlusLighter);
         assert!("glow".parse::<BlendMode>().is_err());
     }
