@@ -37,8 +37,11 @@ fundação  spec+core  web   │  Figma    outras   v2       normalização
 * [x] Testes: ida e volta exata, deteção de corrupção, exatidão dos modos afins,
       erro da pilha ≤ 2.
 * [x] Exemplos gerados (`examples/`).
-* [ ] **Seguinte**: vetores de conformidade publicados e *fuzzing* do parser
-      (`cargo fuzz`).
+* [x] *Fuzzing* do descodificador (300 000 mutações sem *panics*) e variantes de
+      PNG (paleta, cinzento, entrelaçado). Ver [05](05-verificacoes-v1.md).
+* [x] Cor nativa sobre fundo transparente (D9), chunk *safe-to-copy* (D2),
+      armazenamento direto de K/W (D10), regra sRGB (D11).
+* [ ] **Seguinte**: vetores de conformidade publicados.
 
 **Critério de saída**: qualquer pessoa consegue criar um `.vitral.png` a partir
 de dois exports (preto/branco) e vê-lo sobre qualquer fundo com `vitral render`.
@@ -51,23 +54,36 @@ de dois exports (preto/branco) e vê-lo sobre qualquer fundo com `vitral render`
       sem JS.
 * [x] Página de demonstração: o mesmo objeto sobre vários fundos, com
       comparação PNG ↔ Vitral e objetos arrastáveis.
-* [x] Teste automático em Chromium (Playwright): o browser bate com o compositor
-      Rust (erro máximo de 2 níveis, médio < 0,05).
+* [x] Teste automático em Chromium, Firefox e WebKit (Playwright, no CI): o
+      browser bate com o compositor Rust (erro máximo de 2 níveis, médio < 0,05).
+* [x] Codificador na demo com as três exportações (preto, branco, transparente).
 * [ ] **Seguinte**: *playground* (arrastar os PNG preto/branco e descarregar o
       Vitral), publicação no npm e no crates.io, GitHub Pages.
 
 **Critério de saída**: um developer integra o Vitral num site com uma linha
 (`<script type="module" src="vitral.js">`).
 
+## Fase 2.5 — Fechar a v1 (antes de pensar na v2)
+
+* [ ] Exportações reais do autor: Figma, Photoshop, Illustrator, After Effects.
+* [ ] Vetores de conformidade publicados.
+* [ ] Compressão melhor (deflate ao nível do oxipng) e rever a meta RNF1.
+* [ ] Conversão de cor no CLI (Display P3 → sRGB, com a biblioteca `moxcms`).
+* [ ] Documentar o uso em produção: servir sem otimização automática (CDNs e
+      Next.js removem o chunk); otimizadores que o mantêm (optipng, oxipng,
+      pngcrush, `zopflipng --keepchunks=vITr`).
+* [ ] Desempenho: 1 megapixel em menos de 50 ms no browser.
+
 ## Fase 3 — Plugin Figma
 
 * **Exportar**:
   * Seleciona-se um frame.
-  * O plugin troca o fundo para preto e depois para branco e faz
-    `exportAsync` de cada versão.
+  * O plugin exporta-o três vezes: com fundo preto, com fundo branco e com fundo
+    transparente (`exportAsync` com `colorProfile: 'SRGB'`).
   * Codifica em WASM e descarrega o `nome.vitral.png`.
 * **Importar**: cria um grupo *pass-through* com 3 camadas de imagem (Difference,
-  Screen, Multiply).
+  Screen, Multiply). Só é exato sobre fundos preenchidos (D9); o plugin deve
+  avisar quando o frame não tem fundo.
 * **Publicar na Figma Community**: é o primeiro grande canal de divulgação.
 
 ## Fase 4 — Outras ferramentas e vídeo
@@ -77,9 +93,65 @@ de dois exports (preto/branco) e vê-lo sobre qualquer fundo com `vitral render`
 * **After Effects**: importar como 3 camadas com modos.
 * **Photoshop** (UXP): importar e exportar.
 * **Inkscape, GIMP, Krita**: scripts.
-* **Vídeo Vitral (exploratório)**: dois fluxos K/W, ou um vídeo com o dobro da
-  altura, para light leaks e overlays que hoje se vendem com a instrução "usar em
-  modo Screen".
+* **Vídeo Vitral**: adiado (decisão do autor, out/2026). Ver a secção seguinte.
+
+## Vídeo Vitral (adiado; notas para quando chegar a vez)
+
+**Problema.** Os overlays de motion (light leaks, fumo, fogo, poeira, lens
+flares, grão) vendem-se como vídeo sobre preto com a instrução "usar em Screen",
+ou sobre branco com "usar em Multiply". Os vídeos com alfa só fazem o modo
+normal, e um efeito que escurece *e* brilha (fumo) não cabe num só ficheiro.
+
+**Estado da arte do vídeo transparente (pesquisa de out/2026):**
+
+* **Não há um formato universal.**
+  * O WebM/VP9 com alfa funciona no Chrome, Firefox e Edge, mas não no Safari.
+  * O HEVC com alfa funciona no Safari, mas não no Chrome. Os sites servem os
+    dois formatos ([Rotato][rotato], [MDN][mdn-codecs]).
+  * Um guia de agosto de 2026 diz que o WebM com transparência está a chegar ao
+    Safari, mas não confirmei numa fonte da Apple ou do WebKit.
+* **O AV1 não tem alfa nativo.** O AVIF resolve isso com um segundo fluxo, só de
+  luminância, para o alfa ([Jake Archibald][archibald]).
+* **A técnica que está a resolver o problema** é o ***stacked alpha***: um MP4
+  normal (H.264 ou AV1) com a cor na metade de cima e o alfa na metade de baixo,
+  juntadas no leitor com um *shader* de GPU.
+  * O [`<stacked-alpha-video>`][stacked] (Jake Archibald) é um componente de
+    cerca de 2 KB e diz que o AV1 dá ficheiros com metade do tamanho do VP9.
+  * O [Hypervideo][hypervideo] é um serviço recente com SDKs abertos para web,
+    iOS e Android sobre a mesma ideia, em H.264.
+  * Uma limitação: em Safari, o AV1 só tem descodificação por hardware em
+    aparelhos recentes (iPhone 15 Pro, Macs M3 e posteriores).
+
+**Como o Vitral vídeo encaixaria:**
+
+* **É a mesma técnica, com mais faixas.**
+  * Um MP4 normal empilha K, W e a cor nativa (3 faixas, ou 2 se a nativa for
+    aproximada).
+  * Qualquer leitor sem suporte mostra a imagem empilhada; um leitor com suporte
+    separa as faixas.
+* **Na web**, um *shader* WebGL calcula as 3 camadas (difference, screen,
+  multiply) por frame e desenha-as em 3 canvases com `mix-blend-mode`. É o
+  polyfill atual, frame a frame.
+* **No After Effects e no Premiere**, um script importa o vídeo como 3 camadas
+  com os modos certos, usando os modos nativos dos programas.
+
+**Riscos:**
+
+* A compressão com perdas e o 4:2:0 estragam a precisão de K e W, sobretudo nas
+  zonas que invertem (W < K). É preciso medir com AV1 e H.264 a qualidade alta.
+* Muitas apps de vídeo misturam em luz linear: é necessária a flag de espaço de
+  cor (v2).
+* A sincronização: uma só faixa empilhada evita os problemas de sincronizar
+  vários `<video>`.
+
+**Primeiro protótipo:** converter um light leak (vídeo sobre preto + "usar em
+Screen") num MP4 empilhado e mostrá-lo sobre uma página com o polyfill.
+
+[rotato]: https://rotato.app/blog/transparent-videos-for-the-web
+[mdn-codecs]: https://developer.mozilla.org/en-US/docs/Web/Media/Guides/Formats/Video_codecs
+[archibald]: https://jakearchibald.com/2024/video-with-transparency/
+[stacked]: https://github.com/jakearchibald/stacked-alpha-video
+[hypervideo]: https://www.hypervideo.dev/
 
 ## Fase 5 — Vitral v2
 
@@ -148,4 +220,6 @@ Uma imagem que se mistura sozinha com o que está por trás.
 | Cores diferentes entre ferramentas | Mistura em sRGB codificado, igual ao CSS e ao Figma. Testes de referência. |
 | Expectativa de "funcionar em todo o lado" | Comunicar claramente: funciona onde há suporte, degrada noutros sítios. |
 | Tamanho dos ficheiros | Residual nulo nas zonas normais. Medir e otimizar (fase 2). |
-| Fundo transparente (design tools) | Indefinido na v1. As camadas usam alfa 0 onde não fazem nada, o que minimiza artefactos. |
+| Fundo transparente (design tools) | Definido (D9): mostra a cor nativa. A pilha de 3 camadas só é exata sobre fundos opacos; nos programas de design é preciso um fundo preenchido. |
+| CDNs que recodificam (sharp, Cloudinary) | Medido (D2, [05](05-verificacoes-v1.md)): removem o chunk. Servir os ficheiros sem otimização automática. |
+| Exportações em Display P3 | Detetadas e recusadas no CLI (D11); a demo converte. |

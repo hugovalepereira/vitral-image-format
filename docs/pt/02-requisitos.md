@@ -46,7 +46,7 @@ nome original, *Graphic Function Image*). O Vitral organiza essa ideia em nívei
 
 | ID | Requisito | Meta |
 |---|---|---|
-| RNF1 | Tamanho | Zonas em modo normal não custam bytes extra (residual nulo). Objetivo: < +30% face ao PNG equivalente em imagens típicas (a medir). |
+| RNF1 | Tamanho | Zonas em modo normal não custam bytes extra (residual nulo). Medido em out/2026: 2,5–4,7× o PNG nativo nas amostras (ver [05](05-verificacoes-v1.md)); a meta de +30% era irrealista para imagens que misturam em todo o lado. Proposta: ≤ 2,5× após melhorar a compressão. |
 | RNF2 | Precisão | A pilha de 3 camadas difere da referência em ≤ 2 níveis (de 255). |
 | RNF3 | Desempenho | Descodificar e preparar 1 megapixel em < 50 ms (WASM, portátil médio). |
 | RNF4 | Segurança | Parser robusto (testes de *fuzzing*). Nenhum código acede aos pixels do fundo; só se usam os modos de mistura do anfitrião, com aritmética de tempo constante. |
@@ -57,16 +57,16 @@ nome original, *Graphic Function Image*). O Vitral organiza essa ideia em nívei
 ## Fora de âmbito (v1)
 
 * "Funcionar em qualquer lado sem suporte" — impossível (ver [estado da arte](01-estado-da-arte.md)).
-* Fundos semitransparentes: na v1 assume-se que o fundo é opaco.
 * Imagens com perdas (JPEG/AVIF) como contentor.
 
-## Questões em aberto (a decidir com o autor)
+## Questões
 
-* **Q1 — Domínio e handles**: `vitral.dev`? `getvitral.com`? O nome do repositório
-  (`gfi-image-format` → `vitral`) muda-se nas definições do GitHub.
-* **Q2 — Vídeo**: "Vitral vídeo" (dois fluxos K/W, ou um vídeo com o dobro da
-  altura) entra antes ou depois da v2?
-* **Q3 — Contentor da v2**: quando chegarem as camadas e os efeitos, mantemos o
-  PNG com mais chunks ou passamos ao contentor ZIP? (Ver [decisões](03-decisoes.md).)
-* **Q4 — Comportamento sobre fundo transparente**: hoje é indefinido; vale a pena
-  defini-lo na v1.1?
+* **Q1 — Domínio**: em aberto.
+  * Candidatos: `vitral.dev`, `vitral.app`, `vitral.design`, `vitralformat.org`,
+    `getvitral.com`, `vitral.pt`.
+  * Não foi possível confirmar a disponibilidade a partir deste ambiente, porque
+    a rede bloqueia o RDAP e o DNS.
+  * O repositório já foi renomeado para `vitral-image-format`.
+* **Q2 — Vídeo**: adiado, com notas no [plano](04-plano.md).
+* **Q3 — Contentor da v2**: só depois de fechar a v1 (fase 2.5 do plano).
+* **Q4 — Fundo transparente**: ✅ decidido. Mostra a cor nativa (D9).

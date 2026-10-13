@@ -27,6 +27,10 @@ podem voltar a ser consideradas.
 * **Decisão**: o ficheiro é um PNG válido.
   * A imagem principal (`IDAT`) é o **fallback** que qualquer programa mostra.
   * Um chunk auxiliar `vITr` guarda o que falta para reconstruir K e W.
+  * O chunk é *safe-to-copy* (quarta letra minúscula). Inicialmente era `vITR`
+    (*unsafe*), mas os testes com 13 otimizadores mostraram que a marca *unsafe*
+    só fazia as ferramentas descartá-lo. O CRC dos pixels já protege contra
+    alterações (ver [05](05-verificacoes-v1.md)).
   * Um CRC da imagem principal deteta recompressões ou edições.
 * **Riscos aceites**: CDNs e otimizadores que retiram chunks desconhecidos fazem a
   imagem cair para o fallback. Isto é degradação, não erro.
@@ -109,3 +113,43 @@ podem voltar a ser consideradas.
   * A especificação, o README e o código estão em **inglês**, para promoção
     internacional.
   * O planeamento e as decisões estão em **português**, em `docs/pt/`.
+
+## D9 — Fundo transparente: **mostra a cor nativa**
+
+* **Contexto**: a pergunta Q4 era o que mostrar quando não há nada por trás.
+  O autor respondeu: *"se não existir background, a cor deve ser simplesmente a
+  cor nativa"*.
+* **Decisão**: cada pixel tem uma **cor nativa** (RGBA), a mesma que uma camada
+  mostra num programa de design sobre um canvas transparente.
+  * Essa cor é a imagem principal do PNG, que é também o que os programas sem
+    suporte mostram.
+  * Sobre um fundo parcialmente transparente, o resultado mistura as duas
+    coisas: `αfundo · f(fundo) + (1 − αfundo) · nativa`. É a mesma estrutura da
+    fórmula W3C.
+* **Porque tem de ser guardada**: não se deduz de K e W. Por exemplo, multiply
+  com uma cor *s* e hard light com *s*/2 dão o mesmo K e W.
+* **Autoria**: uma terceira exportação, com fundo transparente, que é opcional.
+  Sem ela, a cor nativa é aproximada.
+* **Consequência**: sem suporte, o Vitral mostra exatamente o PNG que se
+  exportaria hoje. Nunca fica pior do que um PNG.
+* **Limitação aceite**: a pilha de 3 camadas (CSS, Figma) só é exata sobre fundos
+  opacos. Na web o fundo da página é sempre opaco; num programa de design, é
+  preciso um fundo preenchido.
+
+## D10 — Armazenamento: **diferenças ou K/W diretos, o que for menor**
+
+* **Contexto**: em imagens que misturam muito, as diferenças em relação à cor
+  nativa comprimem pior do que o próprio K/W, por causa do ruído de
+  arredondamento.
+* **Decisão**: o bit 0 das *flags* indica se o residual guarda as diferenças ou
+  K e W diretamente. O codificador experimenta as duas formas e fica com a menor.
+
+## D11 — Entradas: **só sRGB**
+
+* **Contexto**: o Figma exporta no perfil do documento, que pode ser Display P3.
+  Ler esses valores como sRGB estragava as cores sem aviso.
+* **Decisão**: K, W e a cor nativa são sRGB.
+  * O CLI deteta o espaço de cor de cada exportação (comparando as primárias do
+    perfil ICC com as do sRGB) e recusa as que não são sRGB.
+  * A demo deixa o browser converter.
+* **Para depois**: conversão automática no CLI e suporte a Display P3 (v2).
