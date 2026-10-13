@@ -28,7 +28,7 @@ fundação  spec+core  web   │  Figma    outras   v2       normalização
 
 **Objetivo**: um formato definido ao bit e uma implementação que o prova.
 
-* [x] `SPEC.md` v0.1: modelo K/W, chunk `vITR`, codificação residual, CRC,
+* [x] `SPEC.md` v0.1: modelo K/W, chunk `vITr`, codificação residual, CRC,
       fallback, pilha de renderização, conformidade.
 * [x] Crate `vitral`: codificar/descodificar, compositor de referência, planos de
       renderização, conversão de modos W3C → K/W, composição de camadas.
@@ -94,8 +94,8 @@ de dois exports (preto/branco) e vê-lo sobre qualquer fundo com `vitral render`
 
 ## Fase 6 — Normalização (só com tração)
 
-* **Registar o chunk público** junto do PNG WG/W3C. Passaria de `vITR` (privado)
-  para, por exemplo, `viTR`.
+* **Registar o chunk público** junto do PNG WG/W3C. Passaria de `vITr` (privado)
+  para, por exemplo, `vitr`.
 * **Propor ao WICG/CSSWG** um mecanismo nativo, por exemplo
   `<img blending="auto">` ou um descodificador que exponha K/W ao compositor. Não
   há código com acesso ao fundo, por isso o risco de *timing* é igual ao do

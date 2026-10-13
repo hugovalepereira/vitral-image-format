@@ -19,7 +19,7 @@
 //!
 //! A Vitral file is a valid PNG: the main image is that native appearance,
 //! which software without Vitral support shows as a fallback, and an ancillary
-//! `vITR` chunk carries the residual needed to recover `K` and `W` exactly. See
+//! `vITr` chunk carries the residual needed to recover `K` and `W` exactly. See
 //! `SPEC.md` for the normative text.
 
 mod blend;

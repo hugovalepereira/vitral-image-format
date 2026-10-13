@@ -345,12 +345,12 @@ fn write(path: &Path, bytes: &[u8]) -> Result<()> {
 fn status_text(status: &VitralStatus) -> String {
     match status {
         VitralStatus::Ok => "Vitral data OK".into(),
-        VitralStatus::NotVitral => "plain PNG (no vITR chunk)".into(),
+        VitralStatus::NotVitral => "plain PNG (no vITr chunk)".into(),
         VitralStatus::FallbackMismatch => {
             "main image was modified after encoding; Vitral data ignored".into()
         }
         VitralStatus::Unsupported(what) => format!("unsupported: {what}; Vitral data ignored"),
-        VitralStatus::Corrupt(what) => format!("corrupt vITR chunk: {what}; Vitral data ignored"),
+        VitralStatus::Corrupt(what) => format!("corrupt vITr chunk: {what}; Vitral data ignored"),
     }
 }
 

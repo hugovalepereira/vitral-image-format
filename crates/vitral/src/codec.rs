@@ -1,13 +1,13 @@
 //! Reading and writing `.vitral.png` files.
 //!
-//! Layout of the `vITR` chunk payload (big-endian):
+//! Layout of the `vITr` chunk payload (big-endian):
 //!
 //! | offset | size | field                                              |
 //! |--------|------|----------------------------------------------------|
 //! | 0      | 1    | major version (0 for drafts)                       |
 //! | 1      | 1    | minor version (1)                                  |
 //! | 2      | 1    | model (1 = affine, black/white)                    |
-//! | 3      | 1    | flags (0)                                          |
+//! | 3      | 1    | flags (bit 0: K and W stored directly)             |
 //! | 4      | 4    | CRC-32 of the main image pixels, as decoded to RGBA8 |
 //! | 8      | ...  | residual: a PNG datastream, 8-bit RGB, width x 2*height |
 //!
@@ -19,9 +19,11 @@ use crate::math::mul255;
 use crate::pngio::{chunks, read_rgb8_exact, read_rgba8_with_info, write_rgb8, write_with_chunk};
 use crate::{Error, RgbaImage, VitralImage};
 
-/// The PNG chunk type: ancillary, private, reserved bit clear, unsafe to copy
-/// (it depends on the image data, so editors must drop it).
-pub const CHUNK_TYPE: [u8; 4] = *b"vITR";
+/// The PNG chunk type: ancillary, private, reserved bit clear, safe to copy.
+/// The chunk depends on the pixel values but checks them itself (the CRC of
+/// the main image), so lossless optimisers may keep it and any change to the
+/// pixels is detected.
+pub const CHUNK_TYPE: [u8; 4] = *b"vITr";
 
 const VERSION_MAJOR: u8 = 0;
 const VERSION_MINOR: u8 = 1;
@@ -34,14 +36,14 @@ const HEADER_LEN: usize = 8;
 pub enum VitralStatus {
     /// The file carries valid Vitral data.
     Ok,
-    /// No `vITR` chunk: a plain PNG.
+    /// No `vITr` chunk: a plain PNG.
     NotVitral,
     /// The main image no longer matches the one the residual was computed
     /// against (the file was edited or recompressed lossily).
     FallbackMismatch,
     /// A version, model or feature this decoder does not support.
     Unsupported(String),
-    /// The `vITR` chunk is damaged.
+    /// The `vITr` chunk is damaged.
     Corrupt(String),
 }
 
@@ -66,7 +68,32 @@ impl Decoded {
 
 /// Encodes a Vitral image. Its native appearance becomes the main PNG image;
 /// the residual makes the file lossless whatever that image is.
+///
+/// K and W are stored either as differences from the native image composited
+/// over black and white (small where the image behaves like a plain PNG), or
+/// directly (smaller where it blends a lot). The encoder keeps the smaller.
 pub fn encode(img: &VitralImage) -> Result<Vec<u8>, Error> {
+    let predicted = encode_with(img, Storage::Predicted)?;
+    let direct = encode_with(img, Storage::Direct)?;
+    Ok(if direct.len() < predicted.len() {
+        direct
+    } else {
+        predicted
+    })
+}
+
+/// How the residual image stores K and W (flag bit 0 of the payload).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Storage {
+    /// `(K - Fk) mod 256` and `(W - Fw) mod 256`.
+    Predicted,
+    /// K and W themselves.
+    Direct,
+}
+
+const FLAG_DIRECT: u8 = 1;
+
+fn encode_with(img: &VitralImage, storage: Storage) -> Result<Vec<u8>, Error> {
     let fallback = &img.native;
     if fallback.width != img.width || fallback.height != img.height {
         return Err(Error::InvalidInput(
@@ -76,19 +103,32 @@ pub fn encode(img: &VitralImage) -> Result<Vec<u8>, Error> {
     let pixels = img.width as usize * img.height as usize;
     let mut residual = vec![0u8; pixels * 6];
     let (top, bottom) = residual.split_at_mut(pixels * 3);
-    for i in 0..pixels {
-        let a = fallback.data[i * 4 + 3];
-        for c in 0..3 {
-            let fk = mul255(fallback.data[i * 4 + c], a);
-            let fw = fk + (255 - a);
-            top[i * 3 + c] = img.black[i * 3 + c].wrapping_sub(fk);
-            bottom[i * 3 + c] = img.white[i * 3 + c].wrapping_sub(fw);
+    match storage {
+        Storage::Direct => {
+            top.copy_from_slice(&img.black);
+            bottom.copy_from_slice(&img.white);
+        }
+        Storage::Predicted => {
+            for i in 0..pixels {
+                let a = fallback.data[i * 4 + 3];
+                for c in 0..3 {
+                    let fk = mul255(fallback.data[i * 4 + c], a);
+                    let fw = fk + (255 - a);
+                    top[i * 3 + c] = img.black[i * 3 + c].wrapping_sub(fk);
+                    bottom[i * 3 + c] = img.white[i * 3 + c].wrapping_sub(fw);
+                }
+            }
         }
     }
     let residual_png = write_rgb8(img.width, img.height * 2, &residual)?;
 
+    let flags = if storage == Storage::Direct {
+        FLAG_DIRECT
+    } else {
+        0
+    };
     let mut payload = Vec::with_capacity(HEADER_LEN + residual_png.len());
-    payload.extend_from_slice(&[VERSION_MAJOR, VERSION_MINOR, MODEL_AFFINE_KW, 0]);
+    payload.extend_from_slice(&[VERSION_MAJOR, VERSION_MINOR, MODEL_AFFINE_KW, flags]);
     payload.extend_from_slice(&crc32fast::hash(&fallback.data).to_be_bytes());
     payload.extend_from_slice(&residual_png);
 
@@ -112,8 +152,8 @@ pub fn decode(bytes: &[u8]) -> Result<Decoded, Error> {
     }
     let status = match (found, count) {
         (None, _) => VitralStatus::NotVitral,
-        (Some(_), n) if n > 1 => VitralStatus::Corrupt("more than one vITR chunk".into()),
-        (Some((_, false)), _) => VitralStatus::Corrupt("vITR chunk CRC mismatch".into()),
+        (Some(_), n) if n > 1 => VitralStatus::Corrupt("more than one vITr chunk".into()),
+        (Some((_, false)), _) => VitralStatus::Corrupt("vITr chunk CRC mismatch".into()),
         _ if source.bit_depth_16 => VitralStatus::Unsupported("16-bit images".into()),
         _ if source.animated => VitralStatus::Unsupported("animated PNG".into()),
         (Some((payload, true)), _) => match parse_payload(payload, &fallback) {
@@ -136,7 +176,7 @@ pub fn decode(bytes: &[u8]) -> Result<Decoded, Error> {
 
 fn parse_payload(payload: &[u8], fallback: &RgbaImage) -> Result<VitralImage, VitralStatus> {
     if payload.len() < HEADER_LEN {
-        return Err(VitralStatus::Corrupt("vITR payload too short".into()));
+        return Err(VitralStatus::Corrupt("vITr payload too short".into()));
     }
     let (major, minor, model) = (payload[0], payload[1], payload[2]);
     if major != VERSION_MAJOR {
@@ -159,9 +199,18 @@ fn parse_payload(payload: &[u8], fallback: &RgbaImage) -> Result<VitralImage, Vi
         .map_err(|e| VitralStatus::Corrupt(format!("residual: {e}")))?;
 
     let pixels = fallback.width as usize * fallback.height as usize;
+    let (top, bottom) = residual.split_at(pixels * 3);
+    if payload[3] & FLAG_DIRECT != 0 {
+        return Ok(VitralImage {
+            width: fallback.width,
+            height: fallback.height,
+            black: top.to_vec(),
+            white: bottom.to_vec(),
+            native: fallback.clone(),
+        });
+    }
     let mut black = vec![0u8; pixels * 3];
     let mut white = vec![0u8; pixels * 3];
-    let (top, bottom) = residual.split_at(pixels * 3);
     for i in 0..pixels {
         let a = fallback.data[i * 4 + 3];
         for c in 0..3 {
@@ -230,6 +279,15 @@ mod tests {
     }
 
     #[test]
+    fn both_storage_modes_round_trip() {
+        let img = sample();
+        for storage in [Storage::Predicted, Storage::Direct] {
+            let decoded = decode(&encode_with(&img, storage).unwrap()).unwrap();
+            assert_eq!(decoded.vitral.unwrap(), img, "{storage:?}");
+        }
+    }
+
+    #[test]
     fn round_trip_with_any_native_image() {
         let native = RgbaImage::filled(16, 16, [255, 0, 255, 77]);
         let img = sample().with_native(native.clone()).unwrap();
@@ -280,7 +338,7 @@ mod tests {
     fn damaged_chunk_is_detected() {
         let bytes = encode(&sample()).unwrap();
         let mut damaged = bytes.clone();
-        // Flip a byte inside the vITR payload (after its 8-byte chunk header).
+        // Flip a byte inside the vITr payload (after its 8-byte chunk header).
         let pos = bytes.windows(4).position(|w| w == CHUNK_TYPE).unwrap() + 4 + 10;
         damaged[pos] ^= 0x55;
         let decoded = decode(&damaged).unwrap();
@@ -321,6 +379,11 @@ mod tests {
         let img = VitralImage::from_layers(8, 8, &[layer]).unwrap();
         let bytes = encode(&img).unwrap();
         let payload = chunks(&bytes).find(|c| c.0 == CHUNK_TYPE).unwrap().1;
+        assert_eq!(
+            payload[3] & FLAG_DIRECT,
+            0,
+            "the encoder should pick the residual"
+        );
         let residual = read_rgb8_exact(&payload[HEADER_LEN..], 8, 16).unwrap();
         assert!(residual.iter().all(|&v| v == 0));
     }

@@ -21,7 +21,7 @@ A Vitral file is a valid PNG datastream:
 * the main image is the image's **native appearance**: each pixel's own colour,
   shown where nothing is behind the image. Any PNG decoder displays it, so it is
   also the **fallback**;
-* an ancillary chunk, `vITR`, carries a **residual** that lets a Vitral decoder
+* an ancillary chunk, `vITr`, carries a **residual** that lets a Vitral decoder
   recover the exact transfer function of every pixel.
 
 ### 1.1 Goals
@@ -119,7 +119,7 @@ rounding direction is unambiguous. An exact integer implementation is
 ## 4. File structure
 
 A Vitral file MUST be a valid PNG datastream (PNG Specification, Third Edition)
-that contains exactly one `vITR` chunk.
+that contains exactly one `vITr` chunk.
 
 ### 4.1 Main image (native appearance and fallback)
 
@@ -144,22 +144,22 @@ Fw = Fk + 255 − Fa           (the fallback over white)
 
 In 0.1, the main image MUST NOT have a bit depth of 16, and the file MUST NOT be an
 animated PNG (an `acTL` chunk is present). Decoders that find either MUST ignore
-the `vITR` chunk.
+the `vITr` chunk.
 
-### 4.2 The `vITR` chunk
+### 4.2 The `vITr` chunk
 
 | Property | Value |
 |---|---|
-| Chunk type | `vITR` (0x76 0x49 0x54 0x52) |
+| Chunk type | `vITr` (0x76 0x49 0x54 0x72) |
 | Ancillary | yes (lowercase first letter): decoders without support skip it |
 | Private | yes (uppercase second letter): not yet registered |
 | Reserved bit | clear (uppercase third letter), as required |
-| Safe to copy | **no** (uppercase fourth letter): the chunk depends on the image data, so editors that change critical chunks MUST drop it |
+| Safe to copy | **yes** (lowercase fourth letter): the chunk depends on the pixel values, but carries its own check of them (§4.4), so tools that recompress or re-encode the image losslessly may keep it, and decoders detect any change to the pixels |
 | Position | after `IHDR`, before `IEND`; encoders SHOULD place it after the last `IDAT` |
 | Multiplicity | exactly one |
 
 If the chunk type is registered as a public chunk in the future, the second
-letter becomes lowercase (`viTR`).
+letter becomes lowercase (`vitr`).
 
 ### 4.3 Payload
 
@@ -170,7 +170,7 @@ All multi-byte integers are big-endian, as in PNG.
 | 0 | 1 | major version | 0 |
 | 1 | 1 | minor version | 1 |
 | 2 | 1 | model | 1 = affine, black/white (this document) |
-| 3 | 1 | flags | 0 |
+| 3 | 1 | flags | bit 0: residual storage (§4.5); other bits 0 |
 | 4 | 4 | fallback CRC | CRC-32 of the normalised fallback (§4.4) |
 | 8 | *n* | residual | a complete PNG datastream (§4.5) |
 
@@ -178,8 +178,9 @@ All multi-byte integers are big-endian, as in PNG.
   Minor versions within a major version are backward compatible.
 * A decoder MUST ignore the chunk if the model is unknown. Model values 2–255 are
   reserved.
-* Encoders MUST write flags as 0. Decoders MUST ignore flag bits they do not
-  understand.
+* Flag bit 0 (value 1) selects how the residual stores K and W (§4.5).
+  Encoders MUST write the other bits as 0. Decoders MUST ignore flag bits they
+  do not understand.
 
 ### 4.4 Fallback CRC
 
@@ -188,7 +189,7 @@ the bytes of the normalised RGBA8 fallback: rows top to bottom, pixels left to
 right, bytes in R, G, B, A order, with no filter bytes.
 
 It detects files whose main image was re-encoded with changes (lossy
-optimisation, editing) by software that kept the `vITR` chunk. When it does not
+optimisation, editing) by software that kept the `vITr` chunk. When it does not
 match, the decoder MUST ignore the chunk.
 
 ### 4.5 Residual
@@ -201,8 +202,11 @@ The residual field is a PNG datastream (signature included) with:
 * any interlace method.
 
 Rows 0 to H − 1 hold **DK**; rows H to 2H − 1 hold **DW**, where H is the main
-image height. The residual MAY contain ancillary chunks, which decoders ignore. It
-MUST NOT contain a `vITR` chunk.
+image height. With flag bit 0 clear, DK and DW are differences from the main image
+(§5); with flag bit 0 set, they are K and W themselves.
+
+The residual MAY contain ancillary chunks, which decoders ignore. It
+MUST NOT contain a `vITr` chunk.
 
 Decoders MUST check the residual's `IHDR` (type, depth, dimensions) before
 decompressing it, so that a hostile header cannot force a large allocation.
@@ -211,12 +215,17 @@ decompressing it, so that a hostile header cannot force a large allocation.
 
 ## 5. Encoding
 
-Given K and W (8-bit, per pixel and channel) and the native appearance F:
+Given K and W (8-bit, per pixel and channel) and the native appearance F, the
+residual holds either differences (flag bit 0 clear):
 
 ```
 DK = (K − Fk) mod 256
 DW = (W − Fw) mod 256
 ```
+
+or K and W directly (flag bit 0 set: DK = K, DW = W). Differences are near zero
+where the image behaves like a plain PNG; direct storage compresses better where
+it blends heavily. The reference encoder writes both and keeps the smaller.
 
 The residual makes the file lossless whatever F is. F decides what is shown over
 transparent areas and by software without Vitral support, and affects the file
@@ -248,7 +257,7 @@ exactly, so their residual is zero.
 
 1. Decode the main image and normalise it to RGBA8 (§4.1). If this fails, the file
    is not a usable PNG.
-2. Find the `vITR` chunk. If there is none, more than one, or its chunk CRC is
+2. Find the `vITr` chunk. If there is none, more than one, or its chunk CRC is
    wrong, treat the file as a plain PNG.
 3. Apply the version, model and flag rules (§4.3) and the restrictions of §4.1.
 4. Compare the fallback CRC (§4.4). On mismatch, treat the file as a plain PNG.
@@ -256,8 +265,10 @@ exactly, so their residual is zero.
 6. For every pixel and channel:
 
 ```
-K = (Fk + DK) mod 256
+K = (Fk + DK) mod 256        (flag bit 0 clear)
 W = (Fw + DW) mod 256
+
+K = DK,  W = DW              (flag bit 0 set)
 ```
 
 "Treat the file as a plain PNG" means: use K = Fk and W = Fw, which is exactly
@@ -369,7 +380,7 @@ Tools SHOULD warn when a mode is not captured.
 
 * Recommended file name extension: **`.vitral.png`**. The media type is
   `image/png`.
-* Software MUST identify Vitral files by the presence of a valid `vITR` chunk, not
+* Software MUST identify Vitral files by the presence of a valid `vITr` chunk, not
   by the file name.
 
 ---
@@ -383,7 +394,7 @@ Tools SHOULD warn when a mode is not captured.
 * Decoders MUST bound memory by the dimensions in the main `IHDR` and MUST verify
   the residual's dimensions before decompressing it (§4.5).
 * Decoders MUST treat a damaged chunk as absent, never as a fatal error, so that
-  a hostile `vITR` cannot prevent the fallback from displaying.
+  a hostile `vITr` cannot prevent the fallback from displaying.
 
 ---
 

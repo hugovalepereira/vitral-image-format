@@ -15,7 +15,7 @@ podem voltar a ser consideradas.
   * Ficheiros com dupla extensão **`nome.vitral.png`**, à semelhança dos `.9.png`
     do Android.
   * Tipo MIME: `image/png`.
-  * Chunk PNG: `vITR`.
+  * Chunk PNG: `vITr`.
 * **Alternativas guardadas**: **Gel** (o filtro de cor da iluminação de palco, que
   é um multiply sobre a luz), Scrim, Mixel. Evitar **Glaze**, que é uma ferramenta
   anti-IA muito conhecida entre artistas.
@@ -26,7 +26,7 @@ podem voltar a ser consideradas.
   "ficheiro partido".
 * **Decisão**: o ficheiro é um PNG válido.
   * A imagem principal (`IDAT`) é o **fallback** que qualquer programa mostra.
-  * Um chunk auxiliar `vITR` guarda o que falta para reconstruir K e W.
+  * Um chunk auxiliar `vITr` guarda o que falta para reconstruir K e W.
   * Um CRC da imagem principal deteta recompressões ou edições.
 * **Riscos aceites**: CDNs e otimizadores que retiram chunks desconhecidos fazem a
   imagem cair para o fallback. Isto é degradação, não erro.
