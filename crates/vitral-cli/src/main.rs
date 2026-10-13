@@ -255,7 +255,8 @@ fn run(command: Command) -> Result<()> {
                 .into());
             }
             let (mut max, mut sum, mut over) = (0u8, 0u64, 0u64);
-            for (pa, pb) in a.data.chunks_exact(4).zip(b.data.chunks_exact(4)) {
+            let (pixels_a, pixels_b) = (a.data.as_chunks::<4>().0, b.data.as_chunks::<4>().0);
+            for (pa, pb) in pixels_a.iter().zip(pixels_b) {
                 for c in 0..3 {
                     let d = pa[c].abs_diff(pb[c]);
                     max = max.max(d);

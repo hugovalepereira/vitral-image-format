@@ -3,6 +3,7 @@ name = "vitral-cli"
 description = "Command-line tool to create, inspect and render Vitral images"
 version.workspace = true
 edition.workspace = true
+rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
 authors.workspace = true

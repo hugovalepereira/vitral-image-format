@@ -12,7 +12,8 @@ use crate::{RgbaImage, VitralImage};
 pub fn least_squares_fallback(img: &VitralImage) -> RgbaImage {
     let pixels = img.width as usize * img.height as usize;
     let mut data = Vec::with_capacity(pixels * 4);
-    for (k, w) in img.black.chunks_exact(3).zip(img.white.chunks_exact(3)) {
+    let (black, white) = (img.black.as_chunks::<3>().0, img.white.as_chunks::<3>().0);
+    for (k, w) in black.iter().zip(white) {
         let t: [i32; 3] = [0, 1, 2].map(|c| w[c] as i32 - k[c] as i32);
         // Shared transmission: the mean of the per-channel transmissions.
         let sum = t[0] + t[1] + t[2];

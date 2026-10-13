@@ -84,7 +84,7 @@ impl VitralImage {
         }
         let flatten_over = |img: &RgbaImage, bg: u8| -> Vec<u8> {
             let mut out = Vec::with_capacity(img.data.len() / 4 * 3);
-            for px in img.data.chunks_exact(4) {
+            for px in img.data.as_chunks::<4>().0 {
                 let a = px[3];
                 for &c in &px[..3] {
                     out.push(mul255(c, a) + mul255(bg, 255 - a));
@@ -179,8 +179,9 @@ impl VitralImage {
     /// Classifies pixels as identity, plain-PNG-like, or Vitral-only.
     pub fn stats(&self) -> PixelStats {
         let mut stats = PixelStats::default();
-        for (k, w) in self.black.chunks_exact(3).zip(self.white.chunks_exact(3)) {
-            if k == [0, 0, 0] && w == [255, 255, 255] {
+        let (black, white) = (self.black.as_chunks::<3>().0, self.white.as_chunks::<3>().0);
+        for (k, w) in black.iter().zip(white) {
+            if *k == [0, 0, 0] && *w == [255, 255, 255] {
                 stats.identity += 1;
                 continue;
             }
@@ -287,8 +288,8 @@ mod tests {
         assert_eq!(bd, before);
         let planes = img.render_planes();
         assert!(!planes.uses_difference);
-        assert!(planes.screen.chunks_exact(4).all(|p| p[3] == 0));
-        assert!(planes.multiply.chunks_exact(4).all(|p| p[3] == 0));
+        assert!(planes.screen.as_chunks::<4>().0.iter().all(|p| p[3] == 0));
+        assert!(planes.multiply.as_chunks::<4>().0.iter().all(|p| p[3] == 0));
     }
 
     #[test]

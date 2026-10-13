@@ -186,7 +186,7 @@ fn from_fallback(fallback: &RgbaImage) -> VitralImage {
     let pixels = fallback.width as usize * fallback.height as usize;
     let mut black = Vec::with_capacity(pixels * 3);
     let mut white = Vec::with_capacity(pixels * 3);
-    for px in fallback.data.chunks_exact(4) {
+    for px in fallback.data.as_chunks::<4>().0 {
         for &c in &px[..3] {
             let fk = mul255(c, px[3]);
             black.push(fk);
