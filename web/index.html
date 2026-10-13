@@ -190,6 +190,8 @@ th { font-weight: 600; }
 .slot label { font-weight: 600; font-size: var(--step--1); }
 .slot input { font: inherit; font-size: var(--step--1); max-width: 100%; color: var(--muted); }
 .slot img { width: 100%; height: auto; border-radius: 4px; display: block; }
+.slot .optional { font-weight: 400; color: var(--muted); }
+#transparent-preview { background: repeating-conic-gradient(var(--check-a) 0 25%, var(--check-b) 0 50%) 0 0 / 14px 14px; }
 .result .stage { aspect-ratio: auto; display: grid; place-items: center; padding: 6%; }
 .result .stage > div { width: 70%; }
 .result img { width: 100%; height: auto; display: block; }
@@ -278,8 +280,8 @@ footer { max-width: 72rem; margin: 4rem auto 0; padding-top: 1.5rem; border-top:
   <section class="how" aria-labelledby="make-title">
     <div class="prose">
       <p class="eyebrow">Make one</p>
-      <h2 id="make-title">Export twice, from any tool</h2>
-      <p>Put a black background behind your artwork and export a PNG, then switch it to white and export again. Layers keep their blend modes against the background, so the two exports hold everything Vitral needs. The example below is loaded with the stained glass exports.</p>
+      <h2 id="make-title">Export from any tool</h2>
+      <p>Put a black background behind your artwork and export a PNG, then switch it to white and export again. Layers keep their blend modes against the background, so these two exports hold the blending. A third export with a transparent background records each pixel's own colour, shown where nothing is behind the image and by software without Vitral support. The example below is loaded with the stained glass exports.</p>
     </div>
     <div class="maker">
       <div class="slot">
@@ -291,6 +293,11 @@ footer { max-width: 72rem; margin: 4rem auto 0; padding-top: 1.5rem; border-top:
         <label for="white-input">Artwork over white</label>
         <input type="file" id="white-input" accept="image/png">
         <img id="white-preview" alt="Artwork exported over a white background">
+      </div>
+      <div class="slot">
+        <label for="transparent-input">Artwork over transparency <span class="optional">(optional)</span></label>
+        <input type="file" id="transparent-input" accept="image/png">
+        <img id="transparent-preview" alt="Artwork exported over a transparent background">
       </div>
       <div class="slot result">
         <span class="eyebrow">Result, over the spectrum</span>
@@ -437,6 +444,7 @@ async function showBreakdown(sample) {
   const tiles = [
     ['K', 'over black', p.overBlack()],
     ['W', 'over white', p.overWhite()],
+    ['native', 'over nothing', p.native()],
   ];
   let n = 1;
   if (p.usesDifference) tiles.push([`${n++} difference`, 'inverts where W < K', p.difference()]);
@@ -466,7 +474,7 @@ document.getElementById('copy-snippet').addEventListener('click', async (e) => {
 });
 
 // Encoder
-const inputs = { black: null, white: null };
+const inputs = { black: null, white: null, transparent: null };
 let resultUrl;
 
 async function pixelsOf(blob) {
@@ -493,11 +501,17 @@ async function runEncoder() {
   if (!inputs.black || !inputs.white) return;
   status.classList.remove('error');
   try {
-    const [b, w] = await Promise.all([pixelsOf(inputs.black.blob), pixelsOf(inputs.white.blob)]);
-    if (b.w !== w.w || b.h !== w.h) {
-      throw new Error(`The two exports must be the same size (${b.w}×${b.h} and ${w.w}×${w.h}).`);
+    const [b, w, t] = await Promise.all([
+      pixelsOf(inputs.black.blob),
+      pixelsOf(inputs.white.blob),
+      inputs.transparent ? pixelsOf(inputs.transparent.blob) : null,
+    ]);
+    for (const other of [w, t].filter(Boolean)) {
+      if (other.w !== b.w || other.h !== b.h) {
+        throw new Error(`All exports must be the same size (${b.w}×${b.h} and ${other.w}×${other.h}).`);
+      }
     }
-    const bytes = await encode(b.w, b.h, b.data, w.data);
+    const bytes = await encode(b.w, b.h, b.data, w.data, t?.data);
     if (resultUrl) URL.revokeObjectURL(resultUrl);
     resultUrl = URL.createObjectURL(new Blob([bytes], { type: 'image/png' }));
     const holder = document.createElement('div');
@@ -520,7 +534,7 @@ async function runEncoder() {
   }
 }
 
-for (const which of ['black', 'white']) {
+for (const which of ['black', 'white', 'transparent']) {
   document.getElementById(`${which}-input`).addEventListener('change', (e) => {
     const file = e.target.files[0];
     if (file) setInput(which, file, file.name);
@@ -529,10 +543,13 @@ for (const which of ['black', 'white']) {
 
 render();
 const source = (which) => `../examples/sources/stained-glass-over-${which}.png`;
-const [blackBlob, whiteBlob] = await Promise.all(['black', 'white'].map(async (w) => (await fetch(source(w))).blob()));
-inputs.black = { blob: blackBlob, name: 'stained-glass-over-black.png' };
-await setInput('white', whiteBlob, 'stained-glass-over-white.png');
-document.getElementById('black-preview').src = URL.createObjectURL(blackBlob);
+const kinds = ['black', 'white', 'transparent'];
+const blobs = await Promise.all(kinds.map(async (k) => (await fetch(source(k))).blob()));
+kinds.forEach((k, i) => {
+  inputs[k] = { blob: blobs[i], name: `stained-glass-over-${k}.png` };
+  document.getElementById(`${k}-preview`).src = URL.createObjectURL(blobs[i]);
+});
+await runEncoder();
 </script>
 </body>
 </html>

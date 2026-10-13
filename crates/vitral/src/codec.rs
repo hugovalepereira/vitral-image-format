@@ -8,10 +8,13 @@
 //! | 1      | 1    | minor version (1)                                  |
 //! | 2      | 1    | model (1 = affine, black/white)                    |
 //! | 3      | 1    | flags (0)                                          |
-//! | 4      | 4    | CRC-32 of the fallback pixels, as decoded to RGBA8 |
+//! | 4      | 4    | CRC-32 of the main image pixels, as decoded to RGBA8 |
 //! | 8      | ...  | residual: a PNG datastream, 8-bit RGB, width x 2*height |
+//!
+//! The main PNG image is the native appearance (how the artwork looks with
+//! nothing behind it), which is also what software without Vitral support
+//! shows: the fallback.
 
-use crate::fallback::least_squares_fallback;
 use crate::math::mul255;
 use crate::pngio::{chunks, read_rgb8_exact, read_rgba8_with_info, write_rgb8, write_with_chunk};
 use crate::{Error, RgbaImage, VitralImage};
@@ -61,18 +64,13 @@ impl Decoded {
     }
 }
 
-/// Encodes a Vitral image with the default least-squares fallback.
+/// Encodes a Vitral image. Its native appearance becomes the main PNG image;
+/// the residual makes the file lossless whatever that image is.
 pub fn encode(img: &VitralImage) -> Result<Vec<u8>, Error> {
-    encode_with_fallback(img, &least_squares_fallback(img))
-}
-
-/// Encodes a Vitral image with a caller-chosen fallback (e.g. a render over the
-/// background the artwork will most often be seen on). The residual makes the
-/// result lossless whatever the fallback is.
-pub fn encode_with_fallback(img: &VitralImage, fallback: &RgbaImage) -> Result<Vec<u8>, Error> {
+    let fallback = &img.native;
     if fallback.width != img.width || fallback.height != img.height {
         return Err(Error::InvalidInput(
-            "fallback size differs from image size".into(),
+            "native image size differs from image size".into(),
         ));
     }
     let pixels = img.width as usize * img.height as usize;
@@ -178,6 +176,7 @@ fn parse_payload(payload: &[u8], fallback: &RgbaImage) -> Result<VitralImage, Vi
         height: fallback.height,
         black,
         white,
+        native: fallback.clone(),
     })
 }
 
@@ -198,6 +197,7 @@ fn from_fallback(fallback: &RgbaImage) -> VitralImage {
         height: fallback.height,
         black,
         white,
+        native: fallback.clone(),
     }
 }
 
@@ -230,21 +230,21 @@ mod tests {
     }
 
     #[test]
-    fn round_trip_with_custom_fallback() {
-        let img = sample();
-        let fallback = RgbaImage::filled(img.width, img.height, [255, 0, 255, 77]);
-        let bytes = encode_with_fallback(&img, &fallback).unwrap();
+    fn round_trip_with_any_native_image() {
+        let native = RgbaImage::filled(16, 16, [255, 0, 255, 77]);
+        let img = sample().with_native(native.clone()).unwrap();
+        let bytes = encode(&img).unwrap();
         let decoded = decode(&bytes).unwrap();
-        assert_eq!(decoded.fallback, fallback);
+        assert_eq!(decoded.fallback, native);
         assert_eq!(decoded.vitral.unwrap(), img);
     }
 
     #[test]
-    fn output_is_a_valid_png_with_the_fallback_as_main_image() {
+    fn output_is_a_valid_png_with_the_native_image_as_main_image() {
         let img = sample();
         let bytes = encode(&img).unwrap();
         let main = read_rgba8(&bytes).unwrap();
-        assert_eq!(main, least_squares_fallback(&img));
+        assert_eq!(main, img.native);
     }
 
     #[test]
@@ -328,7 +328,7 @@ mod tests {
     #[test]
     fn residual_with_wrong_dimensions_is_rejected() {
         let img = sample();
-        let fallback = least_squares_fallback(&img);
+        let fallback = img.native.clone();
         // A residual that claims to be far larger than the image.
         let mut payload = vec![VERSION_MAJOR, VERSION_MINOR, MODEL_AFFINE_KW, 0];
         payload.extend_from_slice(&crc32fast::hash(&fallback.data).to_be_bytes());

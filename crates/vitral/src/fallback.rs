@@ -1,18 +1,18 @@
-//! Default fallback image: the plain RGBA image that best approximates a Vitral
-//! image for software that ignores the `vITR` chunk.
+//! Approximate native appearance, for Vitral images built only from black and
+//! white captures (which do not record how the artwork looks over nothing).
 
-use crate::{RgbaImage, VitralImage};
+use crate::RgbaImage;
 
 /// Computes, per pixel, the straight-alpha RGBA colour whose normal
 /// compositing is closest (least squares over uniformly distributed backdrop
-/// values) to the Vitral transfer function.
+/// values) to the transfer function given by `black` (K) and `white` (W).
 ///
 /// Pixels that already behave like plain PNG pixels are reproduced exactly, so
 /// their residual is zero and costs almost nothing to store.
-pub fn least_squares_fallback(img: &VitralImage) -> RgbaImage {
-    let pixels = img.width as usize * img.height as usize;
+pub fn least_squares_native(width: u32, height: u32, black: &[u8], white: &[u8]) -> RgbaImage {
+    let pixels = width as usize * height as usize;
     let mut data = Vec::with_capacity(pixels * 4);
-    let (black, white) = (img.black.as_chunks::<3>().0, img.white.as_chunks::<3>().0);
+    let (black, white) = (black.as_chunks::<3>().0, white.as_chunks::<3>().0);
     for (k, w) in black.iter().zip(white) {
         let t: [i32; 3] = [0, 1, 2].map(|c| w[c] as i32 - k[c] as i32);
         // Shared transmission: the mean of the per-channel transmissions.
@@ -32,8 +32,8 @@ pub fn least_squares_fallback(img: &VitralImage) -> RgbaImage {
         data.push(alpha as u8);
     }
     RgbaImage {
-        width: img.width,
-        height: img.height,
+        width,
+        height,
         data,
     }
 }
@@ -49,8 +49,7 @@ mod tests {
             for c in [0u8, 1, 77, 128, 200, 255] {
                 let k = mul255(c, a);
                 let w = k + (255 - a);
-                let img = VitralImage::new(1, 1, vec![k, k, k], vec![w, w, w]).unwrap();
-                let f = least_squares_fallback(&img);
+                let f = least_squares_native(1, 1, &[k, k, k], &[w, w, w]);
                 let fa = f.data[3];
                 let fk = mul255(f.data[0], fa);
                 assert_eq!((fk, fa), (k, a), "c={c} a={a}");

@@ -39,12 +39,13 @@ export async function decode(bytes) {
 }
 
 /**
- * Encodes a .vitral.png from two RGBA8 renders of the same artwork, one over
- * black and one over white. Returns the file bytes.
+ * Encodes a .vitral.png from RGBA8 renders of the same artwork: over black,
+ * over white and, optionally, over transparency (its look with nothing behind
+ * it; approximated when omitted). Returns the file bytes.
  */
-export async function encode(width, height, overBlack, overWhite) {
+export async function encode(width, height, overBlack, overWhite, overTransparent) {
   await loadWasm();
-  return encodeFromRenders(width, height, overBlack, overWhite);
+  return encodeFromRenders(width, height, overBlack, overWhite, overTransparent);
 }
 
 /** Puts RGBA8 pixels into a new canvas of the given size. */

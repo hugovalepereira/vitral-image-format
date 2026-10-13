@@ -18,7 +18,9 @@ tools do with blend modes, carried inside the file so that it survives export.
 
 A Vitral file is a valid PNG datastream:
 
-* the main image is a **fallback** that any PNG decoder displays;
+* the main image is the image's **native appearance**: each pixel's own colour,
+  shown where nothing is behind the image. Any PNG decoder displays it, so it is
+  also the **fallback**;
 * an ancillary chunk, `vITR`, carries a **residual** that lets a Vitral decoder
   recover the exact transfer function of every pixel.
 
@@ -67,11 +69,28 @@ channels. Every PNG image is therefore a Vitral image; Vitral adds per-channel
 transmission (coloured filters), emission without occlusion (light), and
 inversion.
 
-### 2.3 Backdrop assumptions
+### 2.3 Native appearance and transparent backdrops
 
-The model is defined for an **opaque** backdrop. Results over a non-opaque
-backdrop are undefined in 0.1. A renderer SHOULD flatten the backdrop first; if it
-cannot, it MAY display the fallback image instead.
+Every pixel also has a **native appearance** *N*: a straight-alpha RGBA colour,
+which is how the pixel looks with nothing behind it. It plays the role of a
+layer's own colour in a design tool, where a layer in any blend mode shows its
+own colour over a transparent canvas.
+
+The native appearance cannot be derived from K and W (for example, multiply with
+a colour *s* and hard light with *s*/2 have the same K and W but different own
+colours), so it is stored: it is the main PNG image (§4.1).
+
+Over a backdrop pixel with straight colour *b* and alpha *a*b, the result is, per
+channel, with *f*(*b*) the transfer function of §2.1 and premultiplied colours:
+
+```
+colour = a_b · f(b) + (1 − a_b) · N_a · N_c
+alpha  = a_b + (1 − a_b) · N_a
+```
+
+This reduces to §2.1 over an opaque backdrop (*a*b = 1) and to the native
+appearance over nothing (*a*b = 0), and it has the same structure as the W3C
+compositing formula for a blend mode over a partly transparent backdrop.
 
 ### 2.4 Colour space
 
@@ -102,9 +121,10 @@ rounding direction is unambiguous. An exact integer implementation is
 A Vitral file MUST be a valid PNG datastream (PNG Specification, Third Edition)
 that contains exactly one `vITR` chunk.
 
-### 4.1 Main image (fallback)
+### 4.1 Main image (native appearance and fallback)
 
-The main image (`IHDR`, `PLTE`, `tRNS`, `IDAT`) is the fallback. It MAY use any
+The main image (`IHDR`, `PLTE`, `tRNS`, `IDAT`) is the native appearance *N*
+(§2.3), which software without Vitral support displays as a fallback. It MAY use any
 colour type, with a bit depth of 8 or less. Before use, decoders normalise it to
 **RGBA8**:
 
@@ -114,8 +134,8 @@ colour type, with a bit depth of 8 or less. Before use, decoders normalise it to
 * a missing alpha channel is filled with 255;
 * no gamma correction or colour management is applied to the samples.
 
-Call the normalised fallback *F*, with channels *F*c and *F*a. Define, per
-channel:
+Call the normalised main image *F* (the native appearance), with channels *F*c
+and *F*a. Define, per channel:
 
 ```
 Fk = mul255(Fc, Fa)          (the fallback over black)
@@ -191,23 +211,25 @@ decompressing it, so that a hostile header cannot force a large allocation.
 
 ## 5. Encoding
 
-Given K and W (8-bit, per pixel and channel) and a fallback F chosen by the
-encoder:
+Given K and W (8-bit, per pixel and channel) and the native appearance F:
 
 ```
 DK = (K − Fk) mod 256
 DW = (W − Fw) mod 256
 ```
 
-Any fallback yields a lossless file; the choice only affects what software
-without Vitral support shows, and the file size (the residual is zero wherever
-the fallback is already exact).
+The residual makes the file lossless whatever F is. F decides what is shown over
+transparent areas and by software without Vitral support, and affects the file
+size: the residual is zero wherever F, composited normally, already matches K
+and W.
 
-### 5.1 Default fallback (informative)
+### 5.1 When the native appearance is unknown (informative)
 
-The reference encoder picks, per pixel, the RGBA colour whose normal compositing
-best approximates the transfer function in the least-squares sense over a
-uniformly distributed backdrop value:
+Encoders SHOULD use the real native appearance: the artwork composited over
+nothing (in a design tool, an export with a transparent background). When only K
+and W are available, the reference encoder approximates it with the RGBA colour
+whose normal compositing best matches the transfer function in the
+least-squares sense over a uniformly distributed backdrop value:
 
 ```
 t_c   = W_c − K_c
@@ -257,6 +279,10 @@ r = round((255·K + (W − K)·B) / 255)
 The numerator is always in 0–65025 and the quotient is never exactly halfway
 between two integers. Integer form: `r = (255·K + (W − K)·B + 127) div 255`.
 
+Over a backdrop pixel that is not opaque, apply §2.3 in real arithmetic and
+round the straight colour and the alpha to the nearest 8-bit value. A result
+with alpha 0 has colour 0.
+
 ### 7.2 Blend-mode stack (recommended)
 
 Hosts that offer blend modes but no custom compositing (CSS, Canvas 2D, SVG,
@@ -288,6 +314,11 @@ transfer function of §2.1.
   combinations of K, W and B.
 * The layers blend with whatever the host considers the backdrop. In CSS, that is
   the content of the same stacking context.
+* The stack reproduces §2.1 over **opaque** backdrops only. Over transparent
+  areas, blend-mode hosts show the layers' own colours rather than the native
+  appearance of §2.3. Web pages always have an opaque backdrop; in design tools,
+  place Vitral images over a filled background, or use a renderer that
+  implements §7.1.
 
 ### 7.3 Alternative stack (informative)
 
@@ -306,17 +337,22 @@ src0 = min(K, W) and src1 = |W − K|.
 
 ## 8. Authoring (informative)
 
-### 8.1 From two exports
+### 8.1 From exports
 
 Render the artwork over a black background and over a white background, with
 every layer's blend mode active against that background, and export both as
 PNG. The two exports are K and W directly. Any pixel with alpha below 255 in an
 export is first composited over that export's background.
 
+Then export the artwork with a transparent background. That export is the native
+appearance N. Without it, the encoder approximates N (§5.1).
+
 ### 8.2 From layers
 
-A layer stack is flattened twice, over black and over white. The result is exact
-for modes that are affine in the backdrop and approximate for the others:
+A layer stack is flattened three times: over black (K), over white (W) and over
+nothing (N), using the W3C formulas for blending over a partly transparent
+backdrop. N is always exact; K and W are exact for modes that are affine in the
+backdrop and approximate for the others:
 
 | Mode (W3C name) | Captured by 0.1 |
 |---|---|
@@ -361,7 +397,7 @@ Tools SHOULD warn when a mode is not captured.
   levels of §7.1.
 
 The `examples/` directory contains test files. The reference implementation's
-command-line tool reproduces them: `vitral decode` writes K, W, the fallback and
+command-line tool reproduces them: `vitral decode` writes K, W, the native image and
 the three layers; `vitral render` applies §7.1; `vitral diff` compares renders.
 
 ---

@@ -159,21 +159,47 @@ impl BlendMode {
         }
     }
 
-    /// Result of placing a source pixel (straight alpha `a`) over an opaque
-    /// backdrop pixel.
-    pub fn apply(self, cb: [f32; 3], cs: [f32; 3], a: f32) -> [f32; 3] {
-        let blended = match self {
-            BlendMode::PlusLighter => return cb.map_with(cs, |b, s| (b + a * s).min(1.0)),
-            BlendMode::PlusDarker => {
-                return cb.map_with(cs, |b, s| (b - a * (1.0 - s)).max(0.0));
+    /// Places a source pixel (straight colour `cs`, alpha `a`) over a backdrop
+    /// pixel (straight colour `cb`, alpha `ab`): blend, then source-over, as in
+    /// W3C Compositing. Returns the straight colour and alpha of the result.
+    ///
+    /// Where the backdrop is transparent the source shows its own colour, so a
+    /// layer over nothing looks the same in every mode.
+    pub fn apply(self, cb: [f32; 3], ab: f32, cs: [f32; 3], a: f32) -> ([f32; 3], f32) {
+        let ao_add = (a + ab).min(1.0);
+        match self {
+            BlendMode::PlusLighter => {
+                let co = cb.map_with(cs, |b, s| (ab * b + a * s).min(1.0));
+                return (unpremultiply(co, ao_add), ao_add);
             }
+            BlendMode::PlusDarker => {
+                // Darkness (alpha minus premultiplied colour) adds up.
+                let co = cb.map_with(cs, |b, s| {
+                    (ao_add - a * (1.0 - s) - ab * (1.0 - b)).max(0.0)
+                });
+                return (unpremultiply(co, ao_add), ao_add);
+            }
+            _ => {}
+        }
+        let blended = match self {
             BlendMode::Hue => set_lum(set_sat(cs, sat(cb)), lum(cb)),
             BlendMode::Saturation => set_lum(set_sat(cb, sat(cs)), lum(cb)),
             BlendMode::Color => set_lum(cs, lum(cb)),
             BlendMode::Luminosity => set_lum(cb, lum(cs)),
             mode => cb.map_with(cs, |b, s| mode.separable(b, s)),
         };
-        cb.map_with(blended, |b, m| (1.0 - a) * b + a * m)
+        let mixed = cs.map_with(blended, |s, m| (1.0 - ab) * s + ab * m);
+        let ao = a + ab * (1.0 - a);
+        let co = cb.map_with(mixed, |b, m| a * m + (1.0 - a) * ab * b);
+        (unpremultiply(co, ao), ao)
+    }
+}
+
+fn unpremultiply(co: [f32; 3], ao: f32) -> [f32; 3] {
+    if ao <= 0.0 {
+        [0.0; 3]
+    } else {
+        co.map(|v| (v / ao).clamp(0.0, 1.0))
     }
 }
 
@@ -281,14 +307,15 @@ impl Layer {
     }
 }
 
-/// Composites `layers` (bottom first) over a uniform grey `backdrop` level and
-/// returns RGB8. Intermediate results are kept in floating point and clamped
-/// to `[0, 1]` after each layer, like a design tool would.
-pub(crate) fn flatten(width: u32, height: u32, layers: &[Layer], backdrop: f32) -> Vec<u8> {
+/// Composites `layers` (bottom first) over a uniform backdrop, given as a
+/// straight RGBA colour, and returns RGBA8. Intermediate results are kept in
+/// floating point and clamped to `[0, 1]` after each layer, like a design tool.
+pub(crate) fn flatten(width: u32, height: u32, layers: &[Layer], backdrop: [f32; 4]) -> Vec<u8> {
     let pixels = width as usize * height as usize;
-    let mut out = Vec::with_capacity(pixels * 3);
+    let mut out = Vec::with_capacity(pixels * 4);
     for i in 0..pixels {
-        let mut acc = [backdrop; 3];
+        let mut colour = [backdrop[0], backdrop[1], backdrop[2]];
+        let mut alpha = backdrop[3];
         for layer in layers {
             let px = &layer.image.data[i * 4..i * 4 + 4];
             let a = to_unit(px[3]) * layer.opacity;
@@ -296,11 +323,21 @@ pub(crate) fn flatten(width: u32, height: u32, layers: &[Layer], backdrop: f32) 
                 continue;
             }
             let cs = [to_unit(px[0]), to_unit(px[1]), to_unit(px[2])];
-            acc = layer.mode.apply(acc, cs, a).map(|v| v.clamp(0.0, 1.0));
+            (colour, alpha) = layer.mode.apply(colour, alpha, cs, a);
         }
-        out.extend(acc.map(to_u8));
+        out.extend(colour.map(to_u8));
+        out.push(to_u8(alpha));
     }
     out
+}
+
+/// The RGB channels of an RGBA8 buffer.
+pub(crate) fn rgb_of(rgba: &[u8]) -> Vec<u8> {
+    rgba.as_chunks::<4>()
+        .0
+        .iter()
+        .flat_map(|&[r, g, b, _]| [r, g, b])
+        .collect()
 }
 
 #[cfg(test)]
@@ -330,7 +367,9 @@ mod tests {
                     let b = b as u8;
                     let mut bd = solid([b, b, b, 255]);
                     img.composite_onto(&mut bd, 0, 0);
-                    let direct = flatten(1, 1, std::slice::from_ref(&layer), to_unit(b));
+                    let v = to_unit(b);
+                    let direct =
+                        rgb_of(&flatten(1, 1, std::slice::from_ref(&layer), [v, v, v, 1.0]));
                     for (got, want) in bd.data[..3].iter().zip(&direct) {
                         let err = got.abs_diff(*want);
                         assert!(err <= 1, "{} src={src:?} b={b} err={err}", mode.name());
@@ -354,7 +393,7 @@ mod tests {
             let changes = sources.iter().any(|&src| {
                 let layer = Layer::new(solid(src), mode);
                 let img = VitralImage::from_layers(1, 1, &[layer]).unwrap();
-                img != VitralImage::identity(1, 1)
+                img.black != [0, 0, 0] || img.white != [255, 255, 255]
             });
             let lost = mode.fidelity() == Fidelity::Lost;
             if mode == BlendMode::Luminosity {
@@ -363,6 +402,29 @@ mod tests {
             } else {
                 assert_eq!(lost, !changes, "{}", mode.name());
             }
+        }
+    }
+
+    /// Over nothing, a layer shows its own colour whatever its blend mode.
+    #[test]
+    fn layers_over_transparency_show_their_own_colour() {
+        let src = [200, 40, 90, 170];
+        for mode in BlendMode::ALL {
+            let native = flatten(1, 1, &[Layer::new(solid(src), mode)], [0.0; 4]);
+            assert_eq!(native, src, "{}", mode.name());
+        }
+    }
+
+    /// Over an opaque backdrop the alpha-aware formula reduces to the usual
+    /// `(1 - a) * backdrop + a * blend`.
+    #[test]
+    fn opaque_backdrop_matches_the_simple_formula() {
+        let (cb, cs, a) = ([0.2, 0.5, 0.9], [0.7, 0.1, 0.4], 0.6);
+        let (out, alpha) = BlendMode::Multiply.apply(cb, 1.0, cs, a);
+        assert_eq!(alpha, 1.0);
+        for c in 0..3 {
+            let want = (1.0 - a) * cb[c] + a * cb[c] * cs[c];
+            assert!((out[c] - want).abs() < 1e-6);
         }
     }
 

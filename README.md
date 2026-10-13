@@ -7,8 +7,9 @@ tints, lightens, darkens or inverts whatever is behind it, pixel by pixel, the w
 multiply, screen and their relatives do in Photoshop, Illustrator or Figma, but
 without anyone having to set a blend mode where the image is used.
 
-It is also a valid PNG. Software that has never heard of Vitral shows a built-in
-fallback image.
+It is also a valid PNG. Where nothing is behind it, and in software that has
+never heard of Vitral, it shows each pixel's own colour: the same image a normal
+PNG export would give you.
 
 | Any PNG viewer (left) vs Vitral (right), same file over the same backdrop |
 |---|
@@ -34,7 +35,8 @@ straight line reproduces normal, multiply, screen, hard light, exclusion and
 inversion exactly, mixed freely per pixel and stacked in any order. A plain PNG
 pixel is the special case where W − K is the same grey on all three channels.
 
-The file stores a fallback as its main PNG image, plus a `vITR` chunk holding the
+The file stores the artwork's native look (its own colours, as exported over a
+transparent background) as the main PNG image, plus a `vITR` chunk holding the
 residual needed to rebuild K and W exactly. To draw it, a renderer stacks three
 layers with blend modes every host already has: **difference**, **screen**,
 **multiply**. Read the full [specification](SPEC.md).
@@ -43,12 +45,14 @@ layers with blend modes every host already has: **difference**, **screen**,
 
 ### Make a Vitral image from any design tool
 
-Export your artwork twice, once over a black background and once over a white
-background (keep the layers' blend modes active), then:
+Export your artwork over a black background and over a white background (keep
+the layers' blend modes active), and optionally once more with a transparent
+background, then:
 
 ```sh
 cargo install --path crates/vitral-cli        # installs the `vitral` command
-vitral encode --black art-on-black.png --white art-on-white.png -o art.vitral.png
+vitral encode --black art-on-black.png --white art-on-white.png \
+              --transparent art.png -o art.vitral.png
 ```
 
 Other commands:

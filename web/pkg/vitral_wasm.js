@@ -54,6 +54,16 @@ export class Planes {
         return v1;
     }
     /**
+     * RGBA8 pixels of the image's native look, with nothing behind it.
+     * @returns {Uint8Array}
+     */
+    native() {
+        const ret = wasm.planes_native(this.__wbg_ptr);
+        var v1 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+        wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+        return v1;
+    }
+    /**
      * RGBA8 pixels of the image as seen over black (`K`).
      * @returns {Uint8Array}
      */
@@ -118,8 +128,9 @@ export class Planes {
 if (Symbol.dispose) Planes.prototype[Symbol.dispose] = Planes.prototype.free;
 
 /**
- * Reference composite of a file over an RGBA8 backdrop with the image's
- * top-left corner at `(x, y)`. Returns the new backdrop pixels.
+ * Reference composite of a file over an RGBA8 backdrop (which may be partly
+ * transparent) with the image's top-left corner at `(x, y)`. Returns the new
+ * backdrop pixels.
  * @param {Uint8Array} bytes
  * @param {Uint8Array} backdrop
  * @param {number} width
@@ -159,26 +170,30 @@ export function decodePlanes(bytes) {
 }
 
 /**
- * Encodes a Vitral file from two RGBA8 renders of the same artwork: over a
- * black background and over a white background.
+ * Encodes a Vitral file from RGBA8 renders of the same artwork: over a black
+ * background, over a white background and, optionally, over a transparent
+ * background (its native look; approximated when omitted).
  * @param {number} width
  * @param {number} height
  * @param {Uint8Array} over_black
  * @param {Uint8Array} over_white
+ * @param {Uint8Array | null} [over_transparent]
  * @returns {Uint8Array}
  */
-export function encodeFromRenders(width, height, over_black, over_white) {
+export function encodeFromRenders(width, height, over_black, over_white, over_transparent) {
     const ptr0 = passArray8ToWasm0(over_black, wasm.__wbindgen_malloc);
     const len0 = WASM_VECTOR_LEN;
     const ptr1 = passArray8ToWasm0(over_white, wasm.__wbindgen_malloc);
     const len1 = WASM_VECTOR_LEN;
-    const ret = wasm.encodeFromRenders(width, height, ptr0, len0, ptr1, len1);
+    var ptr2 = isLikeNone(over_transparent) ? 0 : passArray8ToWasm0(over_transparent, wasm.__wbindgen_malloc);
+    var len2 = WASM_VECTOR_LEN;
+    const ret = wasm.encodeFromRenders(width, height, ptr0, len0, ptr1, len1, ptr2, len2);
     if (ret[3]) {
         throw takeFromExternrefTable0(ret[2]);
     }
-    var v3 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+    var v4 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
     wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
-    return v3;
+    return v4;
 }
 function __wbg_get_imports() {
     const import0 = {
@@ -225,6 +240,10 @@ function getUint8ArrayMemory0() {
         cachedUint8ArrayMemory0 = new Uint8Array(wasm.memory.buffer);
     }
     return cachedUint8ArrayMemory0;
+}
+
+function isLikeNone(x) {
+    return x === undefined || x === null;
 }
 
 function passArray8ToWasm0(arg, malloc) {

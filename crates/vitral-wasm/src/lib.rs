@@ -77,6 +77,11 @@ impl Planes {
     pub fn over_white(&self) -> Vec<u8> {
         opaque_rgba(&self.image.white)
     }
+
+    /// RGBA8 pixels of the image's native look, with nothing behind it.
+    pub fn native(&self) -> Vec<u8> {
+        self.image.native.data.clone()
+    }
 }
 
 fn status_code(status: &VitralStatus) -> String {
@@ -106,23 +111,30 @@ pub fn decode_planes(bytes: &[u8]) -> Result<Planes, JsError> {
     })
 }
 
-/// Encodes a Vitral file from two RGBA8 renders of the same artwork: over a
-/// black background and over a white background.
+/// Encodes a Vitral file from RGBA8 renders of the same artwork: over a black
+/// background, over a white background and, optionally, over a transparent
+/// background (its native look; approximated when omitted).
 #[wasm_bindgen(js_name = encodeFromRenders)]
 pub fn encode_from_renders(
     width: u32,
     height: u32,
     over_black: Vec<u8>,
     over_white: Vec<u8>,
+    over_transparent: Option<Vec<u8>>,
 ) -> Result<Vec<u8>, JsError> {
     let black = RgbaImage::new(width, height, over_black).map_err(js_err)?;
     let white = RgbaImage::new(width, height, over_white).map_err(js_err)?;
-    let img = VitralImage::from_renders(&black, &white).map_err(js_err)?;
+    let mut img = VitralImage::from_renders(&black, &white).map_err(js_err)?;
+    if let Some(pixels) = over_transparent {
+        let native = RgbaImage::new(width, height, pixels).map_err(js_err)?;
+        img = img.with_native(native).map_err(js_err)?;
+    }
     vitral::encode(&img).map_err(js_err)
 }
 
-/// Reference composite of a file over an RGBA8 backdrop with the image's
-/// top-left corner at `(x, y)`. Returns the new backdrop pixels.
+/// Reference composite of a file over an RGBA8 backdrop (which may be partly
+/// transparent) with the image's top-left corner at `(x, y)`. Returns the new
+/// backdrop pixels.
 #[wasm_bindgen]
 pub fn composite(
     bytes: &[u8],

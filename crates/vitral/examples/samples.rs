@@ -28,7 +28,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     fs::create_dir_all(root.join("sources"))?;
     for (name, img) in samples {
         if name == "stained-glass" {
-            // The two exports a designer would make to author this file.
+            // The exports a designer would make to author this file: over
+            // black, over white and over a transparent background.
             let (w, h) = (img.width, img.height);
             fs::write(
                 root.join("sources/stained-glass-over-black.png"),
@@ -37,6 +38,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             fs::write(
                 root.join("sources/stained-glass-over-white.png"),
                 vitral::write_rgb8(w, h, &img.white)?,
+            )?;
+            fs::write(
+                root.join("sources/stained-glass-over-transparent.png"),
+                vitral::write_rgba8(&img.native)?,
             )?;
         }
         let bytes = vitral::encode(&img)?;

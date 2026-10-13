@@ -23,10 +23,11 @@ enum Command {
         black: PathBuf,
         #[arg(long)]
         white: PathBuf,
-        /// Image shown by software without Vitral support (default: best
-        /// approximation computed automatically).
+        /// The artwork exported over a transparent background: how it looks
+        /// with nothing behind it, and what software without Vitral support
+        /// shows. If omitted, an approximation is computed.
         #[arg(long)]
-        fallback: Option<PathBuf>,
+        transparent: Option<PathBuf>,
         #[arg(short, long)]
         output: PathBuf,
     },
@@ -55,7 +56,8 @@ enum Command {
         #[arg(short, long)]
         output: PathBuf,
     },
-    /// Write the over-black, over-white, fallback and render-plane images.
+    /// Write the over-black, over-white, native (over-transparent) and
+    /// render-plane images.
     Decode {
         input: PathBuf,
         #[arg(long)]
@@ -109,15 +111,18 @@ fn run(command: Command) -> Result<()> {
         Command::Encode {
             black,
             white,
-            fallback,
+            transparent,
             output,
         } => {
-            let img = VitralImage::from_renders(&read_png(&black)?, &read_png(&white)?)?;
-            let bytes = match fallback {
-                Some(path) => vitral::encode_with_fallback(&img, &read_png(&path)?)?,
-                None => vitral::encode(&img)?,
-            };
-            write(&output, &bytes)
+            let mut img = VitralImage::from_renders(&read_png(&black)?, &read_png(&white)?)?;
+            match transparent {
+                Some(path) => img = img.with_native(read_png(&path)?)?,
+                None => eprintln!(
+                    "note: no --transparent export given; the look over transparent areas \
+                     and in software without Vitral support is approximated"
+                ),
+            }
+            write(&output, &vitral::encode(&img)?)
         }
         Command::FromImage {
             input,
@@ -169,7 +174,7 @@ fn run(command: Command) -> Result<()> {
                     "white.png",
                     vitral::write_rgb8(img.width, img.height, &img.white)?,
                 ),
-                ("fallback.png", vitral::write_rgba8(&decoded.fallback)?),
+                ("native.png", vitral::write_rgba8(&img.native)?),
                 (
                     "plane-1-difference.png",
                     vitral::write_rgba8(&rgba(planes.difference)?)?,

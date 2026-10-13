@@ -1,11 +1,12 @@
-//! The Vitral pixel model: per channel, `result = K + (W - K) * backdrop`.
+//! The Vitral pixel model: per channel, `result = K + (W - K) * backdrop`,
+//! plus the image's native appearance where there is no backdrop.
 
-use crate::blend::{flatten, Layer};
-use crate::math::{composite, mul255};
+use crate::blend::{flatten, rgb_of, Layer};
+use crate::fallback::least_squares_native;
+use crate::math::{composite, mul255, to_u8};
 use crate::{Error, RgbaImage};
 
-/// A Vitral image in canonical form: the image as seen over black (`K`) and
-/// over white (`W`), both RGB8, row-major.
+/// A Vitral image in canonical form.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct VitralImage {
     pub width: u32,
@@ -14,6 +15,10 @@ pub struct VitralImage {
     pub black: Vec<u8>,
     /// RGB8 values over a white backdrop (`W`).
     pub white: Vec<u8>,
+    /// How the image looks with nothing behind it (straight RGBA8): each
+    /// pixel's own colour. It is also the PNG image that software without
+    /// Vitral support displays.
+    pub native: RgbaImage,
 }
 
 /// Three RGBA8 layers that reproduce a Vitral image with blend modes that every
@@ -21,7 +26,7 @@ pub struct VitralImage {
 /// `difference`, then `screen`, then `multiply`.
 ///
 /// Pixels where a layer has no effect have alpha 0; every other pixel is
-/// opaque, so the stack is exact up to 8-bit rounding.
+/// opaque, so the stack is exact up to 8-bit rounding over opaque backdrops.
 #[derive(Clone, Debug)]
 pub struct RenderPlanes {
     pub width: u32,
@@ -46,6 +51,9 @@ pub struct PixelStats {
 }
 
 impl VitralImage {
+    /// Builds an image from K and W. The native appearance is not known from
+    /// K and W alone, so it is approximated (see [`least_squares_native`]);
+    /// set the real one with [`VitralImage::with_native`] when available.
     pub fn new(width: u32, height: u32, black: Vec<u8>, white: Vec<u8>) -> Result<Self, Error> {
         let expected = width as usize * height as usize * 3;
         if black.len() != expected || white.len() != expected {
@@ -53,12 +61,27 @@ impl VitralImage {
                 "K/W buffers must have {expected} bytes for {width}x{height}"
             )));
         }
+        let native = least_squares_native(width, height, &black, &white);
         Ok(VitralImage {
             width,
             height,
             black,
             white,
+            native,
         })
+    }
+
+    /// Replaces the native appearance, e.g. with an export of the artwork
+    /// over a transparent background.
+    pub fn with_native(mut self, native: RgbaImage) -> Result<Self, Error> {
+        if native.width != self.width || native.height != self.height {
+            return Err(Error::InvalidInput(format!(
+                "native image is {}x{}, expected {}x{}",
+                native.width, native.height, self.width, self.height
+            )));
+        }
+        self.native = native;
+        Ok(self)
     }
 
     /// An image with no effect on its backdrop.
@@ -69,6 +92,7 @@ impl VitralImage {
             height,
             black: vec![0; n],
             white: vec![255; n],
+            native: RgbaImage::filled(width, height, [0, 0, 0, 0]),
         }
     }
 
@@ -92,16 +116,16 @@ impl VitralImage {
             }
             out
         };
-        Ok(VitralImage {
-            width: over_black.width,
-            height: over_black.height,
-            black: flatten_over(over_black, 0),
-            white: flatten_over(over_white, 255),
-        })
+        VitralImage::new(
+            over_black.width,
+            over_black.height,
+            flatten_over(over_black, 0),
+            flatten_over(over_white, 255),
+        )
     }
 
     /// Builds a Vitral image from a stack of layers (bottom first), as a design
-    /// tool would composite them over a black and over a white backdrop.
+    /// tool would composite them over black, over white and over nothing.
     ///
     /// Exact for layers whose modes are affine in the backdrop (normal,
     /// multiply, screen, hard-light, exclusion); other modes are captured
@@ -117,20 +141,44 @@ impl VitralImage {
         Ok(VitralImage {
             width,
             height,
-            black: flatten(width, height, layers, 0.0),
-            white: flatten(width, height, layers, 1.0),
+            black: rgb_of(&flatten(width, height, layers, [0.0, 0.0, 0.0, 1.0])),
+            white: rgb_of(&flatten(width, height, layers, [1.0, 1.0, 1.0, 1.0])),
+            native: RgbaImage::new(width, height, flatten(width, height, layers, [0.0; 4]))?,
         })
     }
 
     /// Reference compositing (normative): places the image with its top-left
-    /// corner at `(x, y)` over an opaque backdrop. The backdrop's alpha is
-    /// ignored and set to 255 where the image covers it.
+    /// corner at `(x, y)` over a backdrop.
+    ///
+    /// Where the backdrop is opaque, each channel becomes `K + (W - K) * b`.
+    /// Where it is partly transparent (alpha `ab`), the result mixes that with
+    /// the native appearance: colour `ab * f(b) + (1 - ab) * native` (both
+    /// premultiplied) and alpha `ab + (1 - ab) * native_alpha`.
     pub fn composite_onto(&self, backdrop: &mut RgbaImage, x: i64, y: i64) {
-        for_each_overlap(self.width, self.height, backdrop, x, y, |src3, _, px| {
-            for (c, value) in px[..3].iter_mut().enumerate() {
-                *value = composite(self.black[src3 + c], self.white[src3 + c], *value);
+        for_each_overlap(self.width, self.height, backdrop, x, y, |src3, src4, px| {
+            let (k, w) = (&self.black[src3..src3 + 3], &self.white[src3..src3 + 3]);
+            if px[3] == 255 {
+                for c in 0..3 {
+                    px[c] = composite(k[c], w[c], px[c]);
+                }
+                return;
             }
-            px[3] = 255;
+            let ab = px[3] as f64 / 255.0;
+            let native = &self.native.data[src4..src4 + 4];
+            let na = native[3] as f64 / 255.0;
+            let ao = ab + (1.0 - ab) * na;
+            for c in 0..3 {
+                let over =
+                    (255.0 * k[c] as f64 + (w[c] as f64 - k[c] as f64) * px[c] as f64) / 65025.0;
+                let own = native[c] as f64 / 255.0 * na;
+                let premultiplied = ab * over + (1.0 - ab) * own;
+                px[c] = if ao > 0.0 {
+                    to_u8((premultiplied / ao) as f32)
+                } else {
+                    0
+                };
+            }
+            px[3] = to_u8(ao as f32);
         });
     }
 
@@ -290,6 +338,44 @@ mod tests {
         assert!(!planes.uses_difference);
         assert!(planes.screen.as_chunks::<4>().0.iter().all(|p| p[3] == 0));
         assert!(planes.multiply.as_chunks::<4>().0.iter().all(|p| p[3] == 0));
+    }
+
+    fn red_multiply() -> VitralImage {
+        let layer = Layer::new(
+            RgbaImage::filled(1, 1, [255, 0, 0, 255]),
+            crate::BlendMode::Multiply,
+        );
+        VitralImage::from_layers(1, 1, &[layer]).unwrap()
+    }
+
+    /// With nothing behind it, a pixel shows its own (native) colour.
+    #[test]
+    fn transparent_backdrop_shows_the_native_colour() {
+        let img = red_multiply();
+        assert_eq!(img.native.data, [255, 0, 0, 255]);
+        let mut bd = RgbaImage::filled(1, 1, [0, 0, 0, 0]);
+        img.composite_onto(&mut bd, 0, 0);
+        assert_eq!(bd.data, [255, 0, 0, 255]);
+    }
+
+    /// A partly transparent backdrop blends smoothly between the native colour
+    /// and the opaque result, without a jump next to full opacity.
+    #[test]
+    fn partly_transparent_backdrop_is_continuous() {
+        let img = red_multiply();
+        let at = |alpha: u8| {
+            let mut bd = RgbaImage::filled(1, 1, [100, 200, 50, alpha]);
+            img.composite_onto(&mut bd, 0, 0);
+            bd.data
+        };
+        // Opaque: multiply by red keeps only the red channel of the backdrop.
+        assert_eq!(at(255), [100, 0, 0, 255]);
+        let near = at(254);
+        assert!(near[0].abs_diff(100) <= 2 && near[1] <= 1 && near[3] == 255);
+        // Half transparent: halfway between the backdrop result and pure red.
+        let half = at(128);
+        assert!(half[0].abs_diff(178) <= 1, "{half:?}");
+        assert_eq!(&half[1..], &[0, 0, 255]);
     }
 
     #[test]

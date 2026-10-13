@@ -14,9 +14,13 @@
 //! **white**. This captures normal, multiply, screen, hard-light, exclusion and
 //! inversion exactly — per pixel, with opacity, and for any stack of them.
 //!
-//! A Vitral file is a valid PNG: the main image is a fallback for software
-//! without Vitral support, and an ancillary `vITR` chunk carries the residual
-//! needed to recover `K` and `W` exactly. See `SPEC.md` for the normative text.
+//! Where there is nothing behind the image, each pixel shows its own native
+//! colour, as a layer does in a design tool.
+//!
+//! A Vitral file is a valid PNG: the main image is that native appearance,
+//! which software without Vitral support shows as a fallback, and an ancillary
+//! `vITR` chunk carries the residual needed to recover `K` and `W` exactly. See
+//! `SPEC.md` for the normative text.
 
 mod blend;
 mod codec;
@@ -27,8 +31,8 @@ mod model;
 mod pngio;
 
 pub use blend::{BlendMode, Fidelity, Layer};
-pub use codec::{decode, encode, encode_with_fallback, Decoded, VitralStatus, CHUNK_TYPE};
+pub use codec::{decode, encode, Decoded, VitralStatus, CHUNK_TYPE};
 pub use error::Error;
-pub use fallback::least_squares_fallback;
+pub use fallback::least_squares_native;
 pub use model::{RenderPlanes, VitralImage};
 pub use pngio::{read_rgba8, write_rgb8, write_rgba8, RgbaImage};
