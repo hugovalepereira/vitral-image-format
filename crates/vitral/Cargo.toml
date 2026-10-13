@@ -10,4 +10,5 @@ authors.workspace = true
 
 [dependencies]
 crc32fast = "1.5.2"
+miniz_oxide = "0.8"
 png = "0.18.1"

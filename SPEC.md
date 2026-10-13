@@ -94,11 +94,17 @@ compositing formula for a blend mode over a partly transparent backdrop.
 
 ### 2.4 Colour space
 
-Sample values are interpreted in the colour space of the PNG (sRGB when no colour
-space chunk says otherwise). Blending operates on **encoded** values, as in CSS
-Compositing and Blending Level 1, the Canvas 2D API and the default settings of
-common design tools. Renderers SHOULD NOT convert to linear light before applying
-the transfer function. Encoders SHOULD write an `sRGB` chunk.
+K, W and the native appearance are **sRGB-encoded** values. Blending operates on
+encoded values, as in CSS Compositing and Blending Level 1, the Canvas 2D API and
+the default settings of common design tools, so renderers SHOULD NOT convert to
+linear light before applying the transfer function.
+
+* Encoders SHOULD write an `sRGB` chunk and MUST NOT write colour chunks that
+  declare another colour space.
+* Encoders MUST convert inputs that declare another colour space (an ICC profile
+  with other primaries, `cICP`, `cHRM`), such as Display P3 exports, to sRGB, or
+  refuse them. Inputs without colour information are taken as sRGB.
+* Wide-gamut and linear-light blending are future work (§12).
 
 ---
 

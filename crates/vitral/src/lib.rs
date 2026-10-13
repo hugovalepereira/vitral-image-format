@@ -24,6 +24,7 @@
 
 mod blend;
 mod codec;
+mod colour;
 mod error;
 mod fallback;
 mod math;
@@ -32,6 +33,7 @@ mod pngio;
 
 pub use blend::{BlendMode, Fidelity, Layer};
 pub use codec::{decode, encode, Decoded, VitralStatus, CHUNK_TYPE};
+pub use colour::{colour_space, ColourSpace};
 pub use error::Error;
 pub use fallback::least_squares_native;
 pub use model::{RenderPlanes, VitralImage};

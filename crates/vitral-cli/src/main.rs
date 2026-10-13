@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
 use clap::{Parser, Subcommand};
-use vitral::{BlendMode, Fidelity, Layer, RgbaImage, VitralImage, VitralStatus};
+use vitral::{BlendMode, ColourSpace, Fidelity, Layer, RgbaImage, VitralImage, VitralStatus};
 
 /// Create, inspect and render Vitral images (.vitral.png): images that carry
 /// their own blend behaviour.
@@ -28,6 +28,10 @@ enum Command {
         /// shows. If omitted, an approximation is computed.
         #[arg(long)]
         transparent: Option<PathBuf>,
+        /// Use the samples as sRGB even if a file declares another colour
+        /// space (e.g. Display P3). Colours and blending will be off.
+        #[arg(long)]
+        assume_srgb: bool,
         #[arg(short, long)]
         output: PathBuf,
     },
@@ -112,8 +116,15 @@ fn run(command: Command) -> Result<()> {
             black,
             white,
             transparent,
+            assume_srgb,
             output,
         } => {
+            for path in [Some(&black), Some(&white), transparent.as_ref()]
+                .into_iter()
+                .flatten()
+            {
+                check_srgb(path, assume_srgb)?;
+            }
             let mut img = VitralImage::from_renders(&read_png(&black)?, &read_png(&white)?)?;
             match transparent {
                 Some(path) => img = img.with_native(read_png(&path)?)?,
@@ -279,6 +290,27 @@ fn run(command: Command) -> Result<()> {
             }
             Ok(())
         }
+    }
+}
+
+/// Vitral 0.1 blends sRGB values; refuse exports in other colour spaces.
+fn check_srgb(path: &Path, assume_srgb: bool) -> Result<()> {
+    let bytes = fs::read(path).map_err(|e| format!("{}: {e}", path.display()))?;
+    match vitral::colour_space(&bytes) {
+        ColourSpace::Other(what) if assume_srgb => {
+            eprintln!(
+                "warning: {} declares {what}; using its values as sRGB",
+                path.display()
+            );
+            Ok(())
+        }
+        ColourSpace::Other(what) => Err(format!(
+            "{} declares {what}, but Vitral 0.1 needs sRGB. Export in sRGB \
+             (in Figma: export settings, colour profile sRGB), or pass --assume-srgb",
+            path.display()
+        )
+        .into()),
+        _ => Ok(()),
     }
 }
 

@@ -311,7 +311,7 @@ footer { max-width: 72rem; margin: 4rem auto 0; padding-top: 1.5rem; border-top:
 
 <footer>
   <span>Vitral draft 0.1 · October 2026</span>
-  <a href="https://github.com/hugovalepereira/gfi-image-format">Source and specification on GitHub</a>
+  <a href="https://github.com/hugovalepereira/vitral-image-format">Source and specification on GitHub</a>
   <span>MIT licence</span>
 </footer>
 
@@ -478,7 +478,9 @@ const inputs = { black: null, white: null, transparent: null };
 let resultUrl;
 
 async function pixelsOf(blob) {
-  const bitmap = await createImageBitmap(blob, { colorSpaceConversion: 'none', premultiplyAlpha: 'none' });
+  // Let the browser convert exports with a colour profile (e.g. Display P3) to
+  // sRGB, the colour space Vitral 0.1 blends in.
+  const bitmap = await createImageBitmap(blob, { colorSpaceConversion: 'default', premultiplyAlpha: 'none' });
   const canvas = document.createElement('canvas');
   canvas.width = bitmap.width;
   canvas.height = bitmap.height;
