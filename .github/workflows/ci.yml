@@ -21,3 +21,26 @@ jobs:
       - run: cargo test --release
       - name: Build WebAssembly
         run: cargo build -p vitral-wasm --profile wasm --target wasm32-unknown-unknown
+
+  # The polyfill must match the reference compositor in all three engines.
+  browsers:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.99.0
+          targets: wasm32-unknown-unknown
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: wasm-bindgen-cli@0.2.129
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: cargo build --release -p vitral-cli
+      - run: ./web/build.sh
+      - run: npm install --no-save playwright@1.56.1
+      - run: npx playwright install --with-deps chromium firefox webkit
+      - run: node web/test/run.mjs
+        env:
+          VITRAL_BROWSERS: chromium,firefox,webkit
