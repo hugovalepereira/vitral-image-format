@@ -92,6 +92,14 @@ This reduces to §2.1 over an opaque backdrop (*a*b = 1) and to the native
 appearance over nothing (*a*b = 0), and it has the same structure as the W3C
 compositing formula for a blend mode over a partly transparent backdrop.
 
+In practice, anything visible behind the image (a page, a photo, a colour, a
+checkerboard drawn by a viewer) is an opaque backdrop, and the image blends with
+it. A transparent backdrop only occurs when the image is flattened before its
+final backdrop is known: a layer group composited on its own (in CSS, an
+isolated group), an artboard without a fill exported as PNG, or software
+without Vitral support. The result must then be a plain RGBA pixel, which cannot
+carry a blend mode, so it shows the native appearance, as design tools do.
+
 ### 2.4 Colour space
 
 K, W and the native appearance are **sRGB-encoded** values. Blending operates on

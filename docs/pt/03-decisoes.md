@@ -114,7 +114,7 @@ podem voltar a ser consideradas.
     internacional.
   * O planeamento e as decisões estão em **português**, em `docs/pt/`.
 
-## D9 — Fundo transparente: **mostra a cor nativa**
+## D9 — Sem nada por trás: **mostra a cor nativa**
 
 * **Contexto**: a pergunta Q4 era o que mostrar quando não há nada por trás.
   O autor respondeu: *"se não existir background, a cor deve ser simplesmente a
@@ -128,8 +128,26 @@ podem voltar a ser consideradas.
     fórmula W3C.
 * **Porque tem de ser guardada**: não se deduz de K e W. Por exemplo, multiply
   com uma cor *s* e hard light com *s*/2 dão o mesmo K e W.
-* **Autoria**: uma terceira exportação, com fundo transparente, que é opcional.
-  Sem ela, a cor nativa é aproximada.
+* **Autoria**: uma terceira exportação, o **PNG normal** que se exportaria hoje
+  (com fundo transparente).
+  * O formato aceita ficheiros sem ela, e nesse caso a cor nativa é aproximada.
+  * Mas **as ferramentas exportam sempre as três** (decisão do autor, out/2026),
+    porque o objetivo é o gráfico se comportar fora do Figma exatamente como
+    dentro dele.
+* **Quando é que "não há nada por trás"** (para evitar confusões):
+  * **Quase nunca.** Qualquer coisa visível atrás da imagem é um fundo real: uma
+    página, uma foto, uma cor, ou até um quadriculado *desenhado* por um
+    programa. Nesses casos o Vitral reage ao fundo; é o caso normal.
+  * Só não há fundo quando a imagem tem de ser **achatada antes de se saber onde
+    vai ser colocada**. Por exemplo:
+    * um frame sem preenchimento exportado para PNG;
+    * um grupo isolado em CSS (com `opacity`, `transform` ou `isolation`), cujo
+      conteúdo é composto à parte;
+    * um programa sem suporte para Vitral.
+  * Aí o resultado tem de ser um pixel RGBA normal, que não consegue guardar um
+    modo de mistura, e a regra é mostrar a cor nativa, como o Figma faz.
+  * Ilustração: `examples/renders/checker-backdrop-vs-nothing.png` (A: o
+    quadriculado é o fundo; B: não há nada por trás).
 * **Consequência**: sem suporte, o Vitral mostra exatamente o PNG que se
   exportaria hoje. Nunca fica pior do que um PNG.
 * **Limitação aceite**: a pilha de 3 camadas (CSS, Figma) só é exata sobre fundos

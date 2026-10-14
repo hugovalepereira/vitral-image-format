@@ -80,8 +80,9 @@ de dois exports (preto/branco) e vê-lo sobre qualquer fundo com `vitral render`
 
 * **Exportar**:
   * Seleciona-se um frame.
-  * O plugin exporta-o três vezes: com fundo preto, com fundo branco e com fundo
-    transparente (`exportAsync` com `colorProfile: 'SRGB'`).
+  * O plugin exporta-o sempre três vezes, sem o designer ter de pensar nisso:
+    com fundo preto, com fundo branco e como PNG normal, com fundo transparente
+    (`exportAsync` com `colorProfile: 'SRGB'`).
   * Codifica em WASM e descarrega o `nome.vitral.png`.
 * **Importar**: cria um grupo *pass-through* com 3 camadas de imagem (Difference,
   Screen, Multiply). Só é exato sobre fundos preenchidos (D9); o plugin deve
