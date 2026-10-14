@@ -123,33 +123,49 @@ lia esses valores como sRGB, e as cores e a mistura ficariam erradas sem aviso.
 
 ## 6. Exportações reais do Figma
 
-**Teste:** o autor exportou do Figma duas formas em **multiply** (um retângulo
-laranja e um círculo verde sobrepostos), sobre preto, sobre branco e sobre
-transparente (184 × 184 px).
+O autor exportou do Figma duas artes, cada uma sobre preto, sobre branco e sobre
+transparente (184 × 184 px):
+
+| Arte | Composição | Ficheiro Vitral | PNG simples |
+|---|---|---|---|
+| **multiply** | Retângulo laranja e círculo verde, ambos em multiply. | 5,1 KB | 2,5 KB |
+| **mixed** | Retângulo laranja em **screen**, círculo verde em **multiply** e triângulo ciano em **normal a 50%**, sobrepostos. | 7,8 KB | — |
 
 **Resultados:**
 
-- **As três exportações vêm marcadas como sRGB** (chunks `sRGB` e `gAMA`), por
-  isso passam a verificação de cor (D11).
-- **O ficheiro Vitral reproduz as três exportações sem um único valor de
-  diferença**: sobre preto, sobre branco e sobre transparente.
-- **Sobre outros cinzentos dá exatamente** `fundo × laranja × verde`.
-- **Tamanho:** 5,1 KB contra 2,5 KB do PNG simples, ou seja, cerca de 2×.
+- **As exportações vêm marcadas como sRGB** (chunks `sRGB` e `gAMA`), por isso
+  passam a verificação de cor (D11).
+- **Nas duas artes, o ficheiro Vitral reproduz as três exportações sem um único
+  valor de diferença.**
+- **Sobre outros cinzentos** (40, 128 e 210), cada zona segue a fórmula do seu
+  modo, com um erro de no máximo 0,5 antes do arredondamento:
+
+  | Zona | Fórmula |
+  |---|---|
+  | Retângulo | screen |
+  | Círculo | multiply |
+  | Triângulo | normal a 50% |
+  | Círculo sobre o retângulo | multiply sobre screen |
+
 - **O comportamento do Figma sobre transparente coincide com a D9:** cada forma
-  mostra a sua cor e só faz multiply onde há alguma coisa por baixo (a zona
-  sobreposta). Isto confirma a regra da cor nativa com uma ferramenta real.
+  mostra a sua cor e só mistura onde há alguma coisa por baixo. Por exemplo, o
+  círculo em multiply sobre o retângulo em screen dá a cor do produto. Isto
+  confirma a regra da cor nativa com uma ferramenta real.
+- **Porque a cor nativa tem de ser guardada:** o screen faz o retângulo desaparecer sobre branco,
+  mas sobre transparente aparece com a sua cor. A cor nativa é guardada à parte
+  precisamente por isso.
 
 Os ficheiros ficaram como teste permanente:
 
 - dados em `crates/vitral/tests/data/figma/`;
 - teste em `crates/vitral/tests/real_exports.rs`;
-- comparação visual em `examples/renders/figma-multiply.png`.
+- comparações visuais em `examples/renders/figma-multiply.png` e
+  `examples/renders/figma-mixed.png`.
 
 ## 7. O que continua por verificar
 
 - **Exportações reais de outras ferramentas** (Photoshop, Illustrator, After
-  Effects) e de modos além do multiply (screen, normal com opacidade, mistura de
-  modos).
+  Effects).
 - **Testes de conformidade publicados:** ficheiros de referência e resultados
   esperados, para outras implementações.
 - **Desempenho em imagens grandes** (meta RNF3: 1 megapixel em menos de 50 ms no

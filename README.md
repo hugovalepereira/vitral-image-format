@@ -17,6 +17,7 @@ PNG export would give you.
 | ![Light leak](examples/renders/light-leak.png) |
 | ![Inverting ring](examples/renders/invert-ring.png) |
 | ![Two multiply shapes exported from Figma](examples/renders/figma-multiply.png) |
+| ![Screen, multiply and 50% normal shapes exported from Figma](examples/renders/figma-mixed.png) |
 
 > Status: **draft 0.1** (October 2026). The format, the Rust reference
 > implementation, the command-line tool and the web polyfill work; everything may
