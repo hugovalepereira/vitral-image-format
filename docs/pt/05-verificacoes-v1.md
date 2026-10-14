@@ -162,6 +162,39 @@ Os ficheiros ficaram como teste permanente:
 - comparações visuais em `examples/renders/figma-multiply.png` e
   `examples/renders/figma-mixed.png`.
 
+### 6.1 A mesma arte sem a exportação transparente
+
+**Teste:** codificar a arte *mixed* só com as exportações sobre preto e sobre
+branco. A comparação visual está em
+`examples/renders/figma-mixed-without-transparent.png`.
+
+**Resultados:**
+
+- **Sobre qualquer fundo opaco, o resultado é idêntico** ao da versão com a
+  exportação transparente (testado sobre 6 fundos, zero diferenças). K e W
+  definem sozinhos toda a mistura; por isso a exportação transparente é opcional.
+- **O que muda é a cor nativa**, que só se vê sobre zonas transparentes e nos
+  programas sem suporte:
+
+  | Zona | Cor nativa real | Aproximação atual |
+  |---|---|---|
+  | Retângulo em screen | laranja (248,193,91), opaco | creme (255,255,193) a 69% |
+  | Círculo em multiply | verde (23,100,18), opaco | verde muito escuro (0,32,0) a 82% |
+  | Triângulo normal a 50% | ciano a 50% | ciano a 50% (certo) |
+
+- **Porque não se consegue deduzir:** K e W descrevem o que o pixel *faz* ao
+  fundo, não a cor que ele *tem*. Cores diferentes podem ter exatamente o mesmo
+  efeito. Por exemplo, um cinzento médio em multiply a 100% e um preto em
+  multiply a 50% escurecem qualquer fundo para metade, logo têm o mesmo K e W.
+  Sobre nada, porém, um é cinzento opaco e o outro preto a 50%.
+- **Uma regra simples** ("se escurece, a cor é a que se vê sobre branco; se
+  clareia, a que se vê sobre preto") acerta nas zonas com um só modo. Mas não
+  sabe o que fazer nas sobreposições e erra nas bordas suavizadas (daria um halo
+  claro). Nenhuma regra é exata: só a exportação sabe.
+- **Efeito secundário:** sem a exportação, os programas sem suporte mostram uma
+  imitação *média* da mistura (o círculo escuro, o retângulo pálido). Com a
+  exportação, mostram as cores próprias, como o PNG que se exportaria hoje.
+
 ## 7. O que continua por verificar
 
 - **Exportações reais de outras ferramentas** (Photoshop, Illustrator, After
