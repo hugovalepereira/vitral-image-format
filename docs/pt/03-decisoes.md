@@ -148,6 +148,23 @@ podem voltar a ser consideradas.
     modo de mistura, e a regra é mostrar a cor nativa, como o Figma faz.
   * Ilustração: `examples/renders/checker-backdrop-vs-nothing.png` (A: o
     quadriculado é o fundo; B: não há nada por trás).
+* **Em termos de Figma** (*pass through* vs *normal*):
+  * **Pass through** (padrão dos grupos e frames): as camadas lá dentro misturam-se
+    diretamente com tudo o que está por baixo, incluindo o canvas.
+  * **Normal**: o grupo é primeiro pintado numa folha transparente à parte (um
+    "acetato") e só depois colado por cima. Os modos lá dentro só reagem ao
+    conteúdo do próprio grupo.
+  * Uma exportação PNG é sempre o acetato, ou seja, o frame em Normal. O Vitral
+    exporta o comportamento *pass through*.
+  * Equivalentes noutros programas:
+
+    | Programa | Normal (isolado) | Pass through |
+    |---|---|---|
+    | Photoshop | grupo em Normal | grupo em Pass Through |
+    | Illustrator | "Isolate Blending" ligado | "Isolate Blending" desligado |
+    | CSS | `isolation: isolate`, `opacity` ou `transform` | sem isso |
+
+  * Ilustração: `examples/renders/figma-canvas-vs-export.png`.
 * **Consequência**: sem suporte, o Vitral mostra exatamente o PNG que se
   exportaria hoje. Nunca fica pior do que um PNG.
 * **Limitação aceite**: a pilha de 3 camadas (CSS, Figma) só é exata sobre fundos

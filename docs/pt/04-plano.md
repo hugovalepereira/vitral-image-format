@@ -84,6 +84,8 @@ de dois exports (preto/branco) e vê-lo sobre qualquer fundo com `vitral render`
     com fundo preto, com fundo branco e como PNG normal, com fundo transparente
     (`exportAsync` com `colorProfile: 'SRGB'`).
   * Codifica em WASM e descarrega o `nome.vitral.png`.
+* **Avisar** quando um grupo dentro do frame está em Normal: os modos lá dentro
+  não chegam ao fundo, e o Vitral vai guardar isso tal como está.
 * **Importar**: cria um grupo *pass-through* com 3 camadas de imagem (Difference,
   Screen, Multiply). Só é exato sobre fundos preenchidos (D9); o plugin deve
   avisar quando o frame não tem fundo.
