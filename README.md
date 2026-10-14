@@ -79,8 +79,10 @@ The script decodes the file with WebAssembly and stacks three canvases with CSS
 blend modes, the image blends with content in its own stacking context.
 
 The demo page (`web/index.html`) compares a plain PNG viewer with Vitral over
-several backdrops and includes an encoder. Serve the repository root with any
-static server and open `/web/`:
+several backdrops and includes an encoder. Once GitHub Pages is enabled for the
+`main` branch (root folder), it is published at
+<https://hugovalepereira.github.io/vitral-image-format/>. Locally, serve the
+repository root with any static server and open `/web/`:
 
 ```sh
 python3 -m http.server 8000    # then open http://localhost:8000/web/
