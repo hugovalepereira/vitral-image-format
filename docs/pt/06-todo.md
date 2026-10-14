@@ -1,0 +1,62 @@
+# 06 — Todo
+
+Pontos identificados na revisão de código do PR #1 (out/2026) que ficaram para
+depois. Os itens maiores da fase 2.5 continuam no [plano](04-plano.md).
+
+## Formato
+
+- [ ] **CRC mais tolerante.** Hoje o CRC (a "impressão digital" dos pixels da
+  imagem principal, usada para detetar alterações) inclui a cor dos pixels
+  totalmente transparentes. Essa cor é invisível, e alguns otimizadores
+  (`oxipng -a`, `pngcrush -blacken`) limpam-na; o ficheiro perde então o Vitral
+  sem necessidade.
+  - Correção proposta: calcular o CRC tratando os pixels com alfa 0 como
+    (0, 0, 0, 0).
+  - Muda a especificação (§4.4), por isso tem de ser feito antes de haver
+    ficheiros em circulação.
+
+## Cor
+
+- [ ] **Verificar o espaço de cor em todos os comandos.** Hoje só o
+  `vitral encode` recusa exportações em Display P3; o `from-image` e o `compose`
+  aceitam-nas sem aviso.
+- [ ] **Detetar imagens em luz linear.** Um PNG pode declarar que guarda valores
+  "lineares" (chunk `gAMA`, ou um perfil ICC com gama 1,0). Hoje passa como sRGB,
+  e as misturas sairiam com cores erradas.
+
+## Polyfill (rever depois de analisar a demo online)
+
+- [ ] **Mudanças de `src` ou `srcset`** numa imagem já tratada não são detetadas;
+  ficam as camadas da imagem antiga.
+- [ ] **O elemento que envolve a imagem** (`<span class="vitral">`) muda a
+  estrutura da página. Pode partir seletores CSS como `.galeria > img` e
+  frameworks como o React, que esperam encontrar a imagem onde a deixaram.
+  Alternativas a estudar: um *custom element* (`<vitral-img>`), ou camadas
+  posicionadas sem mexer na imagem.
+- [ ] **`object-fit` e `object-position`** não são respeitados: as camadas
+  esticam para a caixa da imagem.
+- [ ] **`loading="lazy"`**: o polyfill descarrega e descodifica todas as imagens
+  logo no início, incluindo as que estão fora do ecrã.
+
+Já corrigido na mesma revisão:
+
+- se a criação dos canvases falhar, a imagem continua visível como PNG normal;
+- a memória do WASM é sempre libertada;
+- as camadas cobrem só a área da imagem, sem `padding` nem `border`, e
+  acompanham-na quando a página muda de tamanho;
+- imagens `inline-block` continuam lado a lado.
+
+## Demo
+
+- [ ] Se o visitante escolher um ficheiro antes de os exemplos acabarem de
+  carregar, o ficheiro dele é substituído pelo exemplo.
+- [ ] Duas codificações seguidas podem terminar fora de ordem e mostrar o
+  resultado antigo.
+
+## Biblioteca
+
+- [ ] `with_native` só valida a largura e a altura da imagem nativa, não o
+  tamanho real dos dados. Um buffer errado faz o programa crashar em vez de dar
+  um erro.
+- [ ] **Eficiência:** o codificador comprime a imagem principal duas vezes (uma
+  por cada forma de guardar o residual). Basta comprimi-la uma vez.

@@ -41,7 +41,8 @@ enum Command {
         input: PathBuf,
         #[arg(long, default_value = "normal")]
         mode: BlendMode,
-        #[arg(long, default_value_t = 1.0)]
+        /// Layer opacity, from 0 to 1.
+        #[arg(long, default_value_t = 1.0, value_parser = parse_opacity)]
         opacity: f32,
         /// Proceed even with modes this version cannot represent.
         #[arg(long)]
@@ -345,18 +346,27 @@ fn parse_layer(spec: &str) -> Result<Layer> {
     let err = || format!("layer '{spec}' must be FILE:MODE[:OPACITY]");
     let (rest, last) = spec.rsplit_once(':').ok_or_else(err)?;
     let (file, mode, opacity) = match last.parse::<f32>() {
-        Ok(opacity) => {
+        Ok(_) => {
             let (file, mode) = rest.rsplit_once(':').ok_or_else(err)?;
-            (file, mode, opacity)
+            (file, mode, parse_opacity(last)?)
         }
         Err(_) => (rest, last, 1.0),
     };
     Ok(Layer::new(read_png(Path::new(file))?, mode.parse::<BlendMode>()?).with_opacity(opacity))
 }
 
+/// Accepts a number from 0 to 1 (rejects NaN, infinities and out-of-range values).
+fn parse_opacity(text: &str) -> std::result::Result<f32, String> {
+    match text.trim().parse::<f32>() {
+        Ok(v) if (0.0..=1.0).contains(&v) => Ok(v),
+        _ => Err(format!("opacity '{text}' must be a number from 0 to 1")),
+    }
+}
+
+/// Accepts #rrggbb (or rrggbb) with exactly six hexadecimal digits.
 fn parse_hex(hex: &str) -> Result<[u8; 3]> {
     let digits = hex.trim_start_matches('#');
-    if digits.len() != 6 {
+    if digits.len() != 6 || !digits.bytes().all(|b| b.is_ascii_hexdigit()) {
         return Err(format!("colour '{hex}' must be #rrggbb").into());
     }
     let channel = |i: usize| u8::from_str_radix(&digits[i..i + 2], 16);
@@ -377,17 +387,41 @@ fn write(path: &Path, bytes: &[u8]) -> Result<()> {
 fn status_text(status: &VitralStatus) -> String {
     match status {
         VitralStatus::Ok => "Vitral data OK".into(),
-        VitralStatus::NotVitral => "plain PNG (no vITr chunk)".into(),
+        VitralStatus::NotVitral => "plain PNG (no viTr chunk)".into(),
         VitralStatus::FallbackMismatch => {
             "main image was modified after encoding; Vitral data ignored".into()
         }
         VitralStatus::Unsupported(what) => format!("unsupported: {what}; Vitral data ignored"),
-        VitralStatus::Corrupt(what) => format!("corrupt vITr chunk: {what}; Vitral data ignored"),
+        VitralStatus::Corrupt(what) => format!("corrupt viTr chunk: {what}; Vitral data ignored"),
     }
 }
 
 fn report_status(status: &VitralStatus) {
     if *status != VitralStatus::Ok {
         eprintln!("note: {}", status_text(status));
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn colours_must_be_six_hex_digits() {
+        assert_eq!(parse_hex("#ff8800").unwrap(), [255, 136, 0]);
+        assert_eq!(parse_hex("0a0B0c").unwrap(), [10, 11, 12]);
+        for bad in ["#aéabc", "#+f+f+f", "#fff", "#ff88001", "#gg0000", ""] {
+            assert!(parse_hex(bad).is_err(), "{bad}");
+        }
+    }
+
+    #[test]
+    fn opacity_must_be_between_zero_and_one() {
+        for good in ["0", "0.5", "1", " 0.25 "] {
+            assert!(parse_opacity(good).is_ok(), "{good}");
+        }
+        for bad in ["nan", "NaN", "inf", "-0.5", "1.5", "half"] {
+            assert!(parse_opacity(bad).is_err(), "{bad}");
+        }
     }
 }

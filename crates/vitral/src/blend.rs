@@ -301,8 +301,13 @@ impl Layer {
         }
     }
 
+    /// Sets the opacity, clamped to `[0, 1]`; NaN counts as 0 (invisible).
     pub fn with_opacity(mut self, opacity: f32) -> Self {
-        self.opacity = opacity.clamp(0.0, 1.0);
+        self.opacity = if opacity.is_nan() {
+            0.0
+        } else {
+            opacity.clamp(0.0, 1.0)
+        };
         self
     }
 }

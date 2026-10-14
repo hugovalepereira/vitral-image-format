@@ -28,7 +28,7 @@ fundação  spec+core  web   │  Figma    outras   v2       normalização
 
 **Objetivo**: um formato definido ao bit e uma implementação que o prova.
 
-* [x] `SPEC.md` v0.1: modelo K/W, chunk `vITr`, codificação residual, CRC,
+* [x] `SPEC.md` v0.1: modelo K/W, chunk `viTr`, codificação residual, CRC,
       fallback, pilha de renderização, conformidade.
 * [x] Crate `vitral`: codificar/descodificar, compositor de referência, planos de
       renderização, conversão de modos W3C → K/W, composição de camadas.
@@ -65,6 +65,8 @@ de dois exports (preto/branco) e vê-lo sobre qualquer fundo com `vitral render`
 
 ## Fase 2.5 — Fechar a v1 (antes de pensar na v2)
 
+Ver também a lista de pontos pequenos em [06 — Todo](06-todo.md).
+
 * [x] Exportações reais do Figma, com multiply, screen, normal a 50% e os três
       combinados: reproduzidas sem diferenças.
 * [ ] Exportações reais de Photoshop, Illustrator e After Effects.
@@ -73,7 +75,7 @@ de dois exports (preto/branco) e vê-lo sobre qualquer fundo com `vitral render`
 * [ ] Conversão de cor no CLI (Display P3 → sRGB, com a biblioteca `moxcms`).
 * [ ] Documentar o uso em produção: servir sem otimização automática (CDNs e
       Next.js removem o chunk); otimizadores que o mantêm (optipng, oxipng,
-      pngcrush, `zopflipng --keepchunks=vITr`).
+      pngcrush, `zopflipng --keepchunks=viTr`).
 * [ ] Desempenho: 1 megapixel em menos de 50 ms no browser.
 
 ## Fase 3 — Plugin Figma
@@ -171,8 +173,8 @@ Screen") num MP4 empilhado e mostrá-lo sobre uma página com o polyfill.
 
 ## Fase 6 — Normalização (só com tração)
 
-* **Registar o chunk público** junto do PNG WG/W3C. Passaria de `vITr` (privado)
-  para, por exemplo, `vitr`.
+* **Registar o chunk público** junto do PNG WG/W3C. Passaria de `viTr` (privado)
+  para `viTr` (público).
 * **Propor ao WICG/CSSWG** um mecanismo nativo, por exemplo
   `<img blending="auto">` ou um descodificador que exponha K/W ao compositor. Não
   há código com acesso ao fundo, por isso o risco de *timing* é igual ao do

@@ -38,7 +38,7 @@ inversion exactly, mixed freely per pixel and stacked in any order. A plain PNG
 pixel is the special case where W − K is the same grey on all three channels.
 
 The file stores the artwork's native look (its own colours, as exported over a
-transparent background) as the main PNG image, plus a `vITr` chunk holding the
+transparent background) as the main PNG image, plus a `viTr` chunk holding the
 residual needed to rebuild K and W exactly. To draw it, a renderer stacks three
 layers with blend modes every host already has: **difference**, **screen**,
 **multiply**. Read the full [specification](SPEC.md).

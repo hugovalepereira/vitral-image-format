@@ -64,7 +64,7 @@ fn sample() -> VitralImage {
     VitralImage::from_layers(16, 16, &layers).unwrap()
 }
 
-/// Splits a Vitral file into (main PNG without the vITr chunk, payload).
+/// Splits a Vitral file into (main PNG without the viTr chunk, payload).
 fn split(file: &[u8]) -> (Vec<u8>, Vec<u8>) {
     let mut pos = 8;
     let mut main = file[..8].to_vec();
@@ -83,7 +83,7 @@ fn split(file: &[u8]) -> (Vec<u8>, Vec<u8>) {
     (main, payload)
 }
 
-/// Inserts a vITr chunk with a correct CRC just before IEND.
+/// Inserts a viTr chunk with a correct CRC just before IEND.
 fn with_chunk(main: &[u8], payload: &[u8]) -> Vec<u8> {
     let iend = main.len() - 12;
     let mut out = main[..iend].to_vec();

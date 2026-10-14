@@ -193,14 +193,16 @@ pub(crate) fn chunks(bytes: &[u8]) -> impl Iterator<Item = ([u8; 4], &[u8], bool
         bytes.len()
     };
     std::iter::from_fn(move || {
-        if pos + 12 > bytes.len() {
+        if pos.checked_add(12)? > bytes.len() {
             return None;
         }
         let len = u32::from_be_bytes(bytes[pos..pos + 4].try_into().unwrap()) as usize;
         let kind: [u8; 4] = bytes[pos + 4..pos + 8].try_into().unwrap();
         let data_start = pos + 8;
+        // Checked: on 32-bit targets (WebAssembly) a forged length could
+        // otherwise wrap around and pass the bounds check.
         let data_end = data_start.checked_add(len)?;
-        if data_end + 4 > bytes.len() {
+        if data_end.checked_add(4)? > bytes.len() {
             return None;
         }
         let data = &bytes[data_start..data_end];

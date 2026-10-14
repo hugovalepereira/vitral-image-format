@@ -1,6 +1,6 @@
 //! Reading and writing `.vitral.png` files.
 //!
-//! Layout of the `vITr` chunk payload (big-endian):
+//! Layout of the `viTr` chunk payload (big-endian):
 //!
 //! | offset | size | field                                              |
 //! |--------|------|----------------------------------------------------|
@@ -23,7 +23,7 @@ use crate::{Error, RgbaImage, VitralImage};
 /// The chunk depends on the pixel values but checks them itself (the CRC of
 /// the main image), so lossless optimisers may keep it and any change to the
 /// pixels is detected.
-pub const CHUNK_TYPE: [u8; 4] = *b"vITr";
+pub const CHUNK_TYPE: [u8; 4] = *b"viTr";
 
 const VERSION_MAJOR: u8 = 0;
 const VERSION_MINOR: u8 = 1;
@@ -36,14 +36,14 @@ const HEADER_LEN: usize = 8;
 pub enum VitralStatus {
     /// The file carries valid Vitral data.
     Ok,
-    /// No `vITr` chunk: a plain PNG.
+    /// No `viTr` chunk: a plain PNG.
     NotVitral,
     /// The main image no longer matches the one the residual was computed
     /// against (the file was edited or recompressed lossily).
     FallbackMismatch,
     /// A version, model or feature this decoder does not support.
     Unsupported(String),
-    /// The `vITr` chunk is damaged.
+    /// The `viTr` chunk is damaged.
     Corrupt(String),
 }
 
@@ -152,8 +152,8 @@ pub fn decode(bytes: &[u8]) -> Result<Decoded, Error> {
     }
     let status = match (found, count) {
         (None, _) => VitralStatus::NotVitral,
-        (Some(_), n) if n > 1 => VitralStatus::Corrupt("more than one vITr chunk".into()),
-        (Some((_, false)), _) => VitralStatus::Corrupt("vITr chunk CRC mismatch".into()),
+        (Some(_), n) if n > 1 => VitralStatus::Corrupt("more than one viTr chunk".into()),
+        (Some((_, false)), _) => VitralStatus::Corrupt("viTr chunk CRC mismatch".into()),
         _ if source.bit_depth_16 => VitralStatus::Unsupported("16-bit images".into()),
         _ if source.animated => VitralStatus::Unsupported("animated PNG".into()),
         (Some((payload, true)), _) => match parse_payload(payload, &fallback) {
@@ -176,7 +176,7 @@ pub fn decode(bytes: &[u8]) -> Result<Decoded, Error> {
 
 fn parse_payload(payload: &[u8], fallback: &RgbaImage) -> Result<VitralImage, VitralStatus> {
     if payload.len() < HEADER_LEN {
-        return Err(VitralStatus::Corrupt("vITr payload too short".into()));
+        return Err(VitralStatus::Corrupt("viTr payload too short".into()));
     }
     let (major, minor, model) = (payload[0], payload[1], payload[2]);
     if major != VERSION_MAJOR {
@@ -269,6 +269,17 @@ mod tests {
         VitralImage::new(n, n, black, white).unwrap()
     }
 
+    /// The four letter cases of the chunk name carry its properties.
+    #[test]
+    fn chunk_type_is_ancillary_private_and_safe_to_copy() {
+        use png::chunk::{is_critical, is_private, reserved_set, safe_to_copy, ChunkType};
+        let kind = ChunkType(CHUNK_TYPE);
+        assert!(!is_critical(kind));
+        assert!(is_private(kind));
+        assert!(!reserved_set(kind));
+        assert!(safe_to_copy(kind));
+    }
+
     #[test]
     fn round_trip_is_lossless() {
         let img = sample();
@@ -338,7 +349,7 @@ mod tests {
     fn damaged_chunk_is_detected() {
         let bytes = encode(&sample()).unwrap();
         let mut damaged = bytes.clone();
-        // Flip a byte inside the vITr payload (after its 8-byte chunk header).
+        // Flip a byte inside the viTr payload (after its 8-byte chunk header).
         let pos = bytes.windows(4).position(|w| w == CHUNK_TYPE).unwrap() + 4 + 10;
         damaged[pos] ^= 0x55;
         let decoded = decode(&damaged).unwrap();

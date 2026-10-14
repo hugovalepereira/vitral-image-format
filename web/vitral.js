@@ -53,8 +53,10 @@ export function toCanvas(width, height, pixels) {
   const canvas = document.createElement('canvas');
   canvas.width = width;
   canvas.height = height;
-  const data = new ImageData(new Uint8ClampedArray(pixels), width, height);
-  canvas.getContext('2d').putImageData(data, 0, 0);
+  const context = canvas.getContext('2d');
+  // Browsers return null when a page uses up its canvas memory (e.g. on iOS).
+  if (!context) throw new Error('could not create a canvas');
+  context.putImageData(new ImageData(new Uint8ClampedArray(pixels), width, height), 0, 0);
   return canvas;
 }
 
@@ -71,12 +73,15 @@ export async function upgrade(img) {
     const response = await fetch(img.currentSrc || img.src);
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const planes = await decode(new Uint8Array(await response.arrayBuffer()));
-    status = planes.status;
-    // The image may have been turned off or removed while loading.
-    if (planes.isVitral && img.dataset.vitralState === 'loading' && img.isConnected) {
-      attach(img, planes);
+    try {
+      status = planes.status;
+      // The image may have been turned off or removed while loading.
+      if (planes.isVitral && img.dataset.vitralState === 'loading' && img.isConnected) {
+        attach(img, planes);
+      }
+    } finally {
+      planes.free();
     }
-    planes.free();
   } catch (error) {
     status = `error: ${error.message}`;
   }
@@ -85,18 +90,8 @@ export async function upgrade(img) {
 }
 
 function attach(img, planes) {
-  const wrapper = document.createElement('span');
-  wrapper.className = 'vitral';
-  const display = getComputedStyle(img).display;
-  // No z-index, opacity or transform: the wrapper must not isolate blending.
-  wrapper.style.cssText =
-    `position:relative;display:${display === 'inline' ? 'inline-block' : 'block'};line-height:0`;
-  img.replaceWith(wrapper);
-  wrapper.append(img);
-  // Keep the <img> for layout, accessibility, dragging and "save image as",
-  // but hide its fallback pixels.
-  img.style.opacity = '0';
-
+  // Build every canvas before touching the page: if one fails, the <img> is
+  // left exactly as it was and keeps showing its plain PNG.
   const canvases = [];
   for (const [mode, pixels] of LAYERS) {
     if (mode === 'difference' && !planes.usesDifference) continue;
@@ -105,22 +100,41 @@ function attach(img, planes) {
     canvas.style.cssText = `position:absolute;pointer-events:none;mix-blend-mode:${mode}`;
     canvases.push(canvas);
   }
-  wrapper.append(...canvases);
 
-  // Cover exactly the <img> box, whatever CSS does to its size.
+  const wrapper = document.createElement('span');
+  wrapper.className = 'vitral';
+  const display = getComputedStyle(img).display;
+  // No z-index, opacity or transform: the wrapper must not isolate blending.
+  wrapper.style.cssText =
+    `position:relative;display:${display.startsWith('inline') ? 'inline-block' : 'block'};line-height:0`;
+  img.replaceWith(wrapper);
+  wrapper.append(img, ...canvases);
+  // Keep the <img> for layout, accessibility, dragging and "save image as",
+  // but hide its fallback pixels.
+  img.style.opacity = '0';
+
+  // Cover exactly the picture inside the <img> (its content box, without
+  // border or padding), whatever CSS does to its size or position.
   const fit = () => {
+    const css = getComputedStyle(img);
+    const padLeft = parseFloat(css.paddingLeft);
+    const padTop = parseFloat(css.paddingTop);
+    const box = {
+      left: img.offsetLeft + img.clientLeft + padLeft,
+      top: img.offsetTop + img.clientTop + padTop,
+      width: img.clientWidth - padLeft - parseFloat(css.paddingRight),
+      height: img.clientHeight - padTop - parseFloat(css.paddingBottom),
+    };
     for (const canvas of canvases) {
-      Object.assign(canvas.style, {
-        left: `${img.offsetLeft}px`,
-        top: `${img.offsetTop}px`,
-        width: `${img.offsetWidth}px`,
-        height: `${img.offsetHeight}px`,
-      });
+      for (const [key, value] of Object.entries(box)) canvas.style[key] = `${value}px`;
     }
   };
   fit();
+  // The wrapper changes size when the page reflows around a centred image,
+  // even if the image itself keeps its size.
   const observer = new ResizeObserver(fit);
   observer.observe(img);
+  observer.observe(wrapper);
   observers.set(img, observer);
 }
 

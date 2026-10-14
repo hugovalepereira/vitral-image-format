@@ -15,8 +15,8 @@ uma ferramenta de otimização, os dados Vitral sobrevivem?
 |---|---|
 | optipng (por omissão) | ✅ mantém (ficheiro fica 3–22% menor) |
 | oxipng (por omissão) | ✅ mantém (9–24% menor) |
-| pngcrush (por omissão e `-rem allb`) | ✅ mantém, depois da mudança para `vITr` (antes removia) |
-| zopflipng com `--keepchunks=vITr` | ✅ mantém |
+| pngcrush (por omissão e `-rem allb`) | ✅ mantém, depois da mudança para *safe-to-copy* (antes removia) |
+| zopflipng com `--keepchunks=viTr` | ✅ mantém |
 | zopflipng (por omissão), advpng, `optipng -strip all`, `oxipng --strip safe/all` | ⚪ remove o chunk |
 | pngquant (com perdas), ImageMagick, Pillow, ffmpeg, sharp/libvips | ⚪ remove o chunk |
 
@@ -29,7 +29,7 @@ uma ferramenta de otimização, os dados Vitral sobrevivem?
   (Cloudinary, imgix e semelhantes recodificam as imagens). Em produção, os
   ficheiros Vitral têm de ser servidos sem otimização automática; no Next.js,
   por exemplo, com `unoptimized`. Isto tem de constar na documentação de uso.
-- **Mudança feita:** o chunk passou de `vITR` (*unsafe-to-copy*) para `vITr`
+- **Mudança feita:** o chunk passou de `vITR` (*unsafe-to-copy*) para `vITr`, mais tarde corrigido para `viTr` (ver D2)
   (*safe-to-copy*). A marca *unsafe* não protegia nada, porque o descodificador
   já verifica os pixels com um CRC, e só fazia as ferramentas descartarem o
   chunk.

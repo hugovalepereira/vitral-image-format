@@ -15,7 +15,7 @@ podem voltar a ser consideradas.
   * Ficheiros com dupla extensão **`nome.vitral.png`**, à semelhança dos `.9.png`
     do Android.
   * Tipo MIME: `image/png`.
-  * Chunk PNG: `vITr`.
+  * Chunk PNG: `viTr`.
 * **Alternativas guardadas**: **Gel** (o filtro de cor da iluminação de palco, que
   é um multiply sobre a luz), Scrim, Mixel. Evitar **Glaze**, que é uma ferramenta
   anti-IA muito conhecida entre artistas.
@@ -26,11 +26,15 @@ podem voltar a ser consideradas.
   "ficheiro partido".
 * **Decisão**: o ficheiro é um PNG válido.
   * A imagem principal (`IDAT`) é o **fallback** que qualquer programa mostra.
-  * Um chunk auxiliar `vITr` guarda o que falta para reconstruir K e W.
+  * Um chunk auxiliar `viTr` guarda o que falta para reconstruir K e W.
   * O chunk é *safe-to-copy* (quarta letra minúscula). Inicialmente era `vITR`
     (*unsafe*), mas os testes com 13 otimizadores mostraram que a marca *unsafe*
     só fazia as ferramentas descartá-lo. O CRC dos pixels já protege contra
     alterações (ver [05](05-verificacoes-v1.md)).
+  * **Correção (out/2026):** o nome `vITr` marcava, por engano, um chunk
+    *público*, porque nas regras do PNG é a segunda letra **minúscula** que
+    indica um chunk privado. O nome passou a `viTr`. Se um dia o chunk for
+    registado como público, passa a `vITr`.
   * Um CRC da imagem principal deteta recompressões ou edições.
 * **Riscos aceites**: CDNs e otimizadores que retiram chunks desconhecidos fazem a
   imagem cair para o fallback. Isto é degradação, não erro.

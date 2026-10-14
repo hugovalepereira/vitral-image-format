@@ -39,6 +39,8 @@ jobs:
           node-version: 22
       - run: cargo build --release -p vitral-cli
       - run: ./web/build.sh
+      - name: WebAssembly (32-bit) decoder robustness
+        run: node web/test/wasm32.mjs
       - run: npm install --no-save playwright@1.56.1
       - run: npx playwright install --with-deps chromium firefox webkit
       - run: node web/test/run.mjs
