@@ -65,7 +65,9 @@ de dois exports (preto/branco) e vê-lo sobre qualquer fundo com `vitral render`
 
 ## Fase 2.5 — Fechar a v1 (antes de pensar na v2)
 
-* [ ] Exportações reais do autor: Figma, Photoshop, Illustrator, After Effects.
+* [x] Exportações reais do Figma (multiply): reproduzidas sem diferenças.
+* [ ] Exportações reais de Photoshop, Illustrator e After Effects, e de screen
+      e de modos combinados.
 * [ ] Vetores de conformidade publicados.
 * [ ] Compressão melhor (deflate ao nível do oxipng) e rever a meta RNF1.
 * [ ] Conversão de cor no CLI (Display P3 → sRGB, com a biblioteca `moxcms`).

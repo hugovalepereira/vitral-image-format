@@ -61,12 +61,8 @@ nome original, *Graphic Function Image*). O Vitral organiza essa ideia em nívei
 
 ## Questões
 
-* **Q1 — Domínio**: em aberto.
-  * Candidatos: `vitral.dev`, `vitral.app`, `vitral.design`, `vitralformat.org`,
-    `getvitral.com`, `vitral.pt`.
-  * Não foi possível confirmar a disponibilidade a partir deste ambiente, porque
-    a rede bloqueia o RDAP e o DNS.
-  * O repositório já foi renomeado para `vitral-image-format`.
+* **Q1 — Domínio**: em aberto, a decidir pelo autor. O repositório já foi
+  renomeado para `vitral-image-format`.
 * **Q2 — Vídeo**: adiado, com notas no [plano](04-plano.md).
 * **Q3 — Contentor da v2**: só depois de fechar a v1 (fase 2.5 do plano).
 * **Q4 — Fundo transparente**: ✅ decidido. Mostra a cor nativa (D9).
