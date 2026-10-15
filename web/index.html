@@ -1,0 +1,557 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Vitral</title>
+<meta name="description" content="An image format that carries its own blend modes. Valid PNG, blends with whatever is behind it.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gloock&family=IBM+Plex+Mono:wght@400;500&family=Public+Sans:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: a light table. The live stage is the opening statement; everything
+   below is one reading column that widens only for the layer breakdown. */
+:root {
+  --bg: #eceef1;
+  --surface: #f8f9fa;
+  --fg: #15171c;
+  --muted: #586070;
+  --line: #c8cdd5;
+  --accent: #2343c4;
+  --ruby: #a8243a;
+  --check-a: #ffffff;
+  --check-b: #d9dde3;
+  --display: "Gloock", "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+  --body: "Public Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --step--1: 0.8125rem;
+  --step-0: 1rem;
+  --step-1: 1.25rem;
+  --step-2: 1.75rem;
+  --step-3: clamp(2.6rem, 6vw, 4.25rem);
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #101216;
+    --surface: #171a20;
+    --fg: #e7e9ee;
+    --muted: #9aa2b0;
+    --line: #2b3039;
+    --accent: #8ea4ff;
+    --ruby: #ff7d91;
+    --check-a: #2a2e36;
+    --check-b: #1d2026;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #101216;
+  --surface: #171a20;
+  --fg: #e7e9ee;
+  --muted: #9aa2b0;
+  --line: #2b3039;
+  --accent: #8ea4ff;
+  --ruby: #ff7d91;
+  --check-a: #2a2e36;
+  --check-b: #1d2026;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font: 400 var(--step-0)/1.6 var(--body);
+  padding-inline: max(16px, 4vw);
+  padding-block: 0 4rem;
+}
+main { max-width: 72rem; margin-inline: auto; display: grid; grid-template-columns: minmax(0, 1fr); gap: 4.5rem; }
+h1, h2 { font-family: var(--display); font-weight: 400; text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); line-height: 1; letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); line-height: 1.15; }
+p { margin: 0; }
+a { color: var(--accent); }
+code, pre { font-family: var(--mono); font-size: 0.9em; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.eyebrow {
+  font: 500 var(--step--1)/1.2 var(--mono);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+.prose { display: grid; gap: 1rem; max-width: 40rem; }
+.prose p { color: var(--muted); }
+.prose strong { color: var(--fg); font-weight: 600; }
+
+/* Hero */
+header.hero { display: grid; gap: 1.25rem; padding-top: 3.5rem; }
+.hero .lede { font-size: var(--step-1); line-height: 1.4; max-width: 34rem; }
+.hero .lede em { font-style: normal; color: var(--accent); }
+
+/* Controls */
+.controls { display: flex; flex-wrap: wrap; gap: 1rem 2rem; align-items: end; }
+.control { display: grid; gap: 0.4rem; min-width: 0; }
+.segmented { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+.segmented button {
+  font: 500 var(--step--1)/1 var(--body);
+  color: var(--fg);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 0.55rem 0.85rem;
+  cursor: pointer;
+}
+.segmented button[aria-pressed="true"] { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+
+/* Stages */
+.stages { display: grid; gap: 1.25rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr)); }
+figure { margin: 0; display: grid; gap: 0.6rem; min-width: 0; }
+figcaption { display: flex; justify-content: space-between; gap: 1rem; font-size: var(--step--1); color: var(--muted); }
+figcaption strong { color: var(--fg); font-weight: 600; }
+.stage {
+  position: relative;
+  aspect-ratio: 16 / 10;
+  max-width: 100%;
+  overflow: hidden;
+  border-radius: 6px;
+  isolation: isolate; /* the image blends with this stage, not with the page */
+  touch-action: none;
+  user-select: none;
+}
+.obj { position: absolute; cursor: grab; outline-offset: 4px; }
+.obj:active { cursor: grabbing; }
+.obj img { display: block; width: 100%; height: auto; -webkit-user-drag: none; }
+.hint { font-size: var(--step--1); color: var(--muted); }
+
+/* Backdrops are imagery, not theme colours: they stay the same in both themes. */
+.bd-scene { background: #333 url(../examples/backdrop.png) center / cover; }
+.bd-spectrum {
+  background:
+    linear-gradient(to bottom, rgb(0 0 0 / 0), rgb(0 0 0 / 0.65)),
+    linear-gradient(90deg, #ff2d2d, #ffd52d, #3bd13b, #2de0ff, #2d5bff, #e02dff, #ff2d2d);
+}
+.bd-stripes { background: repeating-linear-gradient(45deg, #121212 0 14px, #f2f2f2 14px 28px); }
+.bd-night { background: radial-gradient(circle at 70% 25%, #3b4a8a, #0c1024 60%); }
+.bd-text { background: #f4f1e8; color: #23201b; }
+.bd-text .page-text {
+  position: absolute; inset: 0; padding: 4% 5%;
+  font: 400 clamp(0.62rem, 1.55vw, 0.95rem)/1.45 "Iowan Old Style", Georgia, serif;
+  column-count: 2; column-gap: 5%;
+}
+.bd-text .page-text p + p { margin-top: 0.6em; }
+
+/* Layer breakdown */
+.how { display: grid; grid-template-columns: minmax(0, 1fr); gap: 2rem; }
+.formula {
+  font: 500 var(--step-1)/1.4 var(--mono);
+  padding: 1rem 1.25rem;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  overflow-x: auto;
+}
+.breakdown { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr)); }
+.breakdown figure { gap: 0.4rem; }
+.breakdown figcaption { display: block; }
+.breakdown canvas {
+  width: 100%; height: auto; display: block; border-radius: 4px;
+  background: repeating-conic-gradient(var(--check-a) 0 25%, var(--check-b) 0 50%) 0 0 / 14px 14px;
+}
+.breakdown .tag { font: 500 var(--step--1)/1.3 var(--mono); }
+.breakdown .tag span { color: var(--muted); font-family: var(--body); display: block; }
+
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); }
+th, td { text-align: left; padding: 0.55rem 0.75rem 0.55rem 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-weight: 600; }
+.table-wrap { overflow-x: auto; max-width: 44rem; }
+.pill { display: inline-block; font: 500 0.72rem/1 var(--mono); padding: 0.3rem 0.5rem; border-radius: 999px; border: 1px solid currentColor; white-space: nowrap; }
+.pill.exact { color: var(--accent); }
+.pill.approx { color: var(--muted); }
+.pill.later { color: var(--ruby); }
+
+/* Code */
+.code { display: grid; gap: 0.5rem; max-width: 44rem; }
+.code pre {
+  margin: 0; padding: 1rem 1.25rem; overflow-x: auto;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 6px; line-height: 1.55;
+}
+.code button {
+  justify-self: end;
+  font: 500 0.75rem/1 var(--body); padding: 0.4rem 0.6rem; cursor: pointer;
+  background: var(--bg); color: var(--fg); border: 1px solid var(--line); border-radius: 4px;
+}
+
+/* Encoder */
+.maker { display: grid; gap: 1.25rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr)); align-items: start; }
+.slot { display: grid; gap: 0.5rem; min-width: 0; }
+.slot label { font-weight: 600; font-size: var(--step--1); }
+.slot input { font: inherit; font-size: var(--step--1); max-width: 100%; color: var(--muted); }
+.slot img { width: 100%; height: auto; border-radius: 4px; display: block; }
+.slot .optional { font-weight: 400; color: var(--muted); }
+#transparent-preview { background: repeating-conic-gradient(var(--check-a) 0 25%, var(--check-b) 0 50%) 0 0 / 14px 14px; }
+.result .stage { aspect-ratio: auto; display: grid; place-items: center; padding: 6%; }
+.result .stage > div { width: 70%; }
+.result img { width: 100%; height: auto; display: block; }
+.status { font-size: var(--step--1); color: var(--muted); font-variant-numeric: tabular-nums; }
+.status.error { color: var(--ruby); }
+.download { font-weight: 600; font-size: var(--step--1); }
+
+footer { max-width: 72rem; margin: 4rem auto 0; padding-top: 1.5rem; border-top: 1px solid var(--line); display: flex; flex-wrap: wrap; gap: 0.5rem 1.5rem; font-size: var(--step--1); color: var(--muted); }
+
+@media (prefers-reduced-motion: no-preference) {
+  .segmented button { transition: background-color 120ms, color 120ms; }
+}
+</style>
+</head>
+<body>
+<main>
+  <header class="hero">
+    <p class="eyebrow">Image format · draft 0.1</p>
+    <h1>Vitral</h1>
+    <p class="lede">PNG has transparency. Vitral has <em>light and filter</em>: an image that carries its own blend modes and reacts to whatever is behind it.</p>
+  </header>
+
+  <section aria-labelledby="demo-title" class="how">
+    <h2 id="demo-title" hidden>Live comparison</h2>
+    <div class="controls">
+      <div class="control">
+        <span class="eyebrow" id="sample-label">Image</span>
+        <div class="segmented" role="group" aria-labelledby="sample-label" id="samples"></div>
+      </div>
+      <div class="control">
+        <span class="eyebrow" id="backdrop-label">Backdrop</span>
+        <div class="segmented" role="group" aria-labelledby="backdrop-label" id="backdrops"></div>
+      </div>
+    </div>
+    <div class="stages">
+      <figure>
+        <figcaption><strong>Any PNG viewer</strong><span>shows the built-in fallback</span></figcaption>
+        <div class="stage" id="stage-png"></div>
+      </figure>
+      <figure>
+        <figcaption><strong>Vitral</strong><span>same file, blend modes applied</span></figcaption>
+        <div class="stage" id="stage-vitral"></div>
+      </figure>
+    </div>
+    <p class="hint" id="sample-note">Drag the image, or focus it and use the arrow keys. Both views show the same <code>.vitral.png</code> file.</p>
+  </section>
+
+  <section class="how" aria-labelledby="how-title">
+    <div class="prose">
+      <p class="eyebrow">How it works</p>
+      <h2 id="how-title">Every pixel is a function of its backdrop</h2>
+      <p>A Vitral file stores how each pixel looks <strong>over black</strong> and <strong>over white</strong>. Over any other backdrop, each colour channel lands on the straight line between those two values.</p>
+    </div>
+    <div class="formula">result = K + (W − K) × backdrop</div>
+    <div class="prose">
+      <p>That one line covers normal, multiply, screen, hard light, exclusion and inversion, mixed freely pixel by pixel. To draw it, a renderer stacks three layers with blend modes that every browser and design tool already has: <strong>difference</strong>, then <strong>screen</strong>, then <strong>multiply</strong>.</p>
+    </div>
+    <div class="breakdown" id="breakdown" aria-live="polite"></div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Blend mode</th><th>In draft 0.1</th></tr></thead>
+        <tbody>
+          <tr><td>Normal, multiply, screen, hard light, exclusion, inversion</td><td><span class="pill exact">exact</span></td></tr>
+          <tr><td>Add (plus-lighter), linear burn, darken, lighten, difference</td><td><span class="pill approx">approximate</span></td></tr>
+          <tr><td>Overlay, soft light, colour dodge and burn, hue, saturation, colour, luminosity</td><td><span class="pill later">planned for v2 (layers)</span></td></tr>
+          <tr><td>Background blur, refraction</td><td><span class="pill later">planned for v2 (backdrop effects)</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="hint">Approximate modes are exact over black and white backdrops and follow a straight line in between: add behaves like screen, difference like exclusion.</p>
+  </section>
+
+  <section class="how" aria-labelledby="use-title">
+    <div class="prose">
+      <p class="eyebrow">Use it on a website</p>
+      <h2 id="use-title">One script tag</h2>
+      <p>A Vitral file is a valid PNG, so the page works without JavaScript and shows the fallback. With the script, every <code>&lt;img&gt;</code> whose file ends in <code>.vitral.png</code> starts blending. As with CSS <code>mix-blend-mode</code>, the image blends with content in its own stacking context.</p>
+    </div>
+    <div class="code">
+      <button type="button" id="copy-snippet">Copy</button>
+      <pre id="snippet"><code>&lt;img src="window.vitral.png" alt="Stained glass window"&gt;
+&lt;script type="module" src="vitral.js"&gt;&lt;/script&gt;</code></pre>
+    </div>
+  </section>
+
+  <section class="how" aria-labelledby="make-title">
+    <div class="prose">
+      <p class="eyebrow">Make one</p>
+      <h2 id="make-title">Export from any tool</h2>
+      <p>Put a black background behind your artwork and export a PNG, then switch it to white and export again. Layers keep their blend modes against the background, so these two exports hold the blending. A third export with a transparent background records each pixel's own colour, shown where nothing is behind the image and by software without Vitral support. The example below is loaded with the stained glass exports.</p>
+    </div>
+    <div class="maker">
+      <div class="slot">
+        <label for="black-input">Artwork over black</label>
+        <input type="file" id="black-input" accept="image/png">
+        <img id="black-preview" alt="Artwork exported over a black background">
+      </div>
+      <div class="slot">
+        <label for="white-input">Artwork over white</label>
+        <input type="file" id="white-input" accept="image/png">
+        <img id="white-preview" alt="Artwork exported over a white background">
+      </div>
+      <div class="slot">
+        <label for="transparent-input">Artwork over transparency <span class="optional">(optional)</span></label>
+        <input type="file" id="transparent-input" accept="image/png">
+        <img id="transparent-preview" alt="Artwork exported over a transparent background">
+      </div>
+      <div class="slot result">
+        <span class="eyebrow">Result, over the spectrum</span>
+        <div class="stage bd-spectrum" id="result-stage"></div>
+        <p class="status" id="encode-status">Encoding…</p>
+        <a class="download" id="download" hidden>Download</a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <span>Vitral draft 0.1 · October 2026</span>
+  <a href="https://github.com/hugovalepereira/vitral-image-format">Source and specification on GitHub</a>
+  <span>MIT licence</span>
+</footer>
+
+<script type="module">
+import { decode, encode, toCanvas } from './vitral.js';
+
+const STAGE_W = 640;
+const SAMPLES = [
+  { id: 'stained-glass', label: 'Stained glass', w: 300, h: 360,
+    note: 'Tinted panes in multiply, a sheen in screen and lead lines in normal mode.' },
+  { id: 'glass-badge', label: 'Amber glass', w: 360, h: 260,
+    note: 'A multiply shadow and amber tint, a screen highlight and a normal rim.' },
+  { id: 'light-leak', label: 'Light leak', w: 420, h: 280,
+    note: 'Three blobs of warm light in screen mode. A plain PNG can only fog the image.' },
+  { id: 'invert-ring', label: 'Inverting ring', w: 260, h: 260,
+    note: 'Difference with white: it inverts whatever is behind it.' },
+];
+const BACKDROPS = [
+  { id: 'scene', label: 'Scene' },
+  { id: 'spectrum', label: 'Spectrum' },
+  { id: 'text', label: 'Text' },
+  { id: 'stripes', label: 'Stripes' },
+  { id: 'night', label: 'Night' },
+];
+const PAGE_TEXT = `
+<p>Stained glass works by subtraction. Light from behind passes through pot-metal glass, which keeps some wavelengths and absorbs the rest, so a pane can only darken what it lets through.</p>
+<p>Painted details in vitreous enamel block the light almost entirely, and the lead cames that hold the pieces together read as dark lines against the sky.</p>
+<p>A screen image has no such physics. A PNG can be opaque or see-through, but it cannot tint what lies beneath it, brighten it, or invert it. Every blend mode a designer picks is lost at export.</p>
+<p>Vitral keeps two exports of the artwork, one over black and one over white. Between those two extremes, every pixel follows a straight line, and that line is enough to rebuild multiply, screen and their relatives over any backdrop.</p>
+<p>Software that has never heard of Vitral sees an ordinary PNG and shows the fallback image stored inside it.</p>`;
+
+const state = { sample: SAMPLES[0], backdrop: BACKDROPS[0], x: 0.5, y: 0.5 };
+const stages = [document.getElementById('stage-png'), document.getElementById('stage-vitral')];
+const url = (id) => `../examples/${id}.vitral.png`;
+
+function buttons(container, items, key) {
+  for (const item of items) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.textContent = item.label;
+    b.dataset.id = item.id;
+    b.addEventListener('click', () => { state[key] = item; render(); });
+    container.append(b);
+  }
+}
+buttons(document.getElementById('samples'), SAMPLES, 'sample');
+buttons(document.getElementById('backdrops'), BACKDROPS, 'backdrop');
+
+function place() {
+  const { w, h } = state.sample;
+  const fw = w / STAGE_W;
+  for (const stage of stages) {
+    const obj = stage.querySelector('.obj');
+    if (!obj) continue;
+    const fh = (h / w) * fw * (stage.clientWidth / stage.clientHeight);
+    obj.style.width = `${fw * 100}%`;
+    obj.style.left = `${(state.x - fw / 2) * 100}%`;
+    obj.style.top = `${(state.y - fh / 2) * 100}%`;
+  }
+}
+
+function render() {
+  for (const group of ['samples', 'backdrops']) {
+    const current = group === 'samples' ? state.sample.id : state.backdrop.id;
+    for (const b of document.getElementById(group).children) {
+      b.setAttribute('aria-pressed', String(b.dataset.id === current));
+    }
+  }
+  document.getElementById('sample-note').textContent =
+    `${state.sample.note} Drag it, or focus it and use the arrow keys.`;
+  stages.forEach((stage, i) => {
+    stage.className = `stage bd-${state.backdrop.id}`;
+    stage.replaceChildren();
+    if (state.backdrop.id === 'text') {
+      const text = document.createElement('div');
+      text.className = 'page-text';
+      text.innerHTML = PAGE_TEXT;
+      stage.append(text);
+    }
+    const obj = document.createElement('div');
+    obj.className = 'obj';
+    obj.tabIndex = 0;
+    obj.setAttribute('aria-label', `${state.sample.label}. Use the arrow keys to move it.`);
+    const img = new Image();
+    img.alt = state.sample.label;
+    img.draggable = false;
+    // The left stage stays a plain PNG on purpose.
+    if (i === 0) img.dataset.vitralState = 'off';
+    else img.dataset.vitral = '';
+    img.src = url(state.sample.id);
+    obj.append(img);
+    stage.append(obj);
+    attachDrag(stage, obj);
+  });
+  place();
+  showBreakdown(state.sample);
+}
+
+function attachDrag(stage, obj) {
+  obj.addEventListener('pointerdown', (e) => {
+    obj.setPointerCapture(e.pointerId);
+    const rect = stage.getBoundingClientRect();
+    const start = { px: e.clientX, py: e.clientY, x: state.x, y: state.y };
+    const move = (ev) => {
+      state.x = Math.min(1, Math.max(0, start.x + (ev.clientX - start.px) / rect.width));
+      state.y = Math.min(1, Math.max(0, start.y + (ev.clientY - start.py) / rect.height));
+      place();
+    };
+    const up = () => { obj.removeEventListener('pointermove', move); obj.removeEventListener('pointerup', up); };
+    obj.addEventListener('pointermove', move);
+    obj.addEventListener('pointerup', up);
+  });
+  obj.addEventListener('keydown', (e) => {
+    const step = e.shiftKey ? 0.1 : 0.02;
+    const d = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] }[e.key];
+    if (!d) return;
+    e.preventDefault();
+    state.x = Math.min(1, Math.max(0, state.x + d[0]));
+    state.y = Math.min(1, Math.max(0, state.y + d[1]));
+    place();
+  });
+}
+new ResizeObserver(place).observe(stages[1]);
+
+async function showBreakdown(sample) {
+  const box = document.getElementById('breakdown');
+  const bytes = new Uint8Array(await (await fetch(url(sample.id))).arrayBuffer());
+  const p = await decode(bytes);
+  if (state.sample !== sample) { p.free(); return; }
+  const tiles = [
+    ['K', 'over black', p.overBlack()],
+    ['W', 'over white', p.overWhite()],
+    ['native', 'over nothing', p.native()],
+  ];
+  let n = 1;
+  if (p.usesDifference) tiles.push([`${n++} difference`, 'inverts where W < K', p.difference()]);
+  tiles.push([`${n++} screen`, 'lifts the dark end to K', p.screen()]);
+  tiles.push([`${n++} multiply`, 'scales down to W', p.multiply()]);
+  box.replaceChildren(...tiles.map(([tag, caption, pixels]) => {
+    const fig = document.createElement('figure');
+    const label = document.createElement('figcaption');
+    label.className = 'tag';
+    label.innerHTML = `${tag}<span>${caption}</span>`;
+    fig.append(toCanvas(p.width, p.height, pixels), label);
+    return fig;
+  }));
+  p.free();
+}
+
+document.getElementById('copy-snippet').addEventListener('click', async (e) => {
+  const text = document.getElementById('snippet').textContent;
+  try {
+    await navigator.clipboard.writeText(text);
+    e.target.textContent = 'Copied';
+  } catch {
+    getSelection().selectAllChildren(document.getElementById('snippet'));
+    e.target.textContent = 'Press Ctrl+C';
+  }
+  setTimeout(() => { e.target.textContent = 'Copy'; }, 1800);
+});
+
+// Encoder
+const inputs = { black: null, white: null, transparent: null };
+let resultUrl;
+
+async function pixelsOf(blob) {
+  // Let the browser convert exports with a colour profile (e.g. Display P3) to
+  // sRGB, the colour space Vitral 0.1 blends in.
+  const bitmap = await createImageBitmap(blob, { colorSpaceConversion: 'default', premultiplyAlpha: 'none' });
+  const canvas = document.createElement('canvas');
+  canvas.width = bitmap.width;
+  canvas.height = bitmap.height;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(bitmap, 0, 0);
+  return { w: bitmap.width, h: bitmap.height, data: ctx.getImageData(0, 0, bitmap.width, bitmap.height).data };
+}
+
+async function setInput(which, blob, name) {
+  inputs[which] = { blob, name };
+  const preview = document.getElementById(`${which}-preview`);
+  URL.revokeObjectURL(preview.src);
+  preview.src = URL.createObjectURL(blob);
+  await runEncoder();
+}
+
+async function runEncoder() {
+  const status = document.getElementById('encode-status');
+  const link = document.getElementById('download');
+  if (!inputs.black || !inputs.white) return;
+  status.classList.remove('error');
+  try {
+    const [b, w, t] = await Promise.all([
+      pixelsOf(inputs.black.blob),
+      pixelsOf(inputs.white.blob),
+      inputs.transparent ? pixelsOf(inputs.transparent.blob) : null,
+    ]);
+    for (const other of [w, t].filter(Boolean)) {
+      if (other.w !== b.w || other.h !== b.h) {
+        throw new Error(`All exports must be the same size (${b.w}×${b.h} and ${other.w}×${other.h}).`);
+      }
+    }
+    const bytes = await encode(b.w, b.h, b.data, w.data, t?.data);
+    if (resultUrl) URL.revokeObjectURL(resultUrl);
+    resultUrl = URL.createObjectURL(new Blob([bytes], { type: 'image/png' }));
+    const holder = document.createElement('div');
+    const img = new Image();
+    img.alt = 'Encoded Vitral image';
+    img.dataset.vitral = '';
+    img.src = resultUrl;
+    holder.append(img);
+    document.getElementById('result-stage').replaceChildren(holder);
+    const base = inputs.black.name.replace(/(-over-black)?\.png$/i, '');
+    link.href = resultUrl;
+    link.download = `${base}.vitral.png`;
+    link.textContent = `Download ${base}.vitral.png`;
+    link.hidden = false;
+    status.textContent = `${b.w} × ${b.h} px · ${bytes.length.toLocaleString('en')} bytes`;
+  } catch (error) {
+    status.textContent = error.message;
+    status.classList.add('error');
+    link.hidden = true;
+  }
+}
+
+for (const which of ['black', 'white', 'transparent']) {
+  document.getElementById(`${which}-input`).addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (file) setInput(which, file, file.name);
+  });
+}
+
+render();
+const source = (which) => `../examples/sources/stained-glass-over-${which}.png`;
+const kinds = ['black', 'white', 'transparent'];
+const blobs = await Promise.all(kinds.map(async (k) => (await fetch(source(k))).blob()));
+kinds.forEach((k, i) => {
+  inputs[k] = { blob: blobs[i], name: `stained-glass-over-${k}.png` };
+  document.getElementById(`${k}-preview`).src = URL.createObjectURL(blobs[i]);
+});
+await runEncoder();
+</script>
+</body>
+</html>
