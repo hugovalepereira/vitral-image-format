@@ -46,3 +46,7 @@ jobs:
       - run: node web/test/run.mjs
         env:
           VITRAL_BROWSERS: chromium,firefox,webkit
+      - name: Demo page (own files, encoder)
+        run: node web/test/demo.mjs
+        env:
+          VITRAL_BROWSERS: chromium,firefox,webkit

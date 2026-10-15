@@ -57,8 +57,10 @@ de dois exports (preto/branco) e vê-lo sobre qualquer fundo com `vitral render`
 * [x] Teste automático em Chromium, Firefox e WebKit (Playwright, no CI): o
       browser bate com o compositor Rust (erro máximo de 2 níveis, médio < 0,05).
 * [x] Codificador na demo com as três exportações (preto, branco, transparente).
-* [ ] **Seguinte**: *playground* (arrastar os PNG preto/branco e descarregar o
-      Vitral), publicação no npm e no crates.io, GitHub Pages.
+* [x] Demo publicada no GitHub Pages.
+* [x] Testar um Vitral próprio na demo: abrir um ficheiro (botão, ou arrastá-lo
+      para a comparação) ou levar o resultado do codificador para os fundos.
+* [ ] **Seguinte**: publicação no npm e no crates.io.
 
 **Critério de saída**: um developer integra o Vitral num site com uma linha
 (`<script type="module" src="vitral.js">`).

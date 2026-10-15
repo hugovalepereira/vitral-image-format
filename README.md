@@ -79,8 +79,9 @@ The script decodes the file with WebAssembly and stacks three canvases with CSS
 blend modes, the image blends with content in its own stacking context.
 
 The demo page (`web/index.html`) compares a plain PNG viewer with Vitral over
-several backdrops and includes an encoder. Once GitHub Pages is enabled for the
-`main` branch (root folder), it is published at
+several backdrops and includes an encoder. You can open your own `.vitral.png`
+(or drop it on the comparison), or send the encoder's result to the backdrops.
+It is published from the `main` branch (root folder) at
 <https://hugovalepereira.github.io/vitral-image-format/>. Locally, serve the
 repository root with any static server and open `/web/`:
 
@@ -96,7 +97,7 @@ python3 -m http.server 8000    # then open http://localhost:8000/web/
 | [`crates/vitral`](crates/vitral) | Rust reference implementation: codec, reference compositor, W3C blend modes, render planes |
 | [`crates/vitral-cli`](crates/vitral-cli) | `vitral` command-line tool |
 | [`crates/vitral-wasm`](crates/vitral-wasm) | WebAssembly bindings |
-| [`web/`](web) | Polyfill (`vitral.js`), demo page, prebuilt WebAssembly in `web/pkg`, browser test |
+| [`web/`](web) | Polyfill (`vitral.js`), demo page, prebuilt WebAssembly in `web/pkg`, browser tests |
 | [`examples/`](examples) | Sample files, the two source exports of one sample, comparison renders |
 | [`docs/pt/`](docs/pt) | Planning documents in Portuguese: state of the art, requirements, decisions, roadmap |
 
