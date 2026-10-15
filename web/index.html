@@ -7,54 +7,74 @@
 <meta name="description" content="An image format that carries its own blend modes. Valid PNG, blends with whatever is behind it.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gloock&family=IBM+Plex+Mono:wght@400;500&family=Public+Sans:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&family=Outfit:wght@400;500;600;700&display=swap">
 <style>
-/* Layout: a light table. The live stage is the opening statement; everything
-   below is one reading column that widens only for the layer breakdown. */
+/* Layout: a geometric grid. Hard edges, hairline rules and numbered sections;
+   the live stage is the opening statement, each section after it pairs a
+   heading column with its content on wide screens. */
 :root {
-  --bg: #eceef1;
-  --surface: #f8f9fa;
-  --fg: #15171c;
-  --muted: #586070;
-  --line: #c8cdd5;
-  --accent: #2343c4;
-  --ruby: #a8243a;
+  --bg: #f4f4f1;
+  --surface: #ffffff;
+  --fg: #111214;
+  --muted: #5b5f68;
+  --line: #d5d6d2;
+  --strong-line: #111214;
+  --accent: #2f45ff;
+  --ruby: #c3133f;
+  --cyan: #00b4d8;
+  --magenta: #ef2d7a;
+  --yellow: #ffcc00;
+  --art-blend: multiply;
+  --grid: rgb(17 18 20 / 0.06);
   --check-a: #ffffff;
-  --check-b: #d9dde3;
-  --display: "Gloock", "Iowan Old Style", "Palatino Linotype", Georgia, serif;
-  --body: "Public Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
-  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --check-b: #e2e3df;
+  --display: "Outfit", "Futura", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --body: "DM Sans", "Avenir Next", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --mono: "DM Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
   --step--1: 0.8125rem;
   --step-0: 1rem;
   --step-1: 1.25rem;
-  --step-2: 1.75rem;
-  --step-3: clamp(2.6rem, 6vw, 4.25rem);
+  --step-2: clamp(1.75rem, 3.2vw, 2.5rem);
+  --step-3: clamp(4.5rem, 14vw, 10.5rem);
+  --gutter: max(16px, 4vw);
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #101216;
-    --surface: #171a20;
-    --fg: #e7e9ee;
-    --muted: #9aa2b0;
-    --line: #2b3039;
-    --accent: #8ea4ff;
-    --ruby: #ff7d91;
-    --check-a: #2a2e36;
-    --check-b: #1d2026;
+    --bg: #0c0d10;
+    --surface: #15171c;
+    --fg: #f0f1f3;
+    --muted: #9ba0ab;
+    --line: #2a2d34;
+    --strong-line: #f0f1f3;
+    --accent: #8a9bff;
+    --ruby: #ff7896;
+    --cyan: #0087a3;
+    --magenta: #c4185f;
+    --yellow: #b38f00;
+    --art-blend: screen;
+    --grid: rgb(240 241 243 / 0.05);
+    --check-a: #2a2d34;
+    --check-b: #1c1e24;
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
-  --bg: #101216;
-  --surface: #171a20;
-  --fg: #e7e9ee;
-  --muted: #9aa2b0;
-  --line: #2b3039;
-  --accent: #8ea4ff;
-  --ruby: #ff7d91;
-  --check-a: #2a2e36;
-  --check-b: #1d2026;
+  --bg: #0c0d10;
+  --surface: #15171c;
+  --fg: #f0f1f3;
+  --muted: #9ba0ab;
+  --line: #2a2d34;
+  --strong-line: #f0f1f3;
+  --accent: #8a9bff;
+  --ruby: #ff7896;
+  --cyan: #0087a3;
+  --magenta: #c4185f;
+  --yellow: #b38f00;
+  --art-blend: screen;
+  --grid: rgb(240 241 243 / 0.05);
+  --check-a: #2a2d34;
+  --check-b: #1c1e24;
   color-scheme: dark;
 }
 
@@ -64,62 +84,129 @@ body {
   background: var(--bg);
   color: var(--fg);
   font: 400 var(--step-0)/1.6 var(--body);
-  padding-inline: max(16px, 4vw);
-  padding-block: 0 4rem;
+  padding-inline: var(--gutter);
+  padding-block: 0 3rem;
 }
-main { max-width: 72rem; margin-inline: auto; display: grid; grid-template-columns: minmax(0, 1fr); gap: 4.5rem; }
-h1, h2 { font-family: var(--display); font-weight: 400; text-wrap: balance; margin: 0; }
-h1 { font-size: var(--step-3); line-height: 1; letter-spacing: -0.01em; }
-h2 { font-size: var(--step-2); line-height: 1.15; }
+main { max-width: 76rem; margin-inline: auto; display: grid; grid-template-columns: minmax(0, 1fr); }
+h1, h2 { font-family: var(--display); text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); font-weight: 600; line-height: 0.82; letter-spacing: -0.055em; margin-left: -0.05em; }
+h2 { font-size: var(--step-2); font-weight: 500; line-height: 1.08; letter-spacing: -0.025em; }
 p { margin: 0; }
-a { color: var(--accent); }
+a { color: var(--accent); text-underline-offset: 0.2em; }
 code, pre { font-family: var(--mono); font-size: 0.9em; }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 .eyebrow {
-  font: 500 var(--step--1)/1.2 var(--mono);
+  font: 500 0.75rem/1.2 var(--mono);
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.1em;
   color: var(--muted);
 }
+.num { color: var(--accent); margin-right: 0.6em; }
 .prose { display: grid; gap: 1rem; max-width: 40rem; }
 .prose p { color: var(--muted); }
 .prose strong { color: var(--fg); font-weight: 600; }
 
-/* Hero */
-header.hero { display: grid; gap: 1.25rem; padding-top: 3.5rem; }
-.hero .lede { font-size: var(--step-1); line-height: 1.4; max-width: 34rem; }
-.hero .lede em { font-style: normal; color: var(--accent); }
+/* Top bar */
+.topbar {
+  max-width: 76rem; margin-inline: auto;
+  display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+  padding-block: 1.1rem; border-bottom: 1px solid var(--strong-line);
+}
+.mark { display: flex; align-items: center; gap: 0.6rem; font: 600 1.15rem/1 var(--display); letter-spacing: -0.02em; color: var(--fg); text-decoration: none; }
+.mark svg { width: 1.4rem; height: 1.4rem; }
+.topbar nav { display: flex; gap: 1.75rem; }
+.topbar nav a { font: 500 var(--step--1)/1 var(--body); color: var(--muted); text-decoration: none; }
+.topbar nav a:hover { color: var(--fg); }
+@media (max-width: 47.99rem) { .topbar nav a:not(.ext) { display: none; } }
 
-#demo { scroll-margin-top: 1.5rem; }
+/* Hero */
+header.hero {
+  display: grid; gap: 2.5rem; align-items: end;
+  padding-block: clamp(2.5rem, 7vw, 5.5rem) clamp(2.5rem, 5vw, 4rem);
+  background-image:
+    linear-gradient(var(--grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: 3rem 3rem;
+  background-position: -1px -1px;
+}
+.hero .text { display: grid; gap: 1.5rem; }
+.hero .lede { font: 400 clamp(1.15rem, 1.8vw, 1.4rem)/1.45 var(--body); max-width: 32rem; }
+.hero .lede em { font-style: normal; font-weight: 600; color: var(--accent); }
+.hero .ctas { display: flex; flex-wrap: wrap; gap: 0.6rem; }
+.button {
+  display: inline-flex; align-items: center; gap: 0.5rem;
+  font: 500 var(--step--1)/1 var(--body); text-decoration: none;
+  padding: 0.85rem 1.15rem; border: 1.5px solid var(--strong-line); color: var(--fg); background: transparent;
+}
+.button.primary { background: var(--fg); color: var(--bg); }
+.button:hover { background: var(--fg); color: var(--bg); }
+.art { width: min(100%, 26rem); justify-self: center; aspect-ratio: 1; }
+.art .shape { mix-blend-mode: var(--art-blend); }
+.art .guide { fill: none; stroke: var(--line); stroke-width: 1; }
+@media (min-width: 56rem) {
+  header.hero { grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); }
+  .art { justify-self: end; }
+}
+@media (max-width: 55.99rem) {
+  header.hero { position: relative; }
+  .art { position: absolute; right: 0; top: clamp(2.5rem, 7vw, 5.5rem); width: clamp(6.5rem, 26vw, 14rem); }
+}
+
+/* Sections */
+.section {
+  display: grid; grid-template-columns: minmax(0, 1fr); gap: 2rem;
+  padding-block: clamp(2.5rem, 6vw, 4.5rem);
+  border-top: 1px solid var(--strong-line);
+}
+.section .head { display: grid; gap: 0.9rem; align-content: start; }
+.section > .body { display: grid; gap: 2rem; min-width: 0; }
+@media (min-width: 60rem) {
+  .section.split { grid-template-columns: 17rem minmax(0, 1fr); gap: 3rem; }
+  .section.split > .head { position: sticky; top: 1.5rem; }
+}
+
+#demo { scroll-margin-top: 1rem; border-top: 0; padding-top: 0; }
+.demo-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: end; gap: 1rem 2rem; }
 
 /* Controls */
-.controls { display: flex; flex-wrap: wrap; gap: 1rem 2rem; align-items: end; }
-.control { display: grid; gap: 0.4rem; min-width: 0; }
-.segmented { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+.controls { display: flex; flex-wrap: wrap; gap: 1.25rem 2.5rem; align-items: end; }
+.control { display: grid; gap: 0.55rem; min-width: 0; }
+.segmented { display: flex; flex-wrap: wrap; gap: 0.375rem; }
 .segmented button {
   font: 500 var(--step--1)/1 var(--body);
   color: var(--fg);
   background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  padding: 0.55rem 0.85rem;
+  border: 1.5px solid var(--line);
+  border-radius: 0;
+  padding: 0.65rem 0.95rem;
   cursor: pointer;
 }
+.segmented button:hover { border-color: var(--strong-line); }
 .segmented button[aria-pressed="true"] { background: var(--fg); color: var(--bg); border-color: var(--fg); }
-.segmented button.open { border-style: dashed; color: var(--accent); }
+.segmented button.open { border-style: dashed; border-color: var(--accent); color: var(--accent); background: transparent; }
 
 /* Stages */
 .stages { display: grid; gap: 1.25rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr)); }
 figure { margin: 0; display: grid; gap: 0.6rem; min-width: 0; }
-figcaption { display: flex; justify-content: space-between; gap: 1rem; font-size: var(--step--1); color: var(--muted); }
-figcaption strong { color: var(--fg); font-weight: 600; }
+.stages figure { gap: 0; border: 1.5px solid var(--strong-line); background: var(--surface); }
+.stages figcaption {
+  display: flex; align-items: center; gap: 0.75rem;
+  padding: 0.7rem 0.9rem; border-bottom: 1.5px solid var(--strong-line);
+  font-size: var(--step--1); color: var(--muted);
+}
+.stages figcaption .badge {
+  display: grid; place-items: center; width: 1.5rem; height: 1.5rem; flex: none;
+  font: 500 0.75rem/1 var(--mono); background: var(--fg); color: var(--bg);
+}
+.stages figcaption .badge.on { background: var(--accent); color: #fff; }
+.stages figcaption strong { color: var(--fg); font-weight: 600; }
+.stages figcaption span:last-child { margin-left: auto; text-align: right; }
 .stage {
   position: relative;
   aspect-ratio: 16 / 10;
   max-width: 100%;
   overflow: hidden;
-  border-radius: 6px;
   isolation: isolate; /* the image blends with this stage, not with the page */
   touch-action: none;
   user-select: none;
@@ -129,6 +216,8 @@ figcaption strong { color: var(--fg); font-weight: 600; }
 .obj img { display: block; width: 100%; height: auto; -webkit-user-drag: none; }
 .hint { font-size: var(--step--1); color: var(--muted); }
 .hint.error { color: var(--ruby); }
+#sample-note { padding-left: 0.9rem; border-left: 3px solid var(--accent); }
+#sample-note.error { border-left-color: var(--ruby); }
 
 /* Backdrops are imagery, not theme colours: they stay the same in both themes. */
 .bd-scene { background: #333 url(../examples/backdrop.png) center / cover; }
@@ -148,174 +237,233 @@ figcaption strong { color: var(--fg); font-weight: 600; }
 .bd-text .page-text p + p { margin-top: 0.6em; }
 
 /* Layer breakdown */
-.how { display: grid; grid-template-columns: minmax(0, 1fr); gap: 2rem; }
 .formula {
-  font: 500 var(--step-1)/1.4 var(--mono);
-  padding: 1rem 1.25rem;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: 6px;
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.2em 0.45em;
+  font: 500 clamp(1.25rem, 2.6vw, 1.9rem)/1.3 var(--mono); letter-spacing: -0.02em;
+  padding: 1.5rem 1.75rem;
+  background: #111214; color: #f0f1f3; border: 1.5px solid var(--line);
   overflow-x: auto;
 }
-.breakdown { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr)); }
-.breakdown figure { gap: 0.4rem; }
+/* Fixed colours: the formula is always light on ink, in both themes. */
+.formula .k { color: #3fd2f0; }
+.formula .w { color: #ffd84d; }
+.formula .b { color: #ff6aa6; }
+.breakdown { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr)); }
+.breakdown figure { gap: 0.55rem; }
 .breakdown figcaption { display: block; }
 .breakdown canvas {
-  width: 100%; height: auto; display: block; border-radius: 4px;
+  width: 100%; height: auto; display: block; border: 1px solid var(--line);
   background: repeating-conic-gradient(var(--check-a) 0 25%, var(--check-b) 0 50%) 0 0 / 14px 14px;
 }
 .breakdown .tag { font: 500 var(--step--1)/1.3 var(--mono); }
-.breakdown .tag span { color: var(--muted); font-family: var(--body); display: block; }
+.breakdown .tag span { color: var(--muted); font-family: var(--body); font-weight: 400; display: block; margin-top: 0.15rem; }
 
 table { border-collapse: collapse; width: 100%; font-size: var(--step--1); }
-th, td { text-align: left; padding: 0.55rem 0.75rem 0.55rem 0; border-bottom: 1px solid var(--line); vertical-align: top; }
-th { font-weight: 600; }
-.table-wrap { overflow-x: auto; max-width: 44rem; }
-.pill { display: inline-block; font: 500 0.72rem/1 var(--mono); padding: 0.3rem 0.5rem; border-radius: 999px; border: 1px solid currentColor; white-space: nowrap; }
+th, td { text-align: left; padding: 0.8rem 1rem 0.8rem 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font: 500 0.72rem/1.2 var(--mono); text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); border-bottom: 1.5px solid var(--strong-line); }
+.table-wrap { overflow-x: auto; }
+.pill { display: inline-flex; align-items: center; gap: 0.45rem; font: 500 0.72rem/1 var(--mono); white-space: nowrap; }
+.pill::before { content: ""; width: 0.6rem; height: 0.6rem; background: currentColor; flex: none; }
 .pill.exact { color: var(--accent); }
 .pill.approx { color: var(--muted); }
+.pill.approx::before { background: transparent; border: 1.5px solid currentColor; border-radius: 50%; }
 .pill.later { color: var(--ruby); }
+.pill.later::before { clip-path: polygon(50% 0, 100% 100%, 0 100%); }
 
 /* Code */
-.code { display: grid; gap: 0.5rem; max-width: 44rem; }
-.code pre {
-  margin: 0; padding: 1rem 1.25rem; overflow-x: auto;
-  background: var(--surface); border: 1px solid var(--line); border-radius: 6px; line-height: 1.55;
-}
+.code { display: grid; max-width: 46rem; border: 1.5px solid var(--strong-line); background: var(--surface); }
+.code .bar { display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0.5rem 0.5rem 1rem; border-bottom: 1px solid var(--line); }
+.code pre { margin: 0; padding: 1.1rem 1.25rem; overflow-x: auto; line-height: 1.6; }
 .code button {
-  justify-self: end;
-  font: 500 0.75rem/1 var(--body); padding: 0.4rem 0.6rem; cursor: pointer;
-  background: var(--bg); color: var(--fg); border: 1px solid var(--line); border-radius: 4px;
+  font: 500 0.75rem/1 var(--body); padding: 0.5rem 0.75rem; cursor: pointer;
+  background: var(--fg); color: var(--bg); border: 0; border-radius: 0;
 }
 
 /* Encoder */
-.maker { display: grid; gap: 1.25rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr)); align-items: start; }
-.slot { display: grid; gap: 0.5rem; min-width: 0; }
+.maker { display: grid; gap: 1.25rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 9.5rem), 1fr)); align-items: start; }
+.slot { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0.6rem; min-width: 0; }
 .slot label { font-weight: 600; font-size: var(--step--1); }
+.slot label .step { font: 500 0.72rem/1 var(--mono); color: var(--accent); margin-right: 0.4rem; }
 .slot input { font: inherit; font-size: var(--step--1); max-width: 100%; color: var(--muted); }
-.slot img { width: 100%; height: auto; border-radius: 4px; display: block; }
+.slot input::file-selector-button {
+  font: 500 0.75rem/1 var(--body); margin-right: 0.6rem; padding: 0.5rem 0.75rem; cursor: pointer;
+  color: var(--fg); background: var(--surface); border: 1.5px solid var(--strong-line); border-radius: 0;
+}
+.slot img { width: 100%; height: auto; display: block; border: 1px solid var(--line); }
 .slot .optional { font-weight: 400; color: var(--muted); }
 #transparent-preview { background: repeating-conic-gradient(var(--check-a) 0 25%, var(--check-b) 0 50%) 0 0 / 14px 14px; }
-.result .stage { aspect-ratio: auto; display: grid; place-items: center; padding: 6%; }
+.result .stage { aspect-ratio: auto; display: grid; place-items: center; padding: 8%; border: 1.5px solid var(--strong-line); }
 .result .stage > div { width: 70%; }
 .result img { width: 100%; height: auto; display: block; }
-.status { font-size: var(--step--1); color: var(--muted); font-variant-numeric: tabular-nums; }
-.status.error { color: var(--ruby); }
+.status { font: 400 0.75rem/1.4 var(--mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+.status.error { font-family: var(--body); color: var(--ruby); }
 .download { font-weight: 600; font-size: var(--step--1); }
 .try {
   justify-self: start;
-  font: 600 var(--step--1)/1 var(--body); padding: 0.55rem 0.85rem; cursor: pointer;
-  background: var(--fg); color: var(--bg); border: 1px solid var(--fg); border-radius: 999px;
+  font: 500 var(--step--1)/1 var(--body); padding: 0.75rem 1rem; cursor: pointer;
+  background: var(--fg); color: var(--bg); border: 1.5px solid var(--fg); border-radius: 0;
 }
+.try:hover { background: var(--accent); border-color: var(--accent); color: #fff; }
 
-footer { max-width: 72rem; margin: 4rem auto 0; padding-top: 1.5rem; border-top: 1px solid var(--line); display: flex; flex-wrap: wrap; gap: 0.5rem 1.5rem; font-size: var(--step--1); color: var(--muted); }
+footer {
+  max-width: 76rem; margin: 0 auto; padding-top: 1.25rem; border-top: 1px solid var(--strong-line);
+  display: flex; flex-wrap: wrap; gap: 0.5rem 1.75rem; font: 400 0.75rem/1.4 var(--mono); color: var(--muted);
+}
+footer a { color: var(--fg); }
 
 @media (prefers-reduced-motion: no-preference) {
   html { scroll-behavior: smooth; }
-  .segmented button { transition: background-color 120ms, color 120ms; }
+  .segmented button, .button, .try { transition: background-color 120ms, color 120ms, border-color 120ms; }
 }
 </style>
 </head>
 <body>
-<main>
+<div class="topbar">
+  <a class="mark" href="#top" aria-label="Vitral, back to top">
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <rect x="1" y="1" width="14" height="14" fill="var(--cyan)"/>
+      <circle cx="15" cy="15" r="8" fill="var(--magenta)" style="mix-blend-mode: var(--art-blend)"/>
+    </svg>
+    Vitral
+  </a>
+  <nav aria-label="Sections">
+    <a href="#demo">Demo</a>
+    <a href="#how">How it works</a>
+    <a href="#use">Use it</a>
+    <a href="#make">Make one</a>
+    <a class="ext" href="https://github.com/hugovalepereira/vitral-image-format">GitHub ↗</a>
+  </nav>
+</div>
+<main id="top">
   <header class="hero">
-    <p class="eyebrow">Image format · draft 0.1</p>
-    <h1>Vitral</h1>
-    <p class="lede">PNG has transparency. Vitral has <em>light and filter</em>: an image that carries its own blend modes and reacts to whatever is behind it.</p>
+    <div class="text">
+      <p class="eyebrow">Image format · draft 0.1</p>
+      <h1>Vitral</h1>
+      <p class="lede">PNG has transparency. Vitral has <em>light and filter</em>: an image that carries its own blend modes and reacts to whatever is behind it.</p>
+      <div class="ctas">
+        <a class="button primary" href="#demo">Try the demo ↓</a>
+        <a class="button" href="https://github.com/hugovalepereira/vitral-image-format/blob/main/SPEC.md">Read the specification</a>
+      </div>
+    </div>
+    <svg class="art" viewBox="0 0 240 240" aria-hidden="true">
+      <circle class="guide" cx="120" cy="120" r="112"/>
+      <line class="guide" x1="0" y1="120" x2="240" y2="120"/>
+      <line class="guide" x1="120" y1="0" x2="120" y2="240"/>
+      <rect class="shape" x="24" y="24" width="120" height="120" fill="var(--cyan)"/>
+      <circle class="shape" cx="148" cy="112" r="68" fill="var(--magenta)"/>
+      <polygon class="shape" points="60,216 132,84 204,216" fill="var(--yellow)"/>
+    </svg>
   </header>
 
-  <section aria-labelledby="demo-title" class="how" id="demo">
-    <h2 id="demo-title" hidden>Live comparison</h2>
-    <div class="controls">
-      <div class="control">
-        <span class="eyebrow" id="sample-label">Image</span>
-        <div class="segmented" role="group" aria-labelledby="sample-label" id="samples"></div>
-        <input type="file" id="own-input" accept="image/png" hidden>
+  <section aria-labelledby="demo-title" class="section" id="demo">
+    <div class="demo-head">
+      <div class="head">
+        <p class="eyebrow"><span class="num">01</span>Live comparison</p>
+        <h2 id="demo-title">Same file, two viewers</h2>
       </div>
-      <div class="control">
-        <span class="eyebrow" id="backdrop-label">Backdrop</span>
-        <div class="segmented" role="group" aria-labelledby="backdrop-label" id="backdrops"></div>
+      <div class="controls">
+        <div class="control">
+          <span class="eyebrow" id="sample-label">Image</span>
+          <div class="segmented" role="group" aria-labelledby="sample-label" id="samples"></div>
+          <input type="file" id="own-input" accept="image/png" hidden>
+        </div>
+        <div class="control">
+          <span class="eyebrow" id="backdrop-label">Backdrop</span>
+          <div class="segmented" role="group" aria-labelledby="backdrop-label" id="backdrops"></div>
+        </div>
       </div>
     </div>
     <div class="stages">
       <figure>
-        <figcaption><strong>Any PNG viewer</strong><span>shows the built-in fallback</span></figcaption>
+        <figcaption><span class="badge">A</span><strong>Any PNG viewer</strong><span>built-in fallback</span></figcaption>
         <div class="stage" id="stage-png"></div>
       </figure>
       <figure>
-        <figcaption><strong>Vitral</strong><span>same file, blend modes applied</span></figcaption>
+        <figcaption><span class="badge on">B</span><strong>Vitral</strong><span>blend modes applied</span></figcaption>
         <div class="stage" id="stage-vitral"></div>
       </figure>
     </div>
     <p class="hint" id="sample-note">Drag the image, or focus it and use the arrow keys. Both views show the same <code>.vitral.png</code> file.</p>
   </section>
 
-  <section class="how" aria-labelledby="how-title">
-    <div class="prose">
-      <p class="eyebrow">How it works</p>
+  <section class="section split" id="how" aria-labelledby="how-title">
+    <div class="head">
+      <p class="eyebrow"><span class="num">02</span>How it works</p>
       <h2 id="how-title">Every pixel is a function of its backdrop</h2>
-      <p>A Vitral file stores how each pixel looks <strong>over black</strong> and <strong>over white</strong>. Over any other backdrop, each colour channel lands on the straight line between those two values.</p>
     </div>
-    <div class="formula">result = K + (W − K) × backdrop</div>
-    <div class="prose">
-      <p>That one line covers normal, multiply, screen, hard light, exclusion and inversion, mixed freely pixel by pixel. To draw it, a renderer stacks three layers with blend modes that every browser and design tool already has: <strong>difference</strong>, then <strong>screen</strong>, then <strong>multiply</strong>.</p>
+    <div class="body">
+      <div class="prose">
+        <p>A Vitral file stores how each pixel looks <strong>over black</strong> and <strong>over white</strong>. Over any other backdrop, each colour channel lands on the straight line between those two values.</p>
+      </div>
+      <div class="formula" aria-label="result = K + (W − K) × backdrop"><span>result</span><span>=</span><span class="k">K</span><span>+</span><span>(<span class="w">W</span> − <span class="k">K</span>)</span><span>×</span><span class="b">backdrop</span></div>
+      <div class="prose">
+        <p>That one line covers normal, multiply, screen, hard light, exclusion and inversion, mixed freely pixel by pixel. To draw it, a renderer stacks three layers with blend modes that every browser and design tool already has: <strong>difference</strong>, then <strong>screen</strong>, then <strong>multiply</strong>.</p>
+      </div>
+      <div class="breakdown" id="breakdown" aria-live="polite"></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Blend mode</th><th>In draft 0.1</th></tr></thead>
+          <tbody>
+            <tr><td>Normal, multiply, screen, hard light, exclusion, inversion</td><td><span class="pill exact">exact</span></td></tr>
+            <tr><td>Add (plus-lighter), linear burn, darken, lighten, difference</td><td><span class="pill approx">approximate</span></td></tr>
+            <tr><td>Overlay, soft light, colour dodge and burn, hue, saturation, colour, luminosity</td><td><span class="pill later">planned for v2 (layers)</span></td></tr>
+            <tr><td>Background blur, refraction</td><td><span class="pill later">planned for v2 (backdrop effects)</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="hint">Approximate modes are exact over black and white backdrops and follow a straight line in between: add behaves like screen, difference like exclusion.</p>
     </div>
-    <div class="breakdown" id="breakdown" aria-live="polite"></div>
-    <div class="table-wrap">
-      <table>
-        <thead><tr><th>Blend mode</th><th>In draft 0.1</th></tr></thead>
-        <tbody>
-          <tr><td>Normal, multiply, screen, hard light, exclusion, inversion</td><td><span class="pill exact">exact</span></td></tr>
-          <tr><td>Add (plus-lighter), linear burn, darken, lighten, difference</td><td><span class="pill approx">approximate</span></td></tr>
-          <tr><td>Overlay, soft light, colour dodge and burn, hue, saturation, colour, luminosity</td><td><span class="pill later">planned for v2 (layers)</span></td></tr>
-          <tr><td>Background blur, refraction</td><td><span class="pill later">planned for v2 (backdrop effects)</span></td></tr>
-        </tbody>
-      </table>
-    </div>
-    <p class="hint">Approximate modes are exact over black and white backdrops and follow a straight line in between: add behaves like screen, difference like exclusion.</p>
   </section>
 
-  <section class="how" aria-labelledby="use-title">
-    <div class="prose">
-      <p class="eyebrow">Use it on a website</p>
+  <section class="section split" id="use" aria-labelledby="use-title">
+    <div class="head">
+      <p class="eyebrow"><span class="num">03</span>Use it on a website</p>
       <h2 id="use-title">One script tag</h2>
-      <p>A Vitral file is a valid PNG, so the page works without JavaScript and shows the fallback. With the script, every <code>&lt;img&gt;</code> whose file ends in <code>.vitral.png</code> starts blending. As with CSS <code>mix-blend-mode</code>, the image blends with content in its own stacking context.</p>
     </div>
-    <div class="code">
-      <button type="button" id="copy-snippet">Copy</button>
-      <pre id="snippet"><code>&lt;img src="window.vitral.png" alt="Stained glass window"&gt;
+    <div class="body">
+      <div class="prose">
+        <p>A Vitral file is a valid PNG, so the page works without JavaScript and shows the fallback. With the script, every <code>&lt;img&gt;</code> whose file ends in <code>.vitral.png</code> starts blending. As with CSS <code>mix-blend-mode</code>, the image blends with content in its own stacking context.</p>
+      </div>
+      <div class="code">
+        <div class="bar"><span class="eyebrow">HTML</span><button type="button" id="copy-snippet">Copy</button></div>
+        <pre id="snippet"><code>&lt;img src="window.vitral.png" alt="Stained glass window"&gt;
 &lt;script type="module" src="vitral.js"&gt;&lt;/script&gt;</code></pre>
+      </div>
     </div>
   </section>
 
-  <section class="how" aria-labelledby="make-title">
-    <div class="prose">
-      <p class="eyebrow">Make one</p>
+  <section class="section split" id="make" aria-labelledby="make-title">
+    <div class="head">
+      <p class="eyebrow"><span class="num">04</span>Make one</p>
       <h2 id="make-title">Export from any tool</h2>
-      <p>Put a black background behind your artwork and export a PNG, then switch it to white and export again. Layers keep their blend modes against the background, so these two exports hold the blending. A third export with a transparent background records each pixel's own colour, shown where nothing is behind the image and by software without Vitral support. The example below is loaded with the stained glass exports.</p>
     </div>
-    <div class="maker">
-      <div class="slot">
-        <label for="black-input">Artwork over black</label>
-        <input type="file" id="black-input" accept="image/png">
-        <img id="black-preview" alt="Artwork exported over a black background">
+    <div class="body">
+      <div class="prose">
+        <p>Put a black background behind your artwork and export a PNG, then switch it to white and export again. Layers keep their blend modes against the background, so these two exports hold the blending. A third export with a transparent background records each pixel's own colour, shown where nothing is behind the image and by software without Vitral support. The example below is loaded with the stained glass exports.</p>
       </div>
-      <div class="slot">
-        <label for="white-input">Artwork over white</label>
-        <input type="file" id="white-input" accept="image/png">
-        <img id="white-preview" alt="Artwork exported over a white background">
-      </div>
-      <div class="slot">
-        <label for="transparent-input">Artwork over transparency <span class="optional">(optional)</span></label>
-        <input type="file" id="transparent-input" accept="image/png">
-        <img id="transparent-preview" alt="Artwork exported over a transparent background">
-      </div>
-      <div class="slot result">
-        <span class="eyebrow">Result, over the spectrum</span>
-        <div class="stage bd-spectrum" id="result-stage"></div>
-        <p class="status" id="encode-status">Encoding…</p>
-        <a class="download" id="download" hidden>Download</a>
-        <button type="button" class="try" id="try-above" hidden>Try it on the backdrops above</button>
+      <div class="maker">
+        <div class="slot">
+          <label for="black-input"><span class="step">1</span>Artwork over black</label>
+          <input type="file" id="black-input" accept="image/png">
+          <img id="black-preview" alt="Artwork exported over a black background">
+        </div>
+        <div class="slot">
+          <label for="white-input"><span class="step">2</span>Artwork over white</label>
+          <input type="file" id="white-input" accept="image/png">
+          <img id="white-preview" alt="Artwork exported over a white background">
+        </div>
+        <div class="slot">
+          <label for="transparent-input"><span class="step">3</span>Artwork over transparency <span class="optional">(optional)</span></label>
+          <input type="file" id="transparent-input" accept="image/png">
+          <img id="transparent-preview" alt="Artwork exported over a transparent background">
+        </div>
+        <div class="slot result">
+          <span class="eyebrow">Result, over the spectrum</span>
+          <div class="stage bd-spectrum" id="result-stage"></div>
+          <p class="status" id="encode-status">Encoding…</p>
+          <a class="download" id="download" hidden>Download</a>
+          <button type="button" class="try" id="try-above" hidden>Try it on the backdrops above</button>
+        </div>
       </div>
     </div>
   </section>
