@@ -192,3 +192,16 @@ podem voltar a ser consideradas.
     perfil ICC com as do sRGB) e recusa as que não são sRGB.
   * A demo deixa o browser converter.
 * **Para depois**: conversão automática no CLI e suporte a Display P3 (v2).
+
+## D12 — CRC da imagem principal: **ignora a cor dos pixels invisíveis**
+
+* **Contexto**: o CRC da imagem principal incluía a cor dos pixels com alfa 0.
+  Essa cor não se vê nem entra em K e W, mas otimizadores sem perdas
+  (`oxipng -a`, `pngcrush -blacken`) limpam-na, e o ficheiro perdia o Vitral sem
+  necessidade.
+* **Decisão** (out/2026): o CRC conta cada pixel com alfa 0 como (0, 0, 0, 0)
+  (SPEC §4.4).
+  * A versão continua a 0.1, porque ainda não há ficheiros em circulação.
+  * Um ficheiro feito antes desta mudança, com cor guardada em pixels
+    transparentes, passa a ser lido como PNG normal. Os exemplos do repositório
+    não têm esse caso e continuam válidos.

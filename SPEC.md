@@ -168,7 +168,7 @@ the `viTr` chunk.
 | Ancillary | yes (lowercase first letter): decoders without support skip it |
 | Private | yes (lowercase second letter): not yet registered |
 | Reserved bit | clear (uppercase third letter), as required |
-| Safe to copy | **yes** (lowercase fourth letter): the chunk depends on the pixel values, but carries its own check of them (§4.4), so tools that recompress or re-encode the image losslessly may keep it, and decoders detect any change to the pixels |
+| Safe to copy | **yes** (lowercase fourth letter): the chunk depends on the pixel values, but carries its own check of them (§4.4), so tools that recompress or re-encode the image losslessly may keep it, and decoders detect any visible change to the pixels |
 | Position | after `IHDR`, before `IEND`; encoders SHOULD place it after the last `IDAT` |
 | Multiplicity | exactly one |
 
@@ -200,11 +200,16 @@ All multi-byte integers are big-endian, as in PNG.
 
 The fallback CRC is the CRC-32 used by PNG (ISO 3309 / ITU-T V.42), computed over
 the bytes of the normalised RGBA8 fallback: rows top to bottom, pixels left to
-right, bytes in R, G, B, A order, with no filter bytes.
+right, bytes in R, G, B, A order, with no filter bytes. Every pixel whose alpha
+is 0 is counted as (0, 0, 0, 0), whatever colour the file stores for it.
 
 It detects files whose main image was re-encoded with changes (lossy
 optimisation, editing) by software that kept the `viTr` chunk. When it does not
 match, the decoder MUST ignore the chunk.
+
+The colour of a fully transparent pixel is invisible and does not affect *F*k or
+*F*w, so it is left out: lossless optimisers that clear it (for example
+`oxipng -a` or `pngcrush -blacken`) keep the file valid.
 
 ### 4.5 Residual
 

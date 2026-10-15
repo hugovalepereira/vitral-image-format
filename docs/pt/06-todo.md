@@ -6,15 +6,13 @@ PR #1 (out/2026). Os itens maiores da fase 2.5 continuam no
 
 ## Formato
 
-- [ ] **CRC mais tolerante.** Hoje o CRC (a "impressão digital" dos pixels da
-  imagem principal, usada para detetar alterações) inclui a cor dos pixels
-  totalmente transparentes. Essa cor é invisível, e alguns otimizadores
-  (`oxipng -a`, `pngcrush -blacken`) limpam-na; o ficheiro perde então o Vitral
-  sem necessidade.
-  - Correção proposta: calcular o CRC tratando os pixels com alfa 0 como
-    (0, 0, 0, 0).
-  - Muda a especificação (§4.4), por isso tem de ser feito antes de haver
-    ficheiros em circulação.
+- [x] **CRC mais tolerante** (decisão D12). O CRC (a "impressão digital" dos
+  pixels da imagem principal, usada para detetar alterações) incluía a cor dos
+  pixels totalmente transparentes. Essa cor é invisível, e alguns otimizadores
+  (`oxipng -a`, `pngcrush -blacken`) limpam-na; o ficheiro perdia então o
+  Vitral sem necessidade.
+  - Correção: o CRC trata os pixels com alfa 0 como (0, 0, 0, 0)
+    (SPEC §4.4).
 
 ## Cor
 
