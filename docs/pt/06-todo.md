@@ -56,8 +56,8 @@ Já corrigido na mesma revisão:
 
 ## Site (GitHub Pages)
 
-- [ ] **Ativar o site** (passo manual do autor): Settings → Pages → Deploy from
-  a branch → `main`, pasta `/ (root)`. Fica em
+- [x] **Ativar o site** (passo manual do autor): Settings → Pages → Deploy from
+  a branch → `main`, pasta `/ (root)`. Está em
   <https://hugovalepereira.github.io/vitral-image-format/>.
 - [ ] **Analisar o polyfill na demo online** e só depois decidir os itens da
   secção Polyfill.

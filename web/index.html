@@ -91,6 +91,8 @@ header.hero { display: grid; gap: 1.25rem; padding-top: 3.5rem; }
 .hero .lede { font-size: var(--step-1); line-height: 1.4; max-width: 34rem; }
 .hero .lede em { font-style: normal; color: var(--accent); }
 
+#demo { scroll-margin-top: 1.5rem; }
+
 /* Controls */
 .controls { display: flex; flex-wrap: wrap; gap: 1rem 2rem; align-items: end; }
 .control { display: grid; gap: 0.4rem; min-width: 0; }
@@ -105,6 +107,7 @@ header.hero { display: grid; gap: 1.25rem; padding-top: 3.5rem; }
   cursor: pointer;
 }
 .segmented button[aria-pressed="true"] { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+.segmented button.open { border-style: dashed; color: var(--accent); }
 
 /* Stages */
 .stages { display: grid; gap: 1.25rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr)); }
@@ -125,6 +128,7 @@ figcaption strong { color: var(--fg); font-weight: 600; }
 .obj:active { cursor: grabbing; }
 .obj img { display: block; width: 100%; height: auto; -webkit-user-drag: none; }
 .hint { font-size: var(--step--1); color: var(--muted); }
+.hint.error { color: var(--ruby); }
 
 /* Backdrops are imagery, not theme colours: they stay the same in both themes. */
 .bd-scene { background: #333 url(../examples/backdrop.png) center / cover; }
@@ -198,10 +202,16 @@ th { font-weight: 600; }
 .status { font-size: var(--step--1); color: var(--muted); font-variant-numeric: tabular-nums; }
 .status.error { color: var(--ruby); }
 .download { font-weight: 600; font-size: var(--step--1); }
+.try {
+  justify-self: start;
+  font: 600 var(--step--1)/1 var(--body); padding: 0.55rem 0.85rem; cursor: pointer;
+  background: var(--fg); color: var(--bg); border: 1px solid var(--fg); border-radius: 999px;
+}
 
 footer { max-width: 72rem; margin: 4rem auto 0; padding-top: 1.5rem; border-top: 1px solid var(--line); display: flex; flex-wrap: wrap; gap: 0.5rem 1.5rem; font-size: var(--step--1); color: var(--muted); }
 
 @media (prefers-reduced-motion: no-preference) {
+  html { scroll-behavior: smooth; }
   .segmented button { transition: background-color 120ms, color 120ms; }
 }
 </style>
@@ -214,12 +224,13 @@ footer { max-width: 72rem; margin: 4rem auto 0; padding-top: 1.5rem; border-top:
     <p class="lede">PNG has transparency. Vitral has <em>light and filter</em>: an image that carries its own blend modes and reacts to whatever is behind it.</p>
   </header>
 
-  <section aria-labelledby="demo-title" class="how">
+  <section aria-labelledby="demo-title" class="how" id="demo">
     <h2 id="demo-title" hidden>Live comparison</h2>
     <div class="controls">
       <div class="control">
         <span class="eyebrow" id="sample-label">Image</span>
         <div class="segmented" role="group" aria-labelledby="sample-label" id="samples"></div>
+        <input type="file" id="own-input" accept="image/png" hidden>
       </div>
       <div class="control">
         <span class="eyebrow" id="backdrop-label">Backdrop</span>
@@ -304,6 +315,7 @@ footer { max-width: 72rem; margin: 4rem auto 0; padding-top: 1.5rem; border-top:
         <div class="stage bd-spectrum" id="result-stage"></div>
         <p class="status" id="encode-status">Encoding…</p>
         <a class="download" id="download" hidden>Download</a>
+        <button type="button" class="try" id="try-above" hidden>Try it on the backdrops above</button>
       </div>
     </div>
   </section>
@@ -343,9 +355,10 @@ const PAGE_TEXT = `
 <p>Vitral keeps two exports of the artwork, one over black and one over white. Between those two extremes, every pixel follows a straight line, and that line is enough to rebuild multiply, screen and their relatives over any backdrop.</p>
 <p>Software that has never heard of Vitral sees an ordinary PNG and shows the fallback image stored inside it.</p>`;
 
+for (const sample of SAMPLES) sample.src = `../examples/${sample.id}.vitral.png`;
 const state = { sample: SAMPLES[0], backdrop: BACKDROPS[0], x: 0.5, y: 0.5 };
 const stages = [document.getElementById('stage-png'), document.getElementById('stage-vitral')];
-const url = (id) => `../examples/${id}.vitral.png`;
+const note = document.getElementById('sample-note');
 
 function buttons(container, items, key) {
   for (const item of items) {
@@ -357,16 +370,91 @@ function buttons(container, items, key) {
     container.append(b);
   }
 }
-buttons(document.getElementById('samples'), SAMPLES, 'sample');
+const samplesBox = document.getElementById('samples');
+buttons(samplesBox, SAMPLES, 'sample');
 buttons(document.getElementById('backdrops'), BACKDROPS, 'backdrop');
+
+// The visitor's own file: opened with a button, dropped on the comparison, or
+// sent up from the encoder below.
+const ownInput = document.getElementById('own-input');
+const openButton = document.createElement('button');
+openButton.type = 'button';
+openButton.className = 'open';
+openButton.textContent = 'Open your own…';
+openButton.title = 'Open a .vitral.png, or drop one on the comparison';
+openButton.addEventListener('click', () => ownInput.click());
+samplesBox.append(openButton);
+let own = null;
+let ownButton = null;
+let ownToken = 0;
+
+function ownNote(name, planes) {
+  const intro = `${name}, ${planes.width} × ${planes.height} px.`;
+  if (planes.isVitral) return intro;
+  const why = {
+    'not-vitral': 'This PNG has no Vitral data (an optimiser or image host may have removed it)',
+    'fallback-mismatch': 'Its Vitral data no longer matches the image, which was edited or re-saved after encoding',
+  }[planes.status] ?? `Its Vitral data cannot be used (${planes.status})`;
+  return `${intro} ${why}, so both views show the plain image.`;
+}
+
+async function openOwn(blob, name) {
+  const token = ++ownToken;
+  let planes;
+  try {
+    planes = await decode(new Uint8Array(await blob.arrayBuffer()));
+  } catch (error) {
+    if (token !== ownToken) return;
+    note.textContent = `Could not open ${name}: ${error.message}`;
+    note.classList.add('error');
+    return;
+  }
+  if (token !== ownToken) { planes.free(); return; }
+  const previous = own;
+  own = {
+    id: 'own', label: 'Your file', w: planes.width, h: planes.height,
+    note: ownNote(name, planes), src: URL.createObjectURL(blob),
+  };
+  planes.free();
+  if (!ownButton) {
+    ownButton = document.createElement('button');
+    ownButton.type = 'button';
+    ownButton.textContent = own.label;
+    ownButton.dataset.id = own.id;
+    ownButton.addEventListener('click', () => { state.sample = own; render(); });
+    samplesBox.insertBefore(ownButton, openButton);
+  }
+  state.sample = own;
+  render();
+  if (previous) URL.revokeObjectURL(previous.src);
+}
+
+ownInput.addEventListener('change', () => {
+  const file = ownInput.files[0];
+  if (file) openOwn(file, file.name);
+  ownInput.value = ''; // so the same file can be opened again after a change
+});
+const demo = document.getElementById('demo');
+demo.addEventListener('dragover', (e) => {
+  if (e.dataTransfer.types.includes('Files')) e.preventDefault();
+});
+demo.addEventListener('drop', (e) => {
+  const file = e.dataTransfer.files[0];
+  if (!file) return;
+  e.preventDefault();
+  openOwn(file, file.name);
+});
 
 function place() {
   const { w, h } = state.sample;
-  const fw = w / STAGE_W;
   for (const stage of stages) {
     const obj = stage.querySelector('.obj');
     if (!obj) continue;
-    const fh = (h / w) * fw * (stage.clientWidth / stage.clientHeight);
+    // Samples keep their size relative to a 640 px stage; larger files shrink
+    // to fit.
+    const ratio = stage.clientWidth / stage.clientHeight || 1.6;
+    const fw = Math.min(w / STAGE_W, 0.8, (0.9 * w) / h / ratio);
+    const fh = (h / w) * fw * ratio;
     obj.style.width = `${fw * 100}%`;
     obj.style.left = `${(state.x - fw / 2) * 100}%`;
     obj.style.top = `${(state.y - fh / 2) * 100}%`;
@@ -377,11 +465,11 @@ function render() {
   for (const group of ['samples', 'backdrops']) {
     const current = group === 'samples' ? state.sample.id : state.backdrop.id;
     for (const b of document.getElementById(group).children) {
-      b.setAttribute('aria-pressed', String(b.dataset.id === current));
+      if (b.dataset.id) b.setAttribute('aria-pressed', String(b.dataset.id === current));
     }
   }
-  document.getElementById('sample-note').textContent =
-    `${state.sample.note} Drag it, or focus it and use the arrow keys.`;
+  note.textContent = `${state.sample.note} Drag it, or focus it and use the arrow keys.`;
+  note.classList.remove('error');
   stages.forEach((stage, i) => {
     stage.className = `stage bd-${state.backdrop.id}`;
     stage.replaceChildren();
@@ -401,7 +489,7 @@ function render() {
     // The left stage stays a plain PNG on purpose.
     if (i === 0) img.dataset.vitralState = 'off';
     else img.dataset.vitral = '';
-    img.src = url(state.sample.id);
+    img.src = state.sample.src;
     obj.append(img);
     stage.append(obj);
     attachDrag(stage, obj);
@@ -438,7 +526,7 @@ new ResizeObserver(place).observe(stages[1]);
 
 async function showBreakdown(sample) {
   const box = document.getElementById('breakdown');
-  const bytes = new Uint8Array(await (await fetch(url(sample.id))).arrayBuffer());
+  const bytes = new Uint8Array(await (await fetch(sample.src)).arrayBuffer());
   const p = await decode(bytes);
   if (state.sample !== sample) { p.free(); return; }
   const tiles = [
@@ -476,6 +564,13 @@ document.getElementById('copy-snippet').addEventListener('click', async (e) => {
 // Encoder
 const inputs = { black: null, white: null, transparent: null };
 let resultUrl;
+let result = null;
+const tryButton = document.getElementById('try-above');
+tryButton.addEventListener('click', () => {
+  if (!result) return;
+  openOwn(result.blob, result.name);
+  demo.scrollIntoView({ block: 'start' });
+});
 
 async function pixelsOf(blob) {
   // Let the browser convert exports with a colour profile (e.g. Display P3) to
@@ -515,7 +610,8 @@ async function runEncoder() {
     }
     const bytes = await encode(b.w, b.h, b.data, w.data, t?.data);
     if (resultUrl) URL.revokeObjectURL(resultUrl);
-    resultUrl = URL.createObjectURL(new Blob([bytes], { type: 'image/png' }));
+    const blob = new Blob([bytes], { type: 'image/png' });
+    resultUrl = URL.createObjectURL(blob);
     const holder = document.createElement('div');
     const img = new Image();
     img.alt = 'Encoded Vitral image';
@@ -528,11 +624,15 @@ async function runEncoder() {
     link.download = `${base}.vitral.png`;
     link.textContent = `Download ${base}.vitral.png`;
     link.hidden = false;
+    result = { blob, name: link.download };
+    tryButton.hidden = false;
     status.textContent = `${b.w} × ${b.h} px · ${bytes.length.toLocaleString('en')} bytes`;
   } catch (error) {
     status.textContent = error.message;
     status.classList.add('error');
     link.hidden = true;
+    result = null;
+    tryButton.hidden = true;
   }
 }
 
