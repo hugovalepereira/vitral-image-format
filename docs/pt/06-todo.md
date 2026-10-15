@@ -1,7 +1,8 @@
 # 06 — Todo
 
-Pontos identificados na revisão de código do PR #1 (out/2026) que ficaram para
-depois. Os itens maiores da fase 2.5 continuam no [plano](04-plano.md).
+Pontos que ficaram para depois, a maioria identificados na revisão de código do
+PR #1 (out/2026). Os itens maiores da fase 2.5 continuam no
+[plano](04-plano.md).
 
 ## Formato
 
@@ -52,6 +53,18 @@ Já corrigido na mesma revisão:
   carregar, o ficheiro dele é substituído pelo exemplo.
 - [ ] Duas codificações seguidas podem terminar fora de ordem e mostrar o
   resultado antigo.
+
+## Site (GitHub Pages)
+
+- [ ] **Publicar com GitHub Actions** em vez de servir o repositório inteiro a
+  partir da raiz do `main`.
+  - O workflow compila o WASM no CI, e assim `web/pkg` deixa de estar no
+    repositório.
+  - Publica só o que o site precisa (`web/` e os exemplos), sem `docs/pt`,
+    `SPEC.md` nem `crates/`.
+  - O `index.html` da raiz, que hoje redireciona para `web/`, deixa de ser
+    necessário.
+  - Fazer antes de promover o projeto.
 
 ## Biblioteca
 
