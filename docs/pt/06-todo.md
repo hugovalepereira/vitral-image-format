@@ -56,6 +56,11 @@ Já corrigido na mesma revisão:
 
 ## Site (GitHub Pages)
 
+- [ ] **Ativar o site** (passo manual do autor): Settings → Pages → Deploy from
+  a branch → `main`, pasta `/ (root)`. Fica em
+  <https://hugovalepereira.github.io/vitral-image-format/>.
+- [ ] **Analisar o polyfill na demo online** e só depois decidir os itens da
+  secção Polyfill.
 - [ ] **Publicar com GitHub Actions** em vez de servir o repositório inteiro a
   partir da raiz do `main`.
   - O workflow compila o WASM no CI, e assim `web/pkg` deixa de estar no
