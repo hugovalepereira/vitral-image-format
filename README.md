@@ -97,7 +97,7 @@ python3 -m http.server 8000    # then open http://localhost:8000/web/
 | [`crates/vitral`](crates/vitral) | Rust reference implementation: codec, reference compositor, W3C blend modes, render planes |
 | [`crates/vitral-cli`](crates/vitral-cli) | `vitral` command-line tool |
 | [`crates/vitral-wasm`](crates/vitral-wasm) | WebAssembly bindings |
-| [`web/`](web) | Polyfill (`vitral.js`), demo page, prebuilt WebAssembly in `web/pkg`, browser tests |
+| [`web/`](web) | Polyfill (`vitral.js`), demo page and its images in `web/samples`, prebuilt WebAssembly in `web/pkg`, browser tests |
 | [`examples/`](examples) | Sample files, the two source exports of one sample, comparison renders |
 | [`docs/pt/`](docs/pt) | Planning documents in Portuguese: state of the art, requirements, decisions, roadmap |
 
@@ -106,6 +106,7 @@ python3 -m http.server 8000    # then open http://localhost:8000/web/
 ```sh
 cargo test --release                                  # unit and round-trip tests
 cargo run --release -p vitral --example samples       # regenerate examples/
+cargo run --release -p vitral --example demo_samples  # regenerate web/samples/ (demo page images)
 ./web/build.sh                                        # rebuild web/pkg (needs wasm-bindgen-cli 0.2.129)
 node web/test/run.mjs                                 # Chromium vs reference compositor (needs Playwright)
 ```
