@@ -74,8 +74,8 @@ file:
   to Figma.
 * **Select a Vitral that Figma placed as a flat image** (dragged in while the
   plugin was closed). The panel offers **Rebuild**, which swaps the image for
-  the layers at the same size and place. This works only if Figma keeps the
-  file's bytes as they were; if it doesn't, the panel offers nothing.
+  the layers at the same size and place (checked in Figma: it keeps the
+  file's bytes).
 
 Notes:
 
@@ -98,8 +98,7 @@ with Figma to confirm:
   assumes when it keeps those exports in P3.
 * That Figma reads the colour profile of imported layers in a Display P3
   document as the plugin expects.
-* That Figma hands dropped files to the plugin, and keeps a dropped Vitral's
-  bytes so that **Rebuild** can find it.
+* That Figma hands files dropped on the canvas to the plugin.
 
 ## Files
 

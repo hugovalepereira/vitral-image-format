@@ -105,8 +105,8 @@ Ver também a lista de pontos pequenos em [06 — Todo](06-todo.md).
   piscar.
 * [x] **Arrastar para o canvas**: com o plugin aberto, um `.vitral.png`
   largado no canvas é reconstruído onde cai. Com o plugin fechado fica uma
-  imagem plana; ao selecioná-la, o plugin oferece reconstruí-la (se o Figma
-  guardar os bytes originais, por confirmar).
+  imagem plana; ao selecioná-la, o plugin oferece reconstruí-la (confirmado
+  pelo autor no Figma).
 * [x] **Importar**: cria um grupo *pass-through* com as camadas de imagem
   (Difference, só quando é precisa, Screen, Multiply), no espaço de cor do
   documento. Só é exato sobre fundos preenchidos (D9); o plugin avisa quando o
@@ -188,6 +188,8 @@ Screen") num MP4 empilhado e mostrá-lo sobre uma página com o polyfill.
 
 * **Nível 2**: camadas com modos não-lineares (overlay, soft light, difference,
   HSL), renderizadas como camadas DOM com o respetivo `mix-blend-mode`.
+  Prioridade: difference, darken e lighten, que o autor já encontrou no Figma
+  (ver [06](06-todo.md#formato)).
 * **Nível 3**: efeitos de vizinhança.
   * **Blur de fundo** com máscara por pixel: na web via `backdrop-filter`, no
     Figma via *background blur*.
