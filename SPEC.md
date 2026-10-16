@@ -454,8 +454,11 @@ Tools SHOULD warn when a mode is not captured.
 * A **conforming renderer** produces, over an opaque backdrop, results within 2
   levels of §7.1.
 
-The `examples/` directory contains test files. The reference implementation's
-command-line tool reproduces them: `vitral decode` writes K, W, the native image and
+The `conformance/` directory is the conformance suite: files with the status,
+K, W and renders that a conforming decoder and renderer must produce, including
+damaged files whose Vitral data must be ignored. Its `README.md` gives the
+tolerances. The `examples/` directory contains larger sample images. The
+reference implementation's command-line tool reproduces them: `vitral decode` writes K, W, the native image and
 the three layers; `vitral render` applies §7.1; `vitral diff` compares renders.
 
 ---

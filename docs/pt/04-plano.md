@@ -41,7 +41,7 @@ fundação  spec+core  web   │  Figma    outras   v2       normalização
       PNG (paleta, cinzento, entrelaçado). Ver [05](05-verificacoes-v1.md).
 * [x] Cor nativa sobre fundo transparente (D9), chunk *safe-to-copy* (D2),
       armazenamento direto de K/W (D10), regra sRGB (D11), Display P3 (D13).
-* [ ] **Seguinte**: vetores de conformidade publicados.
+* [x] Vetores de conformidade publicados em [`conformance/`](../../conformance/).
 
 **Critério de saída**: qualquer pessoa consegue criar um `.vitral.png` a partir
 de dois exports (preto/branco) e vê-lo sobre qualquer fundo com `vitral render`.
@@ -72,7 +72,7 @@ Ver também a lista de pontos pequenos em [06 — Todo](06-todo.md).
 * [x] Exportações reais do Figma, com multiply, screen, normal a 50% e os três
       combinados: reproduzidas sem diferenças.
 * [ ] Exportações reais de Photoshop, Illustrator e After Effects.
-* [ ] Vetores de conformidade publicados.
+* [x] Vetores de conformidade publicados ([`conformance/`](../../conformance/)).
 * [ ] Compressão melhor (deflate ao nível do oxipng) e rever a meta RNF1.
 * [x] Display P3 no formato, no CLI, no polyfill e na demo; luz linear recusada
       (D13).
