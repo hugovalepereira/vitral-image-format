@@ -157,12 +157,12 @@ header.hero {
 @media (prefers-reduced-motion: no-preference) {
   .beats .cell i { transition: transform 700ms cubic-bezier(0.2, 0.7, 0.2, 1), background-color 700ms; transition-delay: var(--delay, 0ms); }
 }
-/* 34% wide, square: 51% of the scene's height, so 24.5% from the top. */
-.scene .drop { position: absolute; width: 34%; left: 33%; top: 24.5%; visibility: hidden; }
+/* The poster covers four by two squares of the 6 x 4 grid behind it. */
+.scene .drop { position: absolute; width: 66.6667%; left: 16.6667%; top: 25%; visibility: hidden; }
 .scene.landed .drop { visibility: visible; }
 .scene .drop img { display: block; width: 100%; height: auto; }
 .file-chip {
-  position: absolute; left: 33%; top: 24.5%; width: 34%; aspect-ratio: 1;
+  position: absolute; left: 16.6667%; top: 25%; width: 66.6667%; aspect-ratio: 2;
   display: grid; place-items: end start; padding: 0.6rem;
   font: 500 0.7rem/1 var(--mono); color: #141416;
   border: 1.5px dashed #141416; background: rgb(255 255 255 / 0.55);
@@ -170,7 +170,7 @@ header.hero {
 }
 .file-chip span { background: #fff; padding: 0.35rem 0.45rem; border: 1px solid #141416; }
 .file-chip::after {
-  content: ""; position: absolute; right: 18%; bottom: 22%; width: 1.1rem; height: 1.1rem; background: #141416;
+  content: ""; position: absolute; right: 12%; bottom: 20%; width: 1.1rem; height: 1.1rem; background: #141416;
   clip-path: polygon(0 0, 0 100%, 30% 72%, 52% 100%, 66% 92%, 45% 64%, 85% 64%);
 }
 @media (prefers-reduced-motion: no-preference) {
@@ -182,7 +182,14 @@ header.hero {
   80% { opacity: 1; transform: translate(0, 0) scale(1) rotate(0); }
   100% { opacity: 1; transform: translate(0, 0) scale(1) rotate(0); }
 }
-.show figcaption { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.6rem 1rem; font-size: var(--step--1); color: var(--muted); }
+/* Once dropped, the file keeps its name, like a selected layer. */
+.file-tag {
+  position: absolute; left: 16.6667%; bottom: 75%; margin-bottom: 0.35rem;
+  font: 500 0.68rem/1 var(--mono); color: #fff; background: #141416; padding: 0.3rem 0.45rem;
+  visibility: hidden;
+}
+.scene.landed .file-tag { visibility: visible; }
+.show figcaption { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 0.6rem 1rem; font-size: var(--step--1); color: var(--muted); }
 .show figcaption code { color: var(--fg); }
 .show .tools { display: flex; gap: 0.4rem; }
 
@@ -225,13 +232,13 @@ header.hero {
 .segmented button.open { color: var(--accent); border-style: dashed; background: transparent; }
 .segmented button.open::before { content: "+"; background: none; box-shadow: none; font: 500 1rem/1.25rem var(--mono); text-align: center; }
 /* Samples show their own fallback image; backdrops a miniature of themselves. */
-#samples button[data-id="shadow"] { --sw: #fff url(samples/shadow.vitral.png) center / contain no-repeat; }
-#samples button[data-id="stamp"] { --sw: #fff url(samples/stamp.vitral.png) center / contain no-repeat; }
-#samples button[data-id="light"] { --sw: #2a2a2e url(samples/light.vitral.png) center / cover no-repeat; }
-#samples button[data-id="window"] { --sw: #fff url(samples/window.vitral.png) center / contain no-repeat; }
+#samples button[data-id="poster"] { --sw: #e8e5dd url(samples/poster.vitral.png) center / contain no-repeat; }
+#samples button[data-id="mark"] { --sw: #e8e5dd url(samples/mark.vitral.png) center / contain no-repeat; }
+#samples button[data-id="overprint"] { --sw: #fff url(samples/overprint.vitral.png) center / contain no-repeat; }
+#samples button[data-id="bars"] { --sw: #141416 url(samples/bars.vitral.png) center / contain no-repeat; }
 #samples button[data-id="own"] { --sw: repeating-conic-gradient(var(--check-a) 0 25%, var(--check-b) 0 50%) 0 0 / 8px 8px; }
 #backdrops button[data-id="text"] { --sw: repeating-linear-gradient(#f4f1e8 0 3px, #8f8a7e 3px 4px); }
-#backdrops button[data-id="brand"] { --sw: #2f4bd8; }
+#backdrops button[data-id="blocks"] { --sw: linear-gradient(90deg, #e8b931 0 40%, #2f4bd8 40% 100%); }
 #backdrops button[data-id="gradient"] { --sw: linear-gradient(135deg, #ffd166, #ff8a5b 45%, #7f9cff); }
 #backdrops button[data-id="dark"] { --sw: linear-gradient(#26272e 0 30%, #15161a 30%); }
 #backdrops button[data-id="pattern"] { --sw: url(samples/grid.svg) center / 100% 100%; }
@@ -271,7 +278,14 @@ figure { margin: 0; display: grid; gap: 0.6rem; min-width: 0; }
 #sample-note.error { border-left-color: var(--ruby); }
 
 /* Backdrops are imagery, not theme colours: they stay the same in both themes. */
-.bd-brand { background: #2f4bd8; }
+.bd-blocks {
+  background:
+    linear-gradient(#141416, #141416) 0 72% / 40% 8% no-repeat,
+    linear-gradient(#e5531a, #e5531a) 100% 100% / 60% 45% no-repeat,
+    linear-gradient(#2f4bd8, #2f4bd8) 100% 0 / 60% 55% no-repeat,
+    linear-gradient(#e8b931, #e8b931) 0 0 / 40% 100% no-repeat,
+    #f1eee7;
+}
 .bd-gradient {
   background:
     radial-gradient(60% 80% at 12% 8%, #ffd166, transparent 70%),
@@ -422,11 +436,11 @@ footer a { color: var(--fg); }
     <figure class="show">
       <div class="scene" id="scene">
         <div class="beats" id="beats" aria-hidden="true"></div>
-        <div class="drop"><img id="hero-img" src="samples/window.vitral.png" alt="A stained glass window of rectangular panes over a page of changing shapes"></div>
-        <div class="file-chip" aria-hidden="true"><span>window.vitral.png</span></div>
+        <div class="drop"><img id="hero-img" src="samples/poster.vitral.png" alt="A poster of a disc that inverts and two shapes in multiply, over a page of changing shapes"></div>
+        <div class="file-tag" id="hero-tag" aria-hidden="true">poster.vitral.png</div>
+        <div class="file-chip" aria-hidden="true"><span>poster.vitral.png</span></div>
       </div>
       <figcaption>
-        <span>One still image, <code>window.vitral.png</code>. Only the page behind it moves.</span>
         <span class="tools">
           <button type="button" class="small-button" id="hero-png" aria-pressed="false">Plain PNG</button>
           <button type="button" class="small-button" id="hero-pause" aria-pressed="false">Pause</button>
@@ -472,7 +486,7 @@ footer a { color: var(--fg); }
     </div>
     <div class="body">
       <div class="prose">
-        <p>You make a Vitral in your own design tool. Until the Figma plugin does it in one click, this page packs your exports into one file: export the artwork over black, over white and once with no background, and drop the three files here. Blend modes act on the background, so the black and white exports carry the blending; the one with no background is what software without Vitral will show. The example below is loaded with the exports of the window at the top of the page.</p>
+        <p>You make a Vitral in your own design tool. Until the Figma plugin does it in one click, this page packs your exports into one file: export the artwork over black, over white and once with no background, and drop the three files here. Blend modes act on the background, so the black and white exports carry the blending; the one with no background is what software without Vitral will show. The example below is loaded with the exports of the poster at the top of the page.</p>
       </div>
       <div class="maker">
         <div class="slot">
@@ -511,7 +525,7 @@ footer a { color: var(--fg); }
       <blockquote class="handoff">“It's a PNG. Add one script tag and it blends like it did in Figma.”<span>What to tell your developer.</span></blockquote>
       <div class="code">
         <div class="bar"><span class="eyebrow">HTML</span><button type="button" id="copy-snippet">Copy</button></div>
-        <pre id="snippet"><code>&lt;img src="window.vitral.png" alt="Stained glass window"&gt;
+        <pre id="snippet"><code>&lt;img src="poster.vitral.png" alt="Poster"&gt;
 &lt;script type="module" src="vitral.js"&gt;&lt;/script&gt;</code></pre>
       </div>
       <div class="prose">
@@ -648,6 +662,7 @@ const plain = document.getElementById('hero-png');
 plain.addEventListener('click', () => {
   const on = plain.getAttribute('aria-pressed') !== 'true';
   plain.setAttribute('aria-pressed', String(on));
+  document.getElementById('hero-tag').textContent = on ? 'poster.vitral.png, as a plain PNG' : 'poster.vitral.png';
   if (on) downgrade(heroImg); else upgrade(heroImg);
 });
 </script>
@@ -657,21 +672,21 @@ import { decode, encode, toCanvas } from './vitral.js';
 
 const STAGE_W = 640;
 const SAMPLES = [
-  { id: 'shadow', label: 'Shadow', w: 360, h: 260,
-    note: 'A ball with a multiply shadow. As a plain PNG the shadow is a grey film; with Vitral it darkens the backdrop and keeps its colour.' },
-  { id: 'stamp', label: 'Logo', w: 300, h: 300,
-    note: 'A logo printed in one ink, in multiply. As a plain PNG it covers what is behind it; with Vitral it sits on any backdrop like ink on paper.' },
-  { id: 'light', label: 'Light', w: 420, h: 280,
-    note: 'A beam of light in screen mode. As a plain PNG it can only fog the backdrop; with Vitral it brightens it.' },
-  { id: 'window', label: 'Window', w: 360, h: 360,
-    note: 'The window from the top of the page: tinted panes in multiply, a pane of light in screen and one that inverts, joined by lead.' },
+  { id: 'poster', label: 'Poster', w: 400, h: 200,
+    note: 'The poster from the top of the page: a disc that inverts, a bar and a half disc in multiply. As a plain PNG it is a flat white disc and two flat colours.' },
+  { id: 'mark', label: 'Logo', w: 300, h: 300,
+    note: 'A logo made of a square of ink in multiply and a disc that inverts. As a plain PNG it is a sticker; with Vitral it is printed on the backdrop.' },
+  { id: 'overprint', label: 'Overprint', w: 340, h: 320,
+    note: 'Three discs of process ink in multiply, overprinted like a risograph. As a plain PNG they hide the backdrop; with Vitral it shows through every ink.' },
+  { id: 'bars', label: 'Bars', w: 360, h: 240,
+    note: 'Bars that invert what they cross, over a band of light in screen. As a plain PNG they are white stripes.' },
 ];
 const BACKDROPS = [
+  { id: 'pattern', label: 'Colour grid' },
+  { id: 'blocks', label: 'Colour fields' },
   { id: 'text', label: 'Page' },
-  { id: 'brand', label: 'Brand colour' },
   { id: 'gradient', label: 'Gradient' },
   { id: 'dark', label: 'Dark mode' },
-  { id: 'pattern', label: 'Pattern' },
 ];
 const PAGE_TEXT = `
 <p>Stained glass works by subtraction. Light from behind passes through pot-metal glass, which keeps some wavelengths and absorbs the rest, so a pane can only darken what it lets through.</p>
@@ -969,11 +984,11 @@ for (const which of ['black', 'white', 'transparent']) {
 }
 
 render();
-const source = (which) => `samples/sources/window-over-${which}.png`;
+const source = (which) => `samples/sources/poster-over-${which}.png`;
 const kinds = ['black', 'white', 'transparent'];
 const blobs = await Promise.all(kinds.map(async (k) => (await fetch(source(k))).blob()));
 kinds.forEach((k, i) => {
-  inputs[k] = { blob: blobs[i], name: `window-over-${k}.png` };
+  inputs[k] = { blob: blobs[i], name: `poster-over-${k}.png` };
   document.getElementById(`${k}-preview`).src = URL.createObjectURL(blobs[i]);
 });
 await runEncoder();
