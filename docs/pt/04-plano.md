@@ -187,8 +187,26 @@ Screen") num MP4 empilhado e mostrá-lo sobre uma página com o polyfill.
 
 ## Promoção (contínua, a partir da fase 2)
 
-**Mensagem central**: *"O PNG tem transparência. O Vitral tem luz e filtro."*
-Uma imagem que se mistura sozinha com o que está por trás.
+**Mensagem central** (revista em out/2026): *"Blend modes that survive
+export."* O Vitral apresenta-se como uma **proposta** para manter
+os modos de mistura dentro da imagem: o que faz multiply no Figma, no
+Illustrator ou no Photoshop continua a fazê-lo no site, sem ninguém o ter de
+refazer. *"O PNG tem transparência. O Vitral tem luz e filtro."* passa a
+subtítulo.
+
+* **Porquê**: a frustração existe nos fóruns da Adobe e do Figma há anos ("o
+  modo não pode viajar com a imagem"), sobretudo na passagem do designer para
+  o programador ou o cliente.
+* **Sem prometer de mais**: nomear os modos ("multiply, screen e companhia",
+  nunca "todos os modos"), dizer onde funciona ("onde o Vitral é suportado",
+  "nunca pior do que o PNG de hoje") e mostrar os limites antes de alguém os
+  descobrir. Evitar "any blend mode", "works everywhere" e "no code".
+* **Proposta, aberta a quem quiser ajudar**: o objetivo é juntar pessoas interessadas no tema
+  que ajudem a melhorar o formato. Os limites atuais (overlay, soft light,
+  blur de fundo) são a agenda da proposta, não um segredo. Usar "proposal", não
+  "experiment" (preferência do autor).
+* **Quando**: a mensagem para designers rende mais com o plugin do Figma. Até
+  lá, a frente principal é a web.
 
 1. **A demo é o pitch**:
    * Página com um objeto Vitral arrastável sobre fotos e gradientes, lado a lado
@@ -200,6 +218,8 @@ Uma imagem que se mistura sozinha com o que está por trás.
      * Newsletters: CSS Weekly, Frontend Focus, This Week in Rust.
      * Artigo técnico "Colored transparency for the web".
    * **Fase 3**:
+     * Responder nos fóruns da Adobe e do Figma onde se perguntou como exportar
+       com o modo (lista em [06](06-todo.md#promoção)).
      * Figma Community, Product Hunt.
      * r/FigmaDesign, r/graphic_design, Dribbble/Behance (shots feitos com
        Vitral).
