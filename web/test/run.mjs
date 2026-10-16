@@ -31,7 +31,7 @@ const cli = join(root, 'target/release/vitral');
 const TOLERANCE = 2; // RNF2: the blend-mode stack is within 2 levels of the reference.
 const engines = (process.env.VITRAL_BROWSERS || 'chromium').split(',').map((s) => s.trim());
 const samples = {
-  'stained-glass': [300, 360],
+  'stained-glass': [280, 380],
   'glass-badge': [360, 260],
   'light-leak': [420, 280],
   'invert-ring': [260, 260],
