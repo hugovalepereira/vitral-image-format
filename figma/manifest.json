@@ -4,11 +4,13 @@
   "api": "1.0.0",
   "main": "code.js",
   "ui": "ui.html",
-  "editorType": ["figma"],
+  "editorType": [
+    "figma"
+  ],
   "documentAccess": "dynamic-page",
-  "networkAccess": { "allowedDomains": ["none"] },
-  "menu": [
-    { "name": "Export selection as Vitral", "command": "export" },
-    { "name": "Import a Vitral file", "command": "import" }
-  ]
+  "networkAccess": {
+    "allowedDomains": [
+      "none"
+    ]
+  }
 }

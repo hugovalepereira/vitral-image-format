@@ -70,6 +70,11 @@ function node(props) {
       this.width = width;
       this.height = height;
     },
+    insertChild(index, child) {
+      if (child.parent) child.parent.children.splice(child.parent.children.indexOf(child), 1);
+      this.children.splice(index, 0, child);
+      child.parent = this;
+    },
     clone() {
       const copy = node({ ...this, id: undefined, parent: null });
       copy.id = `${++ids}:1`;
@@ -92,6 +97,8 @@ const solid = (r, g, b, opacity = 1) => ({ type: 'SOLID', color: { r, g, b }, op
 
 function fakeFigma({ selection = [], profile = 'SRGB', exports = 'mixed' } = {}) {
   const log = { frames: [], exports: [], images: [], notifications: [] };
+  const handlers = {};
+  const stored = {};
   const page = node({ type: 'PAGE', name: 'Page 1', children: [] });
   page.selection = selection;
   for (const n of selection) if (!n.parent) page.appendChild(n);
@@ -100,10 +107,17 @@ function fakeFigma({ selection = [], profile = 'SRGB', exports = 'mixed' } = {})
     root: { documentColorProfile: profile },
     currentPage: page,
     command: '',
-    viewport: { center: { x: 500, y: 400 } },
+    handlers,
+    stored,
+    viewport: { center: { x: 500, y: 400 }, bounds: { x: 100.5, y: -200.25, width: 800, height: 1200 } },
     ui: { postMessage: () => {}, onmessage: null },
     showUI() {},
-    on() {},
+    on(name, fn) {
+      handlers[name] = fn;
+    },
+    getImageByHash(hash) {
+      return stored[hash] ? { getBytesAsync: async () => stored[hash] } : null;
+    },
     notify(message) {
       log.notifications.push(message);
     },
@@ -115,6 +129,7 @@ function fakeFigma({ selection = [], profile = 'SRGB', exports = 'mixed' } = {})
         const over = !fill ? 'transparent' : fill.color.r === 0 ? 'black' : 'white';
         const copy = frame.children[0];
         log.exports.push({
+          copies: frame.children.map((c) => c.name),
           over,
           settings,
           size: [frame.width, frame.height],
@@ -225,7 +240,7 @@ async function openPlugin(options) {
   };
   loadPlugin(figma);
   await page.setContent(`<!doctype html><body style="margin:0">
-    <iframe id="ui" style="width:320px;height:520px;border:0"></iframe>
+    <iframe id="ui" style="width:320px;height:600px;border:0"></iframe>
     <script>(() => {
       const fromB64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
       const toB64 = (u8) => { let s = ''; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode(...u8.subarray(i, i + 0x8000)); return btoa(s); };
@@ -252,6 +267,26 @@ async function importInto(ui, parent, file) {
   const deadline = Date.now() + 15000;
   while (!parent.children.length && Date.now() < deadline) await new Promise((ok) => setTimeout(ok, 50));
   return parent.children[0];
+}
+
+async function until(condition, timeout = 15000) {
+  const deadline = Date.now() + timeout;
+  while (!condition() && Date.now() < deadline) await new Promise((ok) => setTimeout(ok, 50));
+  return condition();
+}
+
+// Reads the names and contents of a stored (uncompressed) ZIP archive.
+function unzip(buf) {
+  const files = {};
+  let i = 0;
+  while (buf.readUInt32LE(i) === 0x04034b50) {
+    const size = buf.readUInt32LE(i + 18);
+    const nameLength = buf.readUInt16LE(i + 26);
+    const name = buf.subarray(i + 30, i + 30 + nameLength).toString('utf8');
+    files[name] = buf.subarray(i + 30 + nameLength, i + 30 + nameLength + size);
+    i += 30 + nameLength + size;
+  }
+  return files;
 }
 
 // Composites the placed layers over a synthetic backdrop with the browser's
@@ -304,8 +339,11 @@ try {
   await ui.waitForFunction(() => document.querySelector('#selection').textContent.includes('Mixed'));
   check('ui: shows the selection', (await text(ui, '#selection')).includes('184 × 184'), await text(ui, '#selection'));
   check('ui: export is enabled', await ui.$eval('#export', (b) => !b.disabled), null);
+  check('ui: no “one file or several” choice for one layer', await ui.$eval('#together-row', (r) => r.hidden), null);
+  check('ui: export and import share one panel',
+    await ui.evaluate(() => !!document.querySelector('#export') && !!document.querySelector('#drop') && !document.querySelector('nav')), null);
 
-  await ui.click('#export-scale button[data-scale="2"]');
+  await ui.click('#export-scale button[data-value="2"]');
   const download = page.waitForEvent('download', { timeout: 20000 });
   await ui.click('#export');
   const file = await download;
@@ -313,14 +351,18 @@ try {
   const bytes = readFileSync(await file.path());
 
   const log = figma.log;
+  const view = figma.viewport.bounds;
   check('export: three renders, over black, white and nothing',
     log.exports.map((e) => e.over).join() === 'black,white,transparent', log.exports.map((e) => e.over));
   check('export: keeps the document colour profile at the chosen scale',
     log.exports.every((e) => e.settings.format === 'PNG' && e.settings.colorProfile === 'DOCUMENT'
       && e.settings.constraint.type === 'SCALE' && e.settings.constraint.value === 2), log.exports[0].settings);
   check('export: the frame covers the render bounds on whole pixels',
-    log.exports.every((e) => e.size.join() === '184,184' && e.at.join() === '40,-11'), log.exports.map((e) => [e.size, e.at]));
-  check('export: the copy keeps its place and rotation on the page',
+    log.exports.every((e) => e.size.join() === '184,184'), log.exports.map((e) => e.size));
+  check('export: the frame sits off screen, on whole pixels, so nothing flickers',
+    log.exports.every((e) => e.at[0] >= view.x + view.width && Number.isInteger(e.at[0]) && Number.isInteger(e.at[1])),
+    log.exports.map((e) => e.at));
+  check('export: the copy keeps its place and rotation within the frame',
     JSON.stringify(log.exports[0].copyTransform) === JSON.stringify([[0.6, -0.8, 80.25], [0.8, 0.6, 7.5]]), log.exports[0].copyTransform);
   check('export: the copy keeps its blend mode', log.exports[0].copyBlend === 'PASS_THROUGH', log.exports[0].copyBlend);
   check('export: the temporary frame is removed and the original left alone',
@@ -332,19 +374,57 @@ try {
   execFileSync(join(root, 'target/release/vitral'), ['encode', '--black', join(data, 'mixed-over-black.png'),
     '--white', join(data, 'mixed-over-white.png'), '--transparent', join(data, 'mixed-over-transparent.png'),
     '-o', expected]);
-  check('export: same file as `vitral encode`', Buffer.compare(bytes, readFileSync(expected)) === 0, bytes.length);
+  const expectedBytes = readFileSync(expected);
+  check('export: same file as `vitral encode`', Buffer.compare(bytes, expectedBytes) === 0, bytes.length);
   await ui.waitForFunction(() => document.querySelector('#result-notes').textContent.includes('Saved'));
   check('export: reports the file and its colour space',
     (await text(ui, '#result-notes')).includes('Mixed@2x.vitral.png (sRGB'), await text(ui, '#result-notes'));
+  const previewSize = await ui.$eval('#preview-vitral canvas', (c) => {
+    const r = c.getBoundingClientRect();
+    const stage = c.closest('.stage').getBoundingClientRect();
+    return { ok: r.width > 0 && r.height > 0 && r.width <= stage.width && r.height <= stage.height, w: r.width, h: r.height };
+  });
+  check('export: the preview fits its stage', previewSize.ok, previewSize);
   if (process.env.VITRAL_SCREENSHOTS) {
-    await page.screenshot({ path: join(process.env.VITRAL_SCREENSHOTS, 'export.png'), clip: { x: 0, y: 0, width: 320, height: 520 } });
+    await page.screenshot({ path: join(process.env.VITRAL_SCREENSHOTS, 'export.png'), clip: { x: 0, y: 0, width: 320, height: 600 } });
   }
-  check('export: shows the preview', await ui.$eval('#result', (r) => !r.hidden && r.querySelectorAll('canvas').length === 4), null);
+
+  // Several layers: one file each, as a single ZIP download, or one file.
+  const rect = (name, x, y) => node({
+    type: 'RECTANGLE', name, blendMode: 'MULTIPLY',
+    absoluteRenderBounds: { x, y, width: 100, height: 80 },
+    absoluteTransform: [[1, 0, x], [0, 1, y]],
+    relativeTransform: [[1, 0, x], [0, 1, y]],
+  });
+  const top = rect('Top', 50, 20);
+  const bottom = rect('Bottom', 10, 0);
+  node({ type: 'FRAME', name: 'Artboard', children: [bottom, top] });
+  const multi = await openPlugin({ selection: [top, bottom] });
+  await multi.waitForFunction(() => !document.querySelector('#together-row').hidden);
+  const zipped = page.waitForEvent('download', { timeout: 20000 });
+  await multi.click('#export');
+  const archive = await zipped;
+  check('export: several layers leave as one ZIP download', archive.suggestedFilename() === 'Vitral export.zip', archive.suggestedFilename());
+  const entries = unzip(readFileSync(await archive.path()));
+  check('export: the ZIP holds one file per layer, bottom layer first',
+    Object.keys(entries).join() === 'Bottom.vitral.png,Top.vitral.png', Object.keys(entries));
+  check('export: each file in the ZIP is a whole Vitral',
+    Object.values(entries).every((b) => Buffer.compare(b, expectedBytes) === 0), Object.values(entries).map((b) => b.length));
+
+  figma.log.exports.length = 0;
+  await multi.click('#together button[data-value="together"]');
+  const joined = page.waitForEvent('download', { timeout: 20000 });
+  await multi.click('#export');
+  const one = await joined;
+  check('export: “One file” gives a single Vitral named after the layers’ parent', one.suggestedFilename() === 'Artboard.vitral.png', one.suggestedFilename());
+  const togetherExports = figma.log.exports;
+  check('export: “One file” renders all layers together, stacked as on the canvas',
+    togetherExports.length === 3 && togetherExports[0].copies.join() === 'Bottom,Top', togetherExports.map((e) => e.copies));
+  check('export: “One file” covers both layers', togetherExports[0].size.join() === '140,100', togetherExports[0].size);
 
   // Import the file just made into a frame with a fill.
   const board = node({ type: 'FRAME', name: 'Board', width: 400, height: 300, fills: [solid(0.9, 0.5, 0.2)], children: [] });
   const ui2 = await openPlugin({ selection: [board] });
-  await ui2.click('nav button[data-tab="import"]');
   await ui2.waitForFunction(() => document.querySelector('#import-notes').textContent.includes('Board'));
   check('import: no background warning over a filled frame',
     !(await text(ui2, '#import-notes')).includes('no fill'), await text(ui2, '#import-notes'));
@@ -364,25 +444,22 @@ try {
   const ring = readFileSync(join(root, 'examples/invert-ring.vitral.png'));
   const board2 = node({ type: 'FRAME', name: 'Board', width: 400, height: 300, fills: [solid(0.2, 0.3, 0.9)], children: [] });
   const ui2b = await openPlugin({ selection: [board2] });
-  await ui2b.click('nav button[data-tab="import"]');
   const ringGroup = await importInto(ui2b, board2, { name: 'invert-ring.vitral.png', mimeType: 'image/png', buffer: ring });
   check('import: three layers, difference → screen → multiply, when the file inverts',
     ringGroup && ringGroup.children.map((c) => c.blendMode).join() === 'DIFFERENCE,SCREEN,MULTIPLY', ringGroup && ringGroup.children.map((c) => c.blendMode));
   const ringError = ringGroup && await compositeError(ui2b, ringGroup, ring);
-  if (process.env.VITRAL_SCREENSHOTS) {
-    await page.screenshot({ path: join(process.env.VITRAL_SCREENSHOTS, 'import.png'), clip: { x: 0, y: 0, width: 320, height: 520 } });
-  }
   check('import: those layers composite to the reference (max error ≤ 2)', ringError <= 2, ringError);
+  if (process.env.VITRAL_SCREENSHOTS) {
+    await page.screenshot({ path: join(process.env.VITRAL_SCREENSHOTS, 'import.png'), clip: { x: 0, y: 0, width: 320, height: 600 } });
+  }
 
   // Display P3 documents get Display P3 layers; the bare page gets a warning.
   const ui3 = await openPlugin({ profile: 'DISPLAY_P3' });
-  await ui3.click('nav button[data-tab="import"]');
   await ui3.waitForFunction(() => document.querySelector('#import-notes').textContent.includes('Display P3'));
   check('import: warns that the bare page has no fill', (await text(ui3, '#import-notes')).includes('filled background'), await text(ui3, '#import-notes'));
   const before = figma.log.images.length;
   await ui3.setInputFiles('#file', { name: 'Mixed.vitral.png', mimeType: 'image/png', buffer: bytes });
-  const until = Date.now() + 15000;
-  while (figma.currentPage.children.length === 0 && Date.now() < until) await new Promise((ok) => setTimeout(ok, 50));
+  await until(() => figma.currentPage.children.length > 0);
   const p3 = figma.log.images.slice(before);
   check('import: layers are tagged Display P3 in a P3 document',
     p3.length === 2 && p3.every((png) => Buffer.from(png).includes('iCCP')), p3.length);
@@ -391,14 +468,61 @@ try {
 
   // A plain PNG is placed as one ordinary image.
   const ui4 = await openPlugin({});
-  await ui4.click('nav button[data-tab="import"]');
   await ui4.setInputFiles('#file', join(data, 'mixed-over-transparent.png'));
-  const t4 = Date.now() + 15000;
-  while (figma.currentPage.children.length === 0 && Date.now() < t4) await new Promise((ok) => setTimeout(ok, 50));
+  await until(() => figma.currentPage.children.length > 0);
   const single = figma.currentPage.children[0];
   check('import: a plain PNG becomes one normal image layer',
     single && single.type === 'RECTANGLE' && single.blendMode === 'NORMAL' && figma.log.images.length === 1, single && single.type);
-  check('import: says it was not a Vitral', (await text(ui4, '#import-notes')).includes('Not a Vitral file'), await text(ui4, '#import-notes'));
+  check('import: says it was not a Vitral', (await text(ui4, '#import-notes')).includes('not a Vitral file'), await text(ui4, '#import-notes'));
+
+  // A .vitral.png dropped on the canvas while the plugin is open is rebuilt
+  // where it lands; other files are left to Figma.
+  const canvas = node({ type: 'FRAME', name: 'Canvas', width: 800, height: 600, fills: [solid(1, 1, 1)], children: [] });
+  await openPlugin({ selection: [canvas] });
+  const dropFile = (name, content) => ({ name, type: 'image/png', getBytesAsync: async () => new Uint8Array(content) });
+  check('drop: other files are left to Figma',
+    figma.handlers.drop({ node: canvas, x: 10, y: 10, files: [dropFile('photo.png', bytes)], items: [] }) === true, null);
+  const handled = figma.handlers.drop({ node: canvas, x: 300, y: 200, files: [dropFile('Mixed@2x.vitral.png', bytes)], items: [] });
+  check('drop: a .vitral.png is taken over from Figma', handled === false, handled);
+  await until(() => canvas.children.length > 0);
+  const dropped = canvas.children[0];
+  check('drop: rebuilt as blended layers, centred where it landed',
+    dropped && dropped.type === 'GROUP' && dropped.children.map((c) => c.blendMode).join() === 'SCREEN,MULTIPLY'
+      && dropped.x === 254 && dropped.y === 154, dropped && [dropped.type, dropped.x, dropped.y]);
+
+  // A Vitral that Figma placed as a flat image can be rebuilt in place.
+  const holder = node({ type: 'FRAME', name: 'Holder', width: 500, height: 500, fills: [solid(1, 1, 1)], children: [] });
+  const flat = node({
+    type: 'RECTANGLE', name: 'Mixed.vitral.png', blendMode: 'PASS_THROUGH', width: 92, height: 92,
+    relativeTransform: [[1, 0, 30], [0, 1, 40]],
+    fills: [{ type: 'IMAGE', imageHash: 'flat', scaleMode: 'FILL', visible: true }],
+  });
+  const sibling = node({ type: 'RECTANGLE', name: 'Above', blendMode: 'NORMAL' });
+  holder.appendChild(flat);
+  holder.appendChild(sibling);
+  const ui6 = await openPlugin({ selection: [flat] });
+  figma.stored.flat = new Uint8Array(bytes);
+  figma.ui.onmessage({ type: 'ready' });
+  await ui6.waitForSelector('#candidates button', { timeout: 15000 });
+  check('rebuild: offers to rebuild a flat Vitral image',
+    (await text(ui6, '#candidates')).includes('“Mixed.vitral.png” is a Vitral'), await text(ui6, '#candidates'));
+  await ui6.click('#candidates button');
+  await until(() => flat.removed);
+  const rebuilt = holder.children[0];
+  check('rebuild: replaces the image in place, below what was above it',
+    flat.removed && rebuilt && rebuilt.type === 'GROUP' && holder.children[1] === sibling, holder.children.map((c) => c.name));
+  check('rebuild: the layers take the image’s size and position',
+    rebuilt && rebuilt.children.every((c) => c.width === 92 && c.height === 92
+      && JSON.stringify(c.relativeTransform) === JSON.stringify([[1, 0, 30], [0, 1, 40]])), rebuilt && rebuilt.children.map((c) => c.relativeTransform));
+  check('rebuild: named after the image', rebuilt && rebuilt.name === 'Mixed (Vitral)', rebuilt && rebuilt.name);
+
+  // Plain images are not offered.
+  const photo = node({ type: 'RECTANGLE', name: 'Photo', fills: [{ type: 'IMAGE', imageHash: 'photo', visible: true }] });
+  const ui7 = await openPlugin({ selection: [photo] });
+  figma.stored.photo = new Uint8Array(readFileSync(join(data, 'mixed-over-white.png')));
+  figma.ui.onmessage({ type: 'ready' });
+  await new Promise((ok) => setTimeout(ok, 300));
+  check('rebuild: plain images are not offered', (await ui7.$$('#candidates button')).length === 0, null);
 
   // Nothing selected: export stays disabled.
   const ui5 = await openPlugin({});

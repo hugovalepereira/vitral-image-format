@@ -155,6 +155,10 @@ function documentColourSpace() {
   return figma.root.documentColorProfile === 'DISPLAY_P3' ? 'display-p3' : 'srgb';
 }
 
+function errorText(e) {
+  return e && e.message ? e.message : String(e);
+}
+
 // Where an import goes: inside the selected frame, or on the page.
 function importTarget() {
   const selection = figma.currentPage.selection;
@@ -162,6 +166,63 @@ function importTarget() {
     return selection[0];
   }
   return figma.currentPage;
+}
+
+// --- Vitral files already in the document as plain images ------------------
+
+// A PNG carries Vitral data in a `viTr` chunk (SPEC §4). Checking for the
+// chunk is enough to offer a rebuild; the UI decodes the file properly.
+function hasVitralChunk(bytes) {
+  let i = 8;
+  while (i + 8 <= bytes.length) {
+    const length = ((bytes[i] << 24) | (bytes[i + 1] << 16) | (bytes[i + 2] << 8) | bytes[i + 3]) >>> 0;
+    const type = String.fromCharCode(bytes[i + 4], bytes[i + 5], bytes[i + 6], bytes[i + 7]);
+    if (type === 'viTr') return true;
+    if (type === 'IEND') return false;
+    i += 12 + length;
+  }
+  return false;
+}
+
+function imageFillOf(node) {
+  const fills = listOf(node, 'fills').filter(function (paint) {
+    return paint.visible !== false;
+  });
+  return fills.length === 1 && fills[0].type === 'IMAGE' && fills[0].imageHash ? fills[0] : null;
+}
+
+// Selected image layers whose image is a Vitral file, for instance one dragged
+// onto the canvas while the plugin was closed, which Figma placed as a plain
+// image. Found only if Figma kept the file's bytes as they were.
+const candidates = {};
+let candidateCheck = 0;
+
+async function findCandidates() {
+  const check = ++candidateCheck;
+  const found = [];
+  const nodes = figma.currentPage.selection.slice(0, 8);
+  for (const node of nodes) {
+    const fill = imageFillOf(node);
+    if (!fill) continue;
+    try {
+      const image = figma.getImageByHash(fill.imageHash);
+      const bytes = image ? await image.getBytesAsync() : null;
+      if (bytes && hasVitralChunk(bytes)) found.push({ node: node, bytes: bytes });
+    } catch (e) {
+      // An image that can't be read is simply not offered.
+    }
+  }
+  if (check !== candidateCheck) return;
+  Object.keys(candidates).forEach(function (key) {
+    delete candidates[key];
+  });
+  figma.ui.postMessage({
+    type: 'candidates',
+    items: found.map(function (c) {
+      candidates[c.node.id] = c;
+      return { key: c.node.id, name: c.node.name };
+    }),
+  });
 }
 
 function describe() {
@@ -187,31 +248,71 @@ function describe() {
       filled: target.type !== 'PAGE' && hasOpaqueFill(target),
     },
   });
+  findCandidates();
 }
 
-// Renders a layer over black, over white and over nothing. A temporary frame
-// holds a copy of the layer at the same place on the page, so the three
+// --- export -----------------------------------------------------------------
+
+// Position of a node in the layer tree, for stacking copies bottom to top.
+function stackPath(node) {
+  const path = [];
+  while (node.parent) {
+    path.unshift(node.parent.children.indexOf(node));
+    node = node.parent;
+  }
+  return path;
+}
+
+function compareStack(a, b) {
+  const pa = stackPath(a);
+  const pb = stackPath(b);
+  for (let i = 0; i < Math.min(pa.length, pb.length); i++) {
+    if (pa[i] !== pb[i]) return pa[i] - pb[i];
+  }
+  return pa.length - pb.length;
+}
+
+// Renders layers over black, over white and over nothing. A temporary frame
+// holds copies of the layers with their place on the page, so the three
 // renders share one pixel grid, and its fill is the only thing that changes.
-// The copy blends with that fill as the layer blends with whatever is behind
-// it, which is exactly what the Vitral has to record.
-async function renderThreeTimes(node, scale) {
-  const box = node.absoluteRenderBounds;
-  const transform = node.absoluteTransform;
-  const x0 = Math.floor(box.x);
-  const y0 = Math.floor(box.y);
+// The copies blend with that fill as the layers blend with whatever is behind
+// them, which is exactly what the Vitral has to record.
+//
+// The frame sits beyond the right edge of the visible canvas, so nothing
+// flickers while the fill changes. It is moved by whole pixels only, which
+// keeps the artwork's alignment to the pixel grid.
+async function renderThreeTimes(nodes, scale) {
+  let left = Infinity;
+  let top = Infinity;
+  let right = -Infinity;
+  let bottom = -Infinity;
+  const placed = nodes.map(function (node) {
+    const box = node.absoluteRenderBounds;
+    left = Math.min(left, box.x);
+    top = Math.min(top, box.y);
+    right = Math.max(right, box.x + box.width);
+    bottom = Math.max(bottom, box.y + box.height);
+    return { node: node, transform: node.absoluteTransform };
+  });
+  const x0 = Math.floor(left);
+  const y0 = Math.floor(top);
+  const view = figma.viewport.bounds;
   const frame = figma.createFrame();
   try {
     frame.name = 'Vitral export (temporary)';
-    frame.x = x0;
-    frame.y = y0;
-    frame.resize(Math.max(1, Math.ceil(box.x + box.width) - x0), Math.max(1, Math.ceil(box.y + box.height) - y0));
+    frame.fills = [];
+    frame.x = Math.ceil(view.x + view.width) + 1000;
+    frame.y = Math.floor(view.y);
+    frame.resize(Math.max(1, Math.ceil(right) - x0), Math.max(1, Math.ceil(bottom) - y0));
     frame.clipsContent = true;
-    const copy = node.clone();
-    frame.appendChild(copy);
-    copy.relativeTransform = [
-      [transform[0][0], transform[0][1], transform[0][2] - x0],
-      [transform[1][0], transform[1][1], transform[1][2] - y0],
-    ];
+    placed.forEach(function (p) {
+      const copy = p.node.clone();
+      frame.appendChild(copy);
+      copy.relativeTransform = [
+        [p.transform[0][0], p.transform[0][1], p.transform[0][2] - x0],
+        [p.transform[1][0], p.transform[1][1], p.transform[1][2] - y0],
+      ];
+    });
     // DOCUMENT keeps a Display P3 file's colours in Display P3.
     const settings = { format: 'PNG', constraint: { type: 'SCALE', value: scale }, colorProfile: 'DOCUMENT' };
     frame.fills = BLACK;
@@ -226,38 +327,65 @@ async function renderThreeTimes(node, scale) {
   }
 }
 
-async function exportSelection(scale) {
-  const nodes = figma.currentPage.selection.filter(function (node) {
-    return !problemWith(node);
+function togetherName(nodes) {
+  const parent = nodes[0].parent;
+  const shared = nodes.every(function (n) {
+    return n.parent === parent;
   });
+  return shared && parent.type !== 'PAGE' ? parent.name : 'Selection';
+}
+
+async function exportSelection(scale, together) {
+  const nodes = figma.currentPage.selection
+    .filter(function (node) {
+      return !problemWith(node);
+    })
+    .sort(compareStack);
   if (nodes.length === 0) {
     figma.ui.postMessage({ type: 'error', message: 'Select a visible layer or frame to export.' });
     return;
   }
-  figma.ui.postMessage({ type: 'export-start', count: nodes.length });
-  for (const node of nodes) {
+  const groups = together && nodes.length > 1 ? [nodes] : nodes.map(function (n) {
+    return [n];
+  });
+  figma.ui.postMessage({ type: 'export-start', count: groups.length });
+  for (const group of groups) {
+    const name = group.length > 1 ? togetherName(group) : group[0].name;
     try {
-      const renders = await renderThreeTimes(node, scale);
+      const renders = await renderThreeTimes(group, scale);
       figma.ui.postMessage({
         type: 'renders',
-        name: node.name,
+        name: name,
         scale: scale,
         black: renders.black,
         white: renders.white,
         transparent: renders.transparent,
       });
     } catch (e) {
-      figma.ui.postMessage({ type: 'error', message: '“' + node.name + '”: ' + (e && e.message ? e.message : e) });
+      figma.ui.postMessage({ type: 'error', message: '“' + name + '”: ' + errorText(e) });
     }
   }
 }
 
-function centre(target, width, height) {
-  if (target.type === 'PAGE') {
-    const c = figma.viewport.center;
-    return { x: Math.round(c.x - width / 2), y: Math.round(c.y - height / 2) };
-  }
-  return { x: Math.round((target.width - width) / 2), y: Math.round((target.height - height) / 2) };
+// --- import -----------------------------------------------------------------
+
+// Files waiting for the UI to decode them, and where each one goes.
+const placements = {};
+let placementId = 0;
+
+function decodeFor(bytes, name, scale, placement) {
+  const id = ++placementId;
+  placements[id] = placement;
+  figma.ui.postMessage({ type: 'decode', id: id, bytes: bytes, name: name, scale: scale });
+}
+
+function scaleFromName(name) {
+  const match = /@(\d)x/i.exec(name);
+  return match && Number(match[1]) >= 1 && Number(match[1]) <= 4 ? Number(match[1]) : 1;
+}
+
+function baseName(name) {
+  return name.replace(/(@\dx)?(\.vitral)?\.png$/i, '') || 'Vitral';
 }
 
 function imageLayer(bytes, width, height, name) {
@@ -268,57 +396,114 @@ function imageLayer(bytes, width, height, name) {
   return rect;
 }
 
-// Places a decoded file: a Pass through group with the three layers, bottom
-// to top difference, screen, multiply. Over a filled background they add up
-// to the Vitral's colours; with nothing behind them they can't show its
-// native look (SPEC §7, decision D9).
+// Places a decoded file: a Pass through group with the layers, bottom to top
+// difference (when the file needs it), screen, multiply. Over a filled
+// background they add up to the Vitral's colours; with nothing behind them
+// they can't show its native look (SPEC §7, decision D9).
+//
+// Where it goes: `replace` puts it exactly where an image layer was and
+// removes that layer; `parent` with `centre` puts it centred on a point of a
+// frame or the page; otherwise it goes in the middle of the selected frame,
+// or of the screen.
 function place(msg) {
+  const placement = placements[msg.id] || {};
+  delete placements[msg.id];
   if (msg.width > MAX_IMAGE_SIDE || msg.height > MAX_IMAGE_SIDE) {
     figma.ui.postMessage({ type: 'error', context: 'import', message: 'Figma takes images up to 4096 px a side.' });
     return;
   }
-  const target = importTarget();
-  const width = msg.width / msg.scale;
-  const height = msg.height / msg.scale;
-  const at = centre(target, width, height);
+  const replaced = placement.replace;
+  const parent = replaced ? replaced.parent : placement.parent || importTarget();
+  const width = replaced ? replaced.width : msg.width / msg.scale;
+  const height = replaced ? replaced.height : msg.height / msg.scale;
+  const layers = [];
+  const add = function (bytes, mode, name) {
+    const rect = imageLayer(bytes, width, height, name);
+    rect.blendMode = mode;
+    parent.appendChild(rect);
+    if (replaced) rect.relativeTransform = replaced.relativeTransform;
+    layers.push(rect);
+  };
   let placed;
   if (msg.plain) {
-    placed = imageLayer(msg.plain, width, height, msg.name);
-    target.appendChild(placed);
+    add(msg.plain, 'NORMAL', msg.name);
+    placed = layers[0];
   } else {
-    const layers = [];
-    const add = function (bytes, mode) {
-      const rect = imageLayer(bytes, width, height, modeLabel(mode));
-      rect.blendMode = mode;
-      target.appendChild(rect);
-      layers.push(rect);
-    };
-    if (msg.difference) add(msg.difference, 'DIFFERENCE');
-    add(msg.screen, 'SCREEN');
-    add(msg.multiply, 'MULTIPLY');
-    placed = figma.group(layers, target);
+    if (msg.difference) add(msg.difference, 'DIFFERENCE', 'Difference');
+    add(msg.screen, 'SCREEN', 'Screen');
+    add(msg.multiply, 'MULTIPLY', 'Multiply');
+    placed = figma.group(layers, parent);
     placed.name = msg.name + ' (Vitral)';
   }
-  // In an auto-layout frame, keep it where it is put instead of in the flow.
-  if ('layoutMode' in target && target.layoutMode !== 'NONE') placed.layoutPositioning = 'ABSOLUTE';
-  placed.x = at.x;
-  placed.y = at.y;
+  if (replaced) {
+    parent.insertChild(parent.children.indexOf(replaced), placed);
+    replaced.remove();
+  } else {
+    // In an auto-layout frame, keep it where it is put instead of in the flow.
+    if ('layoutMode' in parent && parent.layoutMode !== 'NONE') placed.layoutPositioning = 'ABSOLUTE';
+    let x;
+    let y;
+    if (placement.centre) {
+      x = placement.centre.x - width / 2;
+      y = placement.centre.y - height / 2;
+    } else if (parent.type === 'PAGE') {
+      x = figma.viewport.center.x - width / 2;
+      y = figma.viewport.center.y - height / 2;
+    } else {
+      x = (parent.width - width) / 2;
+      y = (parent.height - height) / 2;
+    }
+    placed.x = Math.round(x);
+    placed.y = Math.round(y);
+  }
   figma.currentPage.selection = [placed];
   figma.notify(msg.plain ? 'Placed as a plain image.' : 'Placed “' + msg.name + '” as blended layers.');
 }
 
-figma.showUI(__html__, { width: 320, height: 520, themeColors: true });
+// While the plugin is open, a .vitral.png dragged onto the canvas is rebuilt
+// as blended layers where it lands, instead of being placed as a flat image.
+function onDrop(event) {
+  const files = (event.files || []).filter(function (file) {
+    return /\.vitral\.png$/i.test(file.name);
+  });
+  if (files.length === 0) return true;
+  const parent = event.node && 'appendChild' in event.node ? event.node : figma.currentPage;
+  files.forEach(function (file, i) {
+    file.getBytesAsync().then(
+      function (bytes) {
+        decodeFor(bytes, baseName(file.name), scaleFromName(file.name), {
+          parent: parent,
+          centre: { x: event.x + i * 24, y: event.y + i * 24 },
+        });
+      },
+      function (e) {
+        figma.notify('Couldn’t read ' + file.name + ': ' + errorText(e), { error: true });
+      },
+    );
+  });
+  return false;
+}
+
+function rebuild(key) {
+  const candidate = candidates[key];
+  if (!candidate || candidate.node.removed) return;
+  decodeFor(candidate.bytes, candidate.node.name.replace(/(\.vitral)?\.png$/i, ''), 1, { replace: candidate.node });
+}
+
+figma.showUI(__html__, { width: 320, height: 560, themeColors: true });
 figma.ui.onmessage = function (msg) {
   if (msg.type === 'ready') {
     describe();
-    if (figma.command === 'import') figma.ui.postMessage({ type: 'tab', tab: 'import' });
   } else if (msg.type === 'export') {
-    return exportSelection(msg.scale);
+    return exportSelection(msg.scale, msg.together);
   } else if (msg.type === 'place') {
     place(msg);
+  } else if (msg.type === 'rebuild') {
+    rebuild(msg.key);
   } else if (msg.type === 'notify') {
     figma.notify(msg.message, { error: !!msg.error });
   }
 };
 figma.on('selectionchange', describe);
 figma.on('currentpagechange', describe);
+figma.on('drop', onDrop);

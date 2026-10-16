@@ -99,6 +99,14 @@ Ver também a lista de pontos pequenos em [06 — Todo](06-todo.md).
   * quando o frame selecionado tem preenchimento;
   * quando há modos que a v0.1 só aproxima ou perde, e blur de fundo;
   * quando o resultado é opaco (igual a um PNG).
+* [x] **Painel único** (out/2026, pedido do autor): exportar e importar no
+  mesmo painel; várias camadas saem num ficheiro cada (num ZIP, um só
+  download) ou num ficheiro só; o frame temporário fica fora do ecrã, para nada
+  piscar.
+* [x] **Arrastar para o canvas**: com o plugin aberto, um `.vitral.png`
+  largado no canvas é reconstruído onde cai. Com o plugin fechado fica uma
+  imagem plana; ao selecioná-la, o plugin oferece reconstruí-la (se o Figma
+  guardar os bytes originais, por confirmar).
 * [x] **Importar**: cria um grupo *pass-through* com as camadas de imagem
   (Difference, só quando é precisa, Screen, Multiply), no espaço de cor do
   documento. Só é exato sobre fundos preenchidos (D9); o plugin avisa quando o
