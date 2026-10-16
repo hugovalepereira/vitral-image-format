@@ -1,15 +1,18 @@
 # Vitral
 
-**PNG has transparency. Vitral has light and filter.**
+**Blend modes that survive export.**
 
-Vitral is an image format that carries its own blend modes. A `.vitral.png` file
-tints, lightens, darkens or inverts whatever is behind it, pixel by pixel, the way
-multiply, screen and their relatives do in Photoshop, Illustrator or Figma, but
-without anyone having to set a blend mode where the image is used.
+Vitral is a proposal for an image format that carries its own blend modes.
+What multiplies in Figma, Illustrator or Photoshop keeps multiplying on the
+website, without anyone rebuilding it: multiply, screen and their relatives,
+mixed freely per pixel in one PNG.
+
+PNG has transparency. Vitral has light and filter.
 
 It is also a valid PNG. Where nothing is behind it, and in software that has
 never heard of Vitral, it shows each pixel's own colour: the same image a normal
-PNG export would give you.
+PNG export would give you. It is never worse than the PNG you would export
+today.
 
 | Any PNG viewer (left) vs Vitral (right), same file over the same backdrop |
 |---|
@@ -20,10 +23,58 @@ PNG export would give you.
 | ![Screen, multiply and 50% normal shapes exported from Figma](examples/renders/figma-mixed.png) |
 | ![Neon made in Display P3](examples/renders/p3-neon.png) |
 
-> Status: **draft 0.1** (October 2026). The format, the Rust reference
-> implementation, the command-line tool and the web polyfill work; everything may
-> still change. This project was first published as "GFI (Graphic Function
-> Image)".
+> Status: **proposal, draft 0.1** (October 2026). The format, the Rust
+> reference implementation, the command-line tool and the web polyfill work;
+> everything may still change. This project was first published as "GFI
+> (Graphic Function Image)".
+
+## Why
+
+A blend mode lives in the design tool, not in the file. Export a layer set to
+multiply and you get a flat PNG: on a different background it looks grey and
+dirty instead of tinting what is behind it. Design forums have answered the
+same question for years with "the blending mode can't be carried with an
+image". So someone downstream rebuilds the effect by hand (separate layers and
+CSS `mix-blend-mode`), or the artwork gets flattened over one background and
+breaks when that background changes: dark mode, a client's theme, a photo that
+rotates.
+
+Vitral keeps the blend in the image, so the designer's intent reaches the place
+where the image is used.
+
+## What it does, and what it does not do yet
+
+| Blend modes | In Vitral 0.1 |
+|---|---|
+| Normal, multiply, screen, hard light, exclusion, inversion, with opacity, mixed per pixel and stacked | Exact |
+| Add (linear dodge), linear burn, darken, lighten, difference | Approximate: exact over black and white, linear in between |
+| Overlay, soft light, colour dodge, colour burn, hue, saturation, colour, luminosity | Not yet |
+| Background blur, refraction | Not yet |
+
+* **It works where Vitral is supported.** Today that means websites with the
+  polyfill script; a Figma plugin is next. Image viewers, email, slides and
+  native apps show the normal PNG.
+* **On the web it blends with content in its own stacking context**, like CSS
+  blend modes do: an ancestor with `opacity`, `transform` or `isolation`
+  isolates it.
+* **Files are larger**: 2.5 to 4.7 times the plain PNG in the samples.
+
+Growing the format past these limits is the point of the proposal (see the
+[roadmap](#roadmap)).
+
+## A proposal, open to help
+
+Vitral is published as a proposal so that people interested in the problem can
+try it, break it and help improve it. Useful ways to help:
+
+* Try it with your own exports (the [demo](https://hugovalepereira.github.io/vitral-image-format/)
+  has an encoder) and open an issue with what worked and what did not.
+* Describe a case where you had to rebuild a blend by hand, or where Vitral's
+  limits got in the way.
+* Read the [specification](SPEC.md) and question it, or implement it in another
+  tool or language.
+* Propose how overlay, soft light or background blur could fit into a future
+  version.
 
 ## How it works
 
@@ -58,6 +109,12 @@ cargo install --path crates/vitral-cli        # installs the `vitral` command
 vitral encode --black art-on-black.png --white art-on-white.png \
               --transparent art.png -o art.vitral.png
 ```
+
+Export in sRGB: `vitral encode` refuses Display P3 exports, which Figma makes
+when the document's colour profile is set to P3. Keep the
+artwork in a pass-through group (in Photoshop a Pass Through group, in
+Illustrator with "Isolate Blending" off), so its blend modes reach the black
+and white backgrounds.
 
 Other commands:
 
