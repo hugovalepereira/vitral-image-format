@@ -1,0 +1,395 @@
+<!doctype html>
+<!--
+  Source of the plugin's UI. build.sh inlines the WebAssembly module and its
+  bindings into ui.html, because Figma loads the UI as a single HTML string.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<style>
+  :root {
+    --bg: var(--figma-color-bg, #fff);
+    --bg-2: var(--figma-color-bg-secondary, #f5f5f5);
+    --text: var(--figma-color-text, #1e1e1e);
+    --text-2: var(--figma-color-text-secondary, #6b6b6b);
+    --border: var(--figma-color-border, #e6e6e6);
+    --brand: var(--figma-color-bg-brand, #0d99ff);
+    --on-brand: var(--figma-color-text-onbrand, #fff);
+    --warn: var(--figma-color-text-warning, #b86200);
+    --danger: var(--figma-color-text-danger, #dc3412);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font: 11px/16px Inter, system-ui, -apple-system, sans-serif;
+    color: var(--text);
+    background: var(--bg);
+  }
+  nav { display: flex; gap: 4px; padding: 8px 12px 0; border-bottom: 1px solid var(--border); }
+  nav button {
+    font: inherit; font-weight: 600; color: var(--text-2);
+    background: none; border: 0; padding: 6px 4px 8px; margin-bottom: -1px;
+    border-bottom: 2px solid transparent; cursor: pointer;
+  }
+  nav button[aria-selected="true"] { color: var(--text); border-bottom-color: var(--text); }
+  section { padding: 12px; display: grid; gap: 12px; }
+  section[hidden] { display: none; }
+  p { margin: 0; }
+  .muted { color: var(--text-2); }
+  .row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .seg { display: inline-flex; border: 1px solid var(--border); border-radius: 5px; overflow: hidden; }
+  .seg button {
+    font: inherit; color: var(--text); background: none; border: 0;
+    padding: 3px 9px; cursor: pointer;
+  }
+  .seg button + button { border-left: 1px solid var(--border); }
+  .seg button[aria-pressed="true"] { background: var(--bg-2); font-weight: 600; }
+  .primary {
+    font: inherit; font-weight: 600; color: var(--on-brand); background: var(--brand);
+    border: 0; border-radius: 5px; padding: 8px 12px; cursor: pointer;
+  }
+  .primary:disabled { opacity: .4; cursor: default; }
+  ul.notes { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+  ul.notes li { padding-left: 14px; position: relative; }
+  ul.notes li::before {
+    content: ""; position: absolute; left: 2px; top: 6px; width: 5px; height: 5px;
+    border-radius: 50%; background: var(--text-2);
+  }
+  ul.notes li.warn::before { background: var(--warn); }
+  ul.notes li.error { color: var(--danger); }
+  ul.notes li.error::before { background: var(--danger); }
+  .drop {
+    display: grid; place-items: center; text-align: center; min-height: 96px; padding: 12px;
+    border: 1px dashed var(--text-2); border-radius: 6px; cursor: pointer;
+  }
+  .drop.over { border-color: var(--brand); background: var(--bg-2); }
+  .previews { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  figure { margin: 0; display: grid; gap: 4px; }
+  figcaption { color: var(--text-2); }
+  /* The backdrop the preview blends with: black, paper, then colour. The
+     artwork must not sit in a stacking context of its own (no transform,
+     opacity or z-index between it and .stage), or it would not blend. */
+  .stage {
+    height: 120px; border-radius: 4px; overflow: hidden;
+    display: grid; place-items: center; padding: 8px;
+    background:
+      linear-gradient(90deg, #111 0 22%, #f3efe6 22% 44%, transparent 44%),
+      linear-gradient(160deg, #e4572e 0%, #f3a712 30%, #29335c 65%, #669bbc 100%);
+  }
+  .art { position: relative; line-height: 0; }
+  .art canvas { display: block; }
+  .art canvas + canvas { position: absolute; left: 0; top: 0; }
+</style>
+</head>
+<body>
+<nav role="tablist">
+  <button role="tab" data-tab="export" aria-selected="true">Export</button>
+  <button role="tab" data-tab="import" aria-selected="false">Import</button>
+</nav>
+
+<section id="tab-export">
+  <p id="selection" class="muted">Select a layer or frame to export.</p>
+  <div class="row">
+    <span>Scale</span>
+    <div class="seg" id="export-scale">
+      <button data-scale="1" aria-pressed="true">1x</button><button data-scale="2" aria-pressed="false">2x</button><button data-scale="3" aria-pressed="false">3x</button><button data-scale="4" aria-pressed="false">4x</button>
+    </div>
+  </div>
+  <ul class="notes" id="export-notes"></ul>
+  <button class="primary" id="export" disabled>Export .vitral.png</button>
+  <div id="result" hidden>
+    <div class="previews">
+      <figure><div class="stage"><div class="art" id="preview-png"></div></div><figcaption>Plain PNG</figcaption></figure>
+      <figure><div class="stage"><div class="art" id="preview-vitral"></div></div><figcaption>Vitral</figcaption></figure>
+    </div>
+  </div>
+  <ul class="notes" id="result-notes"></ul>
+</section>
+
+<section id="tab-import" hidden>
+  <label class="drop" id="drop">
+    <input type="file" id="file" accept=".png,image/png" hidden>
+    <span>Drop a <b>.vitral.png</b> here<br><span class="muted">or click to choose a file</span></span>
+  </label>
+  <div class="row">
+    <span>File scale</span>
+    <div class="seg" id="import-scale">
+      <button data-scale="1" aria-pressed="true">1x</button><button data-scale="2" aria-pressed="false">2x</button><button data-scale="3" aria-pressed="false">3x</button><button data-scale="4" aria-pressed="false">4x</button>
+    </div>
+  </div>
+  <ul class="notes" id="import-notes"></ul>
+</section>
+
+<script>/*VITRAL_WASM_BINDINGS*/</script>
+<script>
+'use strict';
+const WASM_BASE64 = '__VITRAL_WASM_BASE64__';
+
+const $ = (id) => document.getElementById(id);
+const toPlugin = (msg) => parent.postMessage({ pluginMessage: msg }, '*');
+const state = { items: [], colourSpace: 'srgb', target: { name: null, filled: false } };
+
+let wasmReady;
+function vitral() {
+  if (!wasmReady) {
+    const binary = atob(WASM_BASE64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    wasmReady = wasm_bindgen({ module_or_path: bytes }).then(() => wasm_bindgen);
+  }
+  return wasmReady;
+}
+
+// --- small helpers -------------------------------------------------------
+
+function segmented(id, onChange) {
+  const seg = $(id);
+  const set = (value) => {
+    for (const b of seg.querySelectorAll('button')) b.setAttribute('aria-pressed', String(b.dataset.scale === String(value)));
+    if (onChange) onChange(Number(value));
+  };
+  seg.addEventListener('click', (e) => { if (e.target.dataset.scale) set(e.target.dataset.scale); });
+  return { set, get: () => Number(seg.querySelector('[aria-pressed="true"]').dataset.scale) };
+}
+const exportScale = segmented('export-scale');
+const importScale = segmented('import-scale');
+
+function notes(id, list) {
+  const ul = $(id);
+  ul.replaceChildren(...list.map(([kind, html]) => {
+    const li = document.createElement('li');
+    li.className = kind;
+    li.innerHTML = html;
+    return li;
+  }));
+}
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+const q = (name) => `“${esc(name)}”`;
+const spaceName = (space) => (space === 'display-p3' ? 'Display P3' : 'sRGB');
+
+function fileName(name, scale) {
+  const safe = name.replace(/[\\/:*?"<>|]+/g, '-').trim() || 'vitral';
+  return `${safe}${scale > 1 ? `@${scale}x` : ''}.vitral.png`;
+}
+
+function download(bytes, name) {
+  const url = URL.createObjectURL(new Blob([bytes], { type: 'image/png' }));
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = name;
+  document.body.append(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
+}
+
+function canvasFrom(rgba, width, height, mode) {
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  canvas.getContext('2d').putImageData(new ImageData(new Uint8ClampedArray(rgba), width, height), 0, 0);
+  if (mode) canvas.style.mixBlendMode = mode;
+  return canvas;
+}
+
+// --- tabs ------------------------------------------------------------------
+
+function showTab(tab) {
+  for (const b of document.querySelectorAll('nav button')) b.setAttribute('aria-selected', String(b.dataset.tab === tab));
+  $('tab-export').hidden = tab !== 'export';
+  $('tab-import').hidden = tab !== 'import';
+}
+document.querySelector('nav').addEventListener('click', (e) => { if (e.target.dataset.tab) showTab(e.target.dataset.tab); });
+
+// --- export ----------------------------------------------------------------
+
+function selectionNotes() {
+  const items = state.items;
+  const list = [];
+  if (items.length === 0) {
+    $('selection').textContent = 'Select a layer or frame to export.';
+  } else if (items.length === 1) {
+    const it = items[0];
+    $('selection').innerHTML = `${q(it.name)} <span class="muted">· ${it.width} × ${it.height}</span>`;
+  } else {
+    $('selection').textContent = `${items.length} layers selected; each one becomes its own file.`;
+  }
+  for (const it of items) {
+    const who = items.length > 1 ? `${q(it.name)}: ` : '';
+    if (it.problem) { list.push(['warn', who + esc(it.problem)]); continue; }
+    const r = it.report;
+    if (r.reaching === 0) {
+      list.push(['', `${who}No blend modes reach the background, so this file will behave like a regular PNG.`]);
+    }
+    if (r.filled) {
+      list.push(['warn', `${who}${q(it.name)} has a fill, so the blend modes inside mix with that fill rather than with what is behind. Hide the fill to let them through.`]);
+    }
+    for (const g of r.isolated) {
+      list.push(['warn', `${who}${q(g.name)} is set to ${esc(g.mode)}, not Pass through, so the blend modes inside it only mix within it.`]);
+    }
+    for (const m of r.approximate) {
+      list.push(['', `${who}${esc(m.mode)} on ${q(m.name)} is exact over black and white and approximated over other colours.`]);
+    }
+    for (const m of r.lost) {
+      list.push(['warn', `${who}${esc(m.mode)} on ${q(m.name)} can’t be kept by Vitral 0.1; it will only be right over black and white.`]);
+    }
+    for (const b of r.backgroundBlur) {
+      list.push(['warn', `${who}The background blur on ${q(b.name)} won’t blur what is behind the file.`]);
+    }
+    if (r.truncated) list.push(['', `${who}Large selection: only part of it was checked for blend modes.`]);
+  }
+  notes('export-notes', list);
+  $('export').disabled = !items.some((it) => !it.problem);
+}
+
+let pending = 0;
+const exported = [];
+const errors = [];
+
+$('export').addEventListener('click', () => {
+  $('export').disabled = true;
+  pending = 0;
+  exported.length = 0;
+  errors.length = 0;
+  notes('result-notes', [['', 'Rendering…']]);
+  toPlugin({ type: 'export', scale: exportScale.get() });
+});
+
+function preview(planes) {
+  const { width, height } = planes;
+  // Fit inside the stage (120 px high, ~136 px wide, minus padding).
+  const fit = Math.min(1, 104 / height, ($('preview-vitral').parentElement.clientWidth - 16) / width);
+  const size = (c) => { c.style.width = `${width * fit}px`; c.style.height = `${height * fit}px`; return c; };
+  $('preview-png').replaceChildren(size(canvasFrom(planes.native(), width, height)));
+  $('preview-vitral').replaceChildren(
+    size(canvasFrom(planes.difference(), width, height, 'difference')),
+    size(canvasFrom(planes.screen(), width, height, 'screen')),
+    size(canvasFrom(planes.multiply(), width, height, 'multiply')),
+  );
+  $('result').hidden = false;
+}
+
+async function encodeRenders(msg) {
+  const lib = await vitral();
+  const file = lib.encodeFromExports(msg.black, msg.white, msg.transparent);
+  const name = fileName(msg.name, msg.scale);
+  download(file, name);
+  const planes = lib.decodePlanes(file);
+  try {
+    const k = planes.overBlack(), w = planes.overWhite();
+    let opaque = true;
+    for (let i = 0; i < k.length && opaque; i++) opaque = k[i] === w[i];
+    exported.push({ name, space: planes.colourSpace, opaque, bytes: file.length });
+    preview(planes);
+  } finally {
+    planes.free();
+  }
+}
+
+function exportDone() {
+  const list = exported.map((e) => ['', `Saved <b>${esc(e.name)}</b> (${spaceName(e.space)}, ${Math.ceil(e.bytes / 1024)} KB).`]);
+  if (exported.some((e) => e.opaque)) {
+    list.push(['warn', 'The result is opaque, so it looks the same as a regular PNG over any background.']);
+  }
+  notes('result-notes', list.concat(errors.map((m) => ['error', esc(m)])));
+  $('export').disabled = !state.items.some((it) => !it.problem);
+}
+
+// --- import ----------------------------------------------------------------
+
+function importNotes(extra = []) {
+  const t = state.target;
+  const list = [];
+  list.push(['', t.name
+    ? `Places the file inside ${q(t.name)} as blended image layers.`
+    : 'Places the file on the page as blended image layers. Select a frame first to place it inside.']);
+  if (!t.filled) {
+    list.push(['warn', t.name
+      ? `${q(t.name)} has no fill. The layers need a filled background behind them: with nothing behind, they can’t show the file’s own look.`
+      : 'The layers need a filled background behind them: on the bare canvas, or in an export of a frame without a fill, they can’t show the file’s own look.']);
+  }
+  if (state.colourSpace === 'display-p3') list.push(['', 'The layers are made in Display P3, the document’s colour profile.']);
+  notes('import-notes', list.concat(extra));
+}
+
+async function importFile(file) {
+  const match = /@(\d)x/i.exec(file.name);
+  if (match && Number(match[1]) <= 4) importScale.set(match[1]);
+  const name = file.name.replace(/(@\dx)?(\.vitral)?\.png$/i, '') || 'Vitral';
+  try {
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    const lib = await vitral();
+    const layers = lib.decodeLayerPngs(bytes, state.colourSpace);
+    try {
+      const base = { type: 'place', name, width: layers.width, height: layers.height, scale: importScale.get() };
+      if (base.width > 4096 || base.height > 4096) {
+        importNotes([['error', `${q(file.name)} is ${base.width} × ${base.height} px; Figma takes images up to 4096 px a side.`]]);
+        return;
+      }
+      if (layers.status !== 'ok') {
+        importNotes([['warn', `Not a Vitral file (${esc(layers.status)}); placed as a plain image.`]]);
+        toPlugin({ ...base, plain: bytes });
+        return;
+      }
+      importNotes();
+      toPlugin({
+        ...base,
+        difference: layers.usesDifference ? layers.difference() : null,
+        screen: layers.screen(),
+        multiply: layers.multiply(),
+      });
+    } finally {
+      layers.free();
+    }
+  } catch (e) {
+    importNotes([['error', `Couldn’t read ${q(file.name)}: ${esc(e.message || e)}`]]);
+  }
+}
+
+$('file').addEventListener('change', () => {
+  if ($('file').files[0]) importFile($('file').files[0]);
+  $('file').value = '';
+});
+const drop = $('drop');
+drop.addEventListener('dragover', (e) => { e.preventDefault(); drop.classList.add('over'); });
+drop.addEventListener('dragleave', () => drop.classList.remove('over'));
+drop.addEventListener('drop', (e) => {
+  e.preventDefault();
+  drop.classList.remove('over');
+  if (e.dataTransfer.files[0]) importFile(e.dataTransfer.files[0]);
+});
+
+// --- messages from the plugin ---------------------------------------------
+
+window.onmessage = async (event) => {
+  const msg = event.data && event.data.pluginMessage;
+  if (!msg) return;
+  if (msg.type === 'selection') {
+    Object.assign(state, { items: msg.items, colourSpace: msg.colourSpace, target: msg.target });
+    selectionNotes();
+    importNotes();
+  } else if (msg.type === 'tab') {
+    showTab(msg.tab);
+  } else if (msg.type === 'export-start') {
+    pending = msg.count;
+  } else if (msg.type === 'renders') {
+    try {
+      await encodeRenders(msg);
+    } catch (e) {
+      errors.push(`“${msg.name}”: ${e.message || e}`);
+    }
+    if (--pending <= 0) exportDone();
+  } else if (msg.type === 'error' && msg.context === 'import') {
+    importNotes([['error', esc(msg.message)]]);
+  } else if (msg.type === 'error') {
+    errors.push(msg.message);
+    if (pending > 0) pending--;
+    if (pending <= 0) exportDone();
+  }
+};
+
+toPlugin({ type: 'ready' });
+vitral(); // start compiling the module while the designer looks at the panel
+</script>
+</body>
+</html>
