@@ -92,83 +92,98 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 // ---------------------------------------------------------------- samples ---
 
-/// The namesake: Voronoi panes of tinted glass (multiply) joined by lead
-/// (normal), with a soft sheen (screen).
+/// The namesake: an arched window of tinted glass (multiply) in a strict
+/// grid, joined by lead (normal), with a half disc of light (screen) under
+/// the arch. Its plain PNG shows the intention: the glass as flat,
+/// half-transparent colour.
 fn stained_glass() -> VitralImage {
-    let (w, h) = (300, 360);
-    let (cx, top, bottom, half) = (150.0, 140.0, 345.0, 135.0);
+    let (w, h) = (280, 380);
+    let (cx, top, bottom, half) = (140.0, 140.0, 367.0, 120.0);
+    let (inner, row, col) = (60.0, 76.0, 80.0);
     let window = move |x: f32, y: f32| -> f32 {
-        // Signed distance to an arched window (positive inside).
-        let d_rect = (half - (x - cx).abs()).min(bottom - y);
+        // Signed distance to the window (positive inside).
         if y < top {
-            half - ((x - cx).powi(2) + (y - top).powi(2)).sqrt()
+            half - (x - cx).hypot(y - top)
         } else {
-            d_rect
+            (half - (x - cx).abs()).min(bottom - y)
         }
     };
-    let seeds = [
-        (150.0, 40.0),
-        (95.0, 85.0),
-        (205.0, 85.0),
-        (150.0, 120.0),
-        (60.0, 160.0),
-        (240.0, 160.0),
-        (115.0, 190.0),
-        (185.0, 195.0),
-        (55.0, 250.0),
-        (150.0, 250.0),
-        (245.0, 250.0),
-        (95.0, 305.0),
-        (205.0, 305.0),
-        (150.0, 330.0),
+    let [blue, red, yellow] = [[40, 96, 214], [234, 78, 44], [250, 196, 30]];
+    // Panes: three rows of three under the arch, four sectors in it.
+    let grid = [
+        Some(blue),
+        Some(yellow),
+        Some(red),
+        None,
+        Some(blue),
+        Some(yellow),
+        Some(red),
+        None,
+        Some(blue),
     ];
-    let palette = [
-        [200, 40, 55],
-        [40, 85, 205],
-        [245, 185, 40],
-        [40, 160, 95],
-        [135, 60, 175],
-        [40, 170, 195],
-        [235, 110, 40],
-    ];
-    let voronoi = move |x: f32, y: f32| {
-        let mut best = (f32::MAX, f32::MAX, 0usize);
-        for (i, (sx, sy)) in seeds.iter().enumerate() {
-            let d = ((x - sx).powi(2) + (y - sy).powi(2)).sqrt();
-            if d < best.0 {
-                best = (d, best.0, i);
-            } else if d < best.1 {
-                best.1 = d;
-            }
+    let arch = [Some(red), Some(yellow), None, Some(blue)];
+    let pane = move |x: f32, y: f32| -> Option<[u8; 3]> {
+        if y >= top {
+            let c = (((x - (cx - half)) / col) as usize).min(2);
+            let r = (((y - top) / row) as usize).min(2);
+            grid[r * 3 + c]
+        } else if (x - cx).hypot(y - top) < inner {
+            None
+        } else {
+            let angle = (top - y).atan2(x - cx).to_degrees();
+            arch[((angle / 45.0) as usize).min(3)]
         }
-        ((best.1 - best.0) / 2.0, best.2)
     };
-    let glass = paint(w, h, |x, y| {
-        let inside = coverage(window(x, y));
-        let (_, cell) = voronoi(x, y);
-        rgba(palette[cell % palette.len()], inside * 0.9)
-    });
-    let sheen = paint(w, h, |x, y| {
-        let band = (-(((x - 0.8 * y) - 20.0) / 60.0).powi(2)).exp();
-        rgba([255, 255, 255], coverage(window(x, y)) * band * 0.35)
-    });
-    let lead = paint(w, h, |x, y| {
+    let light = move |x: f32, y: f32| coverage(inner - (x - cx).hypot(y - top)) * coverage(top - y);
+    let lead = move |x: f32, y: f32| -> f32 {
         let d = window(x, y);
-        let (edge, _) = voronoi(x, y);
-        let joint = coverage(2.2 - edge) * coverage(d);
-        let frame = coverage(d + 4.0) * coverage(5.0 - d);
-        rgba([38, 36, 40], joint.max(frame))
-    });
-    VitralImage::from_layers(
-        w,
-        h,
-        &[
-            Layer::new(glass, BlendMode::Multiply),
-            Layer::new(sheen, BlendMode::Screen),
-            Layer::new(lead, BlendMode::Normal),
-        ],
-    )
-    .unwrap()
+        let mut a = coverage(5.5 - d.abs());
+        let line =
+            |ax: f32, ay: f32, bx: f32, by: f32| coverage(2.0 - segment(x, y, ax, ay, bx, by));
+        for k in 1..3 {
+            let lx = cx - half + col * k as f32;
+            a = a.max(line(lx, top, lx, bottom));
+        }
+        for k in 0..3 {
+            let ly = top + row * k as f32;
+            a = a.max(line(cx - half, ly, cx + half, ly));
+        }
+        if y < top + 2.0 {
+            a = a.max(coverage(2.0 - ((x - cx).hypot(y - top) - inner).abs()));
+        }
+        for k in 1..4 {
+            let t = (45.0 * k as f32).to_radians();
+            let (c, s) = (t.cos(), t.sin());
+            a = a.max(line(
+                cx + inner * c,
+                top - inner * s,
+                cx + half * c,
+                top - half * s,
+            ));
+        }
+        a * coverage(d + 6.0)
+    };
+    let layers = |intention: bool| {
+        let fade = if intention { 0.55 } else { 1.0 };
+        let mode = |m| if intention { BlendMode::Normal } else { m };
+        let glass = paint(w, h, |x, y| match pane(x, y) {
+            Some(c) => rgba(c, coverage(window(x, y)) * fade),
+            None => [0.0; 4],
+        });
+        let sun = paint(w, h, |x, y| rgba([255, 236, 170], light(x, y) * fade));
+        let lead = paint(w, h, |x, y| rgba([20, 20, 22], lead(x, y)));
+        VitralImage::from_layers(
+            w,
+            h,
+            &[
+                Layer::new(glass, mode(BlendMode::Multiply)),
+                Layer::new(sun, mode(BlendMode::Screen)),
+                Layer::new(lead, BlendMode::Normal),
+            ],
+        )
+        .unwrap()
+    };
+    layers(false).with_native(layers(true).native).unwrap()
 }
 
 /// An amber glass card: soft multiply shadow, tinted body, screen
@@ -350,6 +365,13 @@ fn rgba(c: [u8; 3], alpha: f32) -> [f32; 4] {
 /// Antialiased coverage from a signed distance (positive inside).
 fn coverage(d: f32) -> f32 {
     (d + 0.5).clamp(0.0, 1.0)
+}
+
+/// Distance from (x, y) to the segment from a to b.
+fn segment(x: f32, y: f32, ax: f32, ay: f32, bx: f32, by: f32) -> f32 {
+    let (px, py, dx, dy) = (x - ax, y - ay, bx - ax, by - ay);
+    let t = ((px * dx + py * dy) / (dx * dx + dy * dy)).clamp(0.0, 1.0);
+    (px - dx * t).hypot(py - dy * t)
 }
 
 fn rounded_rect(x: f32, y: f32, cx: f32, cy: f32, hw: f32, hh: f32, r: f32) -> f32 {

@@ -14,14 +14,13 @@ never heard of Vitral, it shows each pixel's own colour: the same image a normal
 PNG export would give you. It is never worse than the PNG you would export
 today.
 
-| Any PNG viewer (left) vs Vitral (right), same file over the same backdrop |
+| Same file over the same backdrop, as the [demo page](https://hugovalepereira.github.io/vitral-image-format/) shows it: any PNG viewer (A) and Vitral (B) |
 |---|
-| ![Stained glass window over a busy backdrop](examples/renders/stained-glass.png) |
-| ![Light leak](examples/renders/light-leak.png) |
-| ![Inverting ring](examples/renders/invert-ring.png) |
-| ![Two multiply shapes exported from Figma](examples/renders/figma-multiply.png) |
-| ![Screen, multiply and 50% normal shapes exported from Figma](examples/renders/figma-mixed.png) |
-| ![Neon made in Display P3](examples/renders/p3-neon.png) |
+| ![A stained glass window in a strict grid over a 3D render: in a PNG viewer its panes are flat, half-transparent colour; with Vitral the glass tints the scene and a half disc of light brightens it](examples/renders/site-stained-glass.png) |
+| ![The capsule from the top of the demo page over a colour grid: in a PNG viewer it is a pale veil; with Vitral its bands invert the colours and its disc and square darken them like ink](examples/renders/site-capsule.png) |
+| ![Highlighter strokes over large type: opaque stickers in a PNG viewer, ink that lets the letters through with Vitral](examples/renders/site-highlighter.png) |
+| ![Sunglasses over a poster: grey lenses in a PNG viewer, tinted glass with Vitral](examples/renders/site-sunglasses.png) |
+| ![A neon circle and triangle over a dark website: a coloured haze in a PNG viewer, light that brightens the page with Vitral](examples/renders/site-neon.png) |
 
 > Status: **proposal, draft 0.1** (October 2026). The format, the Rust
 > reference implementation, the command-line tool and the web polyfill work;
@@ -175,6 +174,7 @@ python3 -m http.server 8000    # then open http://localhost:8000/web/
 cargo test --release                                  # unit and round-trip tests
 cargo run --release -p vitral --example samples       # regenerate examples/
 python3 tools/demo_samples.py                         # regenerate web/samples/ (demo page images; needs numpy, Pillow)
+node tools/readme_renders.mjs                         # capture the README comparisons from the demo page (needs Playwright)
 ./web/build.sh                                        # rebuild web/pkg (needs wasm-bindgen-cli 0.2.129)
 node web/test/run.mjs                                 # Chromium vs reference compositor (needs Playwright)
 ./figma/build.sh && node figma/test/plugin.mjs        # rebuild and test the Figma plugin
