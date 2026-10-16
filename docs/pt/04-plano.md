@@ -248,7 +248,7 @@ subtítulo.
 | Adoção lenta: "mais um formato" | É um PNG válido, por isso não há custo de experimentar. O polyfill e os plugins dão valor imediato. |
 | CDNs e otimizadores retiram o chunk | Fallback razoável + CRC. Documentar as opções que preservam chunks (ex.: `oxipng --strip safe`). |
 | Isolamento por contextos de empilhamento no CSS | Documentar. O polyfill avisa em modo debug quando um antepassado isola. |
-| Cores diferentes entre ferramentas | Mistura em sRGB codificado, igual ao CSS e ao Figma. Testes de referência. |
+| Cores diferentes entre ferramentas | Mistura nos valores codificados do espaço de cor do ficheiro (sRGB ou Display P3, D13), como o Figma. Testes de referência. |
 | Expectativa de "funcionar em todo o lado" | Comunicar claramente: funciona onde há suporte, degrada noutros sítios. |
 | Tamanho dos ficheiros | Residual nulo nas zonas normais. Medir e otimizar (fase 2). |
 | Fundo transparente (design tools) | Definido (D9): mostra a cor nativa. A pilha de 3 camadas só é exata sobre fundos opacos; nos programas de design é preciso um fundo preenchido. |

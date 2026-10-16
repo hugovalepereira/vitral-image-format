@@ -110,11 +110,9 @@ vitral encode --black art-on-black.png --white art-on-white.png \
               --transparent art.png -o art.vitral.png
 ```
 
-Export in sRGB: `vitral encode` refuses Display P3 exports, which Figma makes
-when the document's colour profile is set to P3. Keep the
-artwork in a pass-through group (in Photoshop a Pass Through group, in
-Illustrator with "Isolate Blending" off), so its blend modes reach the black
-and white backgrounds.
+Keep the artwork in a pass-through group (in Photoshop a Pass Through group, in
+Illustrator with "Isolate Blending" off), so its blend modes reach the black and
+white backgrounds.
 
 Other commands:
 
