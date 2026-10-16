@@ -7,47 +7,42 @@
 <meta name="description" content="An image format that carries its own blend modes. Valid PNG, blends with whatever is behind it.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@100..125,400..800&family=Geist+Mono:wght@400;500&family=Newsreader:opsz,wght@6..72,400&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&family=Newsreader:opsz,wght@6..72,400&family=Outfit:wght@400;500;600&display=swap">
 <style>
 /* Layout: a quiet grid. Neutral surfaces, hairline rules and numbered
-   sections; colour is kept for meaning. One signal colour marks what you can
-   act on, and each blend mode has its own colour wherever it appears. */
+   sections; strong colour lives only in the images and their backdrops, and
+   one signal orange marks what you can act on. */
 :root {
-  --bg: #eeede9;
-  --surface: #f8f7f4;
-  --fg: #18181a;
-  --muted: #64635e;
-  --line: #d2d0c9;
-  --strong-line: #18181a;
+  --bg: #f1f0ec;
+  --surface: #fafaf7;
+  --fg: #141416;
+  --muted: #5d5c58;
+  --line: #d4d2cb;
+  --strong-line: #141416;
   --accent: #d9480f;
   --ruby: #b3261e;
-  /* Blend modes: multiply, screen, difference (black and white). */
-  --multiply: #3054d4;
-  --screen: #e8a317;
   --check-a: #ffffff;
-  --check-b: #e2e1dc;
-  --display: "Archivo", "Helvetica Neue", Arial, system-ui, sans-serif;
-  --body: "Archivo", "Helvetica Neue", Arial, system-ui, -apple-system, sans-serif;
-  --mono: "Geist Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --check-b: #e3e1dc;
+  --display: "Outfit", "Futura", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --body: "DM Sans", "Avenir Next", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --mono: "DM Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
   --step--1: 0.8125rem;
   --step-0: 1rem;
   --step-1: 1.25rem;
-  --step-2: clamp(1.75rem, 3.2vw, 2.6rem);
-  --step-3: clamp(4.25rem, 12.5vw, 9.5rem);
+  --step-2: clamp(1.75rem, 3.2vw, 2.5rem);
+  --step-3: clamp(4.25rem, 11vw, 8.5rem);
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --bg: #111113;
     --surface: #19191c;
-    --fg: #edece8;
+    --fg: #eeede9;
     --muted: #a09f99;
     --line: #2c2c30;
-    --strong-line: #edece8;
+    --strong-line: #eeede9;
     --accent: #ff7a3d;
     --ruby: #ff8a80;
-    --multiply: #7f98ff;
-    --screen: #f2b84b;
     --check-a: #2c2c30;
     --check-b: #1f1f23;
     color-scheme: dark;
@@ -56,14 +51,12 @@
 :root[data-theme="dark"] {
   --bg: #111113;
   --surface: #19191c;
-  --fg: #edece8;
+  --fg: #eeede9;
   --muted: #a09f99;
   --line: #2c2c30;
-  --strong-line: #edece8;
+  --strong-line: #eeede9;
   --accent: #ff7a3d;
   --ruby: #ff8a80;
-  --multiply: #7f98ff;
-  --screen: #f2b84b;
   --check-a: #2c2c30;
   --check-b: #1f1f23;
   color-scheme: dark;
@@ -75,19 +68,19 @@ body {
   background: var(--bg);
   color: var(--fg);
   font: 400 var(--step-0)/1.6 var(--body);
-  font-stretch: 100%;
   padding-inline: max(16px, 4vw);
   padding-block: 0 3rem;
 }
 main { max-width: 76rem; margin-inline: auto; display: grid; grid-template-columns: minmax(0, 1fr); }
 h1, h2 { font-family: var(--display); text-wrap: balance; margin: 0; }
-h1 { font-size: var(--step-3); font-weight: 700; font-stretch: 112%; line-height: 0.86; letter-spacing: -0.045em; margin-left: -0.04em; }
-h2 { font-size: var(--step-2); font-weight: 600; font-stretch: 108%; line-height: 1.06; letter-spacing: -0.03em; }
+h1 { font-size: var(--step-3); font-weight: 600; line-height: 0.85; letter-spacing: -0.05em; margin-left: -0.04em; }
+h2 { font-size: var(--step-2); font-weight: 500; line-height: 1.08; letter-spacing: -0.025em; }
 p { margin: 0; }
 a { color: var(--fg); text-decoration-color: var(--accent); text-decoration-thickness: 1.5px; text-underline-offset: 0.22em; }
 a:hover { color: var(--accent); }
 code, pre { font-family: var(--mono); font-size: 0.88em; }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.dot { color: var(--accent); }
 
 .eyebrow {
   font: 500 0.72rem/1.2 var(--mono);
@@ -99,13 +92,13 @@ code, pre { font-family: var(--mono); font-size: 0.88em; }
 .prose { display: grid; gap: 1rem; max-width: 40rem; }
 .prose p { color: var(--muted); }
 .prose strong { color: var(--fg); font-weight: 600; }
-
-/* Mode swatches: the same mark for a blend mode everywhere on the page. */
-.mode { display: inline-block; width: 0.7rem; height: 0.7rem; flex: none; vertical-align: -0.05em; }
-.mode.multiply { background: var(--multiply); }
-.mode.screen { background: var(--screen); }
-.mode.difference { background: linear-gradient(90deg, var(--fg) 50%, var(--bg) 50%); box-shadow: inset 0 0 0 1px var(--fg); }
-.mode.mixed { background: linear-gradient(90deg, var(--multiply) 33.3%, var(--screen) 33.3% 66.6%, var(--fg) 66.6%); }
+.small-button {
+  font: 500 0.72rem/1 var(--mono); text-transform: uppercase; letter-spacing: 0.06em;
+  color: var(--fg); background: none; border: 1px solid var(--line); border-radius: 0;
+  padding: 0.5rem 0.65rem; cursor: pointer;
+}
+.small-button:hover { border-color: var(--strong-line); }
+.small-button[aria-pressed="true"] { background: var(--fg); color: var(--bg); border-color: var(--fg); }
 
 /* Top bar */
 .topbar {
@@ -113,12 +106,7 @@ code, pre { font-family: var(--mono); font-size: 0.88em; }
   display: flex; align-items: center; justify-content: space-between; gap: 1rem;
   padding-block: 1.1rem; border-bottom: 1px solid var(--strong-line);
 }
-.mark { display: flex; align-items: center; gap: 0.6rem; font: 700 1.1rem/1 var(--display); font-stretch: 112%; letter-spacing: -0.02em; color: var(--fg); text-decoration: none; }
-.mark i { display: grid; grid-template-columns: repeat(3, 0.4rem); height: 1.1rem; }
-.mark i::before, .mark i::after, .mark i b { content: ""; display: block; }
-.mark i::before { background: var(--multiply); }
-.mark i b { background: var(--screen); }
-.mark i::after { background: var(--fg); }
+.mark { font: 600 1.25rem/1 var(--display); letter-spacing: -0.03em; color: var(--fg); text-decoration: none; }
 .topbar nav { display: flex; gap: 1.75rem; }
 .topbar nav a { font: 500 var(--step--1)/1 var(--body); color: var(--muted); text-decoration: none; }
 .topbar nav a:hover { color: var(--fg); }
@@ -127,50 +115,76 @@ code, pre { font-family: var(--mono); font-size: 0.88em; }
 /* Hero */
 header.hero {
   display: grid; gap: 2.5rem; align-items: center;
-  padding-block: clamp(2.5rem, 6vw, 5rem) clamp(2.5rem, 5vw, 4rem);
+  padding-block: clamp(2.5rem, 6vw, 4.5rem) clamp(2.5rem, 5vw, 4rem);
 }
-.hero .text { display: grid; gap: 1.5rem; }
-.hero .lede { font-size: clamp(1.15rem, 1.7vw, 1.35rem); line-height: 1.45; max-width: 31rem; }
-.hero .lede em { font-style: normal; font-weight: 600; }
+.hero .text { display: grid; gap: 1.4rem; }
+.hero .claim { font: 500 clamp(1.5rem, 2.6vw, 2.1rem)/1.12 var(--display); letter-spacing: -0.025em; max-width: 26rem; }
+.hero .lede { color: var(--muted); font-size: clamp(1.02rem, 1.3vw, 1.12rem); line-height: 1.55; max-width: 31rem; }
 .hero .ctas { display: flex; flex-wrap: wrap; gap: 0.6rem; }
 .button {
-  display: inline-flex; align-items: center; gap: 0.5rem;
+  display: inline-flex; align-items: center; gap: 0.55rem;
   font: 600 var(--step--1)/1 var(--body); text-decoration: none;
   padding: 0.9rem 1.2rem; border: 1.5px solid var(--strong-line); color: var(--fg); background: transparent;
 }
 .button.primary { background: var(--fg); color: var(--bg); }
 .button.primary::before { content: ""; width: 0.5rem; height: 0.5rem; background: var(--accent); }
 .button:hover { background: var(--fg); color: var(--bg); }
+.facts { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 0.4rem 1.5rem; font: 400 0.75rem/1.4 var(--mono); color: var(--muted); }
+.facts li::before { content: "— "; color: var(--accent); }
+@media (min-width: 58rem) {
+  header.hero { grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); gap: 4rem; }
+}
 
-/* The opening figure: one .vitral.png sliding over a row of colour bands. */
-.lens { display: grid; gap: 0.75rem; min-width: 0; }
-.lens .frame {
-  position: relative; aspect-ratio: 7 / 4; overflow: hidden; isolation: isolate;
-  border: 1.5px solid var(--strong-line);
-  background: linear-gradient(90deg,
-    #f4f1ea 0 14.29%, #e8b931 0 28.57%, #e5531a 0 42.86%, #c23b5a 0 57.14%,
-    #3054d4 0 71.43%, #1f6f5c 0 85.71%, #18181a 0);
+/* The opening scene: a still .vitral.png is dropped on a page whose shapes
+   change behind it. Nothing above the image may create a stacking context
+   inside the scene, or it would stop blending with the shapes. */
+.show { margin: 0; display: grid; gap: 0.75rem; min-width: 0; }
+.scene {
+  position: relative; aspect-ratio: 3 / 2; overflow: hidden; isolation: isolate;
+  background: #f1eee7; border: 1.5px solid var(--strong-line);
 }
-/* Centred without translate: any transform would isolate the pane from the
-   bands. 36% wide at 9:5 is 20% of the frame's width, 35% of its height. */
-.lens .pane { position: absolute; width: 36%; left: 32%; top: 32.5%; }
-.lens .pane img { display: block; width: 100%; height: auto; }
+.beats { position: absolute; inset: 0; display: grid; grid-template-columns: repeat(6, 1fr); grid-template-rows: repeat(4, 1fr); }
+.beats .cell { position: relative; }
+.beats .cell i {
+  position: absolute; inset: 0; display: block;
+  background: var(--c, #141416);
+  transform: rotate(var(--rot, 0deg)) scale(0);
+}
+.beats .cell i.on { transform: rotate(var(--rot, 0deg)) scale(1); }
+.beats .cell i[data-shape="circle"] { border-radius: 50%; }
+.beats .cell i[data-shape="quarter"] { border-top-left-radius: 100%; }
+.beats .cell i[data-shape="half"] { clip-path: circle(50% at 50% 100%); }
 @media (prefers-reduced-motion: no-preference) {
-  .lens .pane { animation: slide 14s ease-in-out infinite alternate; }
-  .lens.paused .pane { animation-play-state: paused; }
+  .beats .cell i { transition: transform 700ms cubic-bezier(0.2, 0.7, 0.2, 1), background-color 700ms; transition-delay: var(--delay, 0ms); }
 }
-@keyframes slide { from { left: 2%; } to { left: 62%; } }
-.lens .legend { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem 1.25rem; font: 500 0.72rem/1.3 var(--mono); color: var(--muted); }
-.lens .legend span { display: inline-flex; align-items: center; gap: 0.45rem; }
-.lens .legend button {
-  margin-left: auto; font: 500 0.72rem/1 var(--mono); text-transform: uppercase; letter-spacing: 0.06em;
-  color: var(--fg); background: none; border: 1px solid var(--line); padding: 0.4rem 0.6rem; cursor: pointer;
+/* 34% wide, square: 51% of the scene's height, so 24.5% from the top. */
+.scene .drop { position: absolute; width: 34%; left: 33%; top: 24.5%; visibility: hidden; }
+.scene.landed .drop { visibility: visible; }
+.scene .drop img { display: block; width: 100%; height: auto; }
+.file-chip {
+  position: absolute; left: 33%; top: 24.5%; width: 34%; aspect-ratio: 1;
+  display: grid; place-items: end start; padding: 0.6rem;
+  font: 500 0.7rem/1 var(--mono); color: #141416;
+  border: 1.5px dashed #141416; background: rgb(255 255 255 / 0.55);
+  opacity: 0; pointer-events: none;
 }
-.lens .legend button:hover { border-color: var(--strong-line); }
-@media (prefers-reduced-motion: reduce) { .lens .legend button { display: none; } }
-@media (min-width: 56rem) {
-  header.hero { grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr); gap: 4rem; }
+.file-chip span { background: #fff; padding: 0.35rem 0.45rem; border: 1px solid #141416; }
+.file-chip::after {
+  content: ""; position: absolute; right: 18%; bottom: 22%; width: 1.1rem; height: 1.1rem; background: #141416;
+  clip-path: polygon(0 0, 0 100%, 30% 72%, 52% 100%, 66% 92%, 45% 64%, 85% 64%);
 }
+@media (prefers-reduced-motion: no-preference) {
+  .scene:not(.landed) .file-chip { animation: carry 1.5s cubic-bezier(0.3, 0.6, 0.2, 1) 0.3s both; }
+}
+@keyframes carry {
+  0% { opacity: 0; transform: translate(-70%, -60%) scale(0.5) rotate(-6deg); }
+  20% { opacity: 1; }
+  80% { opacity: 1; transform: translate(0, 0) scale(1) rotate(0); }
+  100% { opacity: 1; transform: translate(0, 0) scale(1) rotate(0); }
+}
+.show figcaption { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.6rem 1rem; font-size: var(--step--1); color: var(--muted); }
+.show figcaption code { color: var(--fg); }
+.show .tools { display: flex; gap: 0.4rem; }
 
 /* Sections */
 .section {
@@ -184,8 +198,8 @@ header.hero {
   .section.split { grid-template-columns: 17rem minmax(0, 1fr); gap: 3rem; }
   .section.split > .head { position: sticky; top: 1.5rem; }
 }
-
 #demo { scroll-margin-top: 1rem; }
+#demo .head .prose { margin-top: 0.25rem; }
 
 /* Controls: each group is a row of a small table, a label and a grid of
    equal cells. */
@@ -199,30 +213,28 @@ header.hero {
   font: 500 var(--step--1)/1.1 var(--body); text-align: left;
   color: var(--fg); background: var(--surface);
   border: 1px solid var(--line); border-radius: 0;
-  padding: 0.7rem 0.75rem;
+  padding: 0.6rem 0.7rem;
   cursor: pointer;
 }
 .segmented button::before {
-  content: ""; width: 1rem; height: 1rem; flex: none;
-  background: var(--sw, var(--line)); box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.15);
+  content: ""; width: 1.25rem; height: 1.25rem; flex: none;
+  background: var(--sw, var(--line)); box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.12);
 }
 .segmented button:hover { border-color: var(--strong-line); }
 .segmented button[aria-pressed="true"] { background: var(--fg); color: var(--bg); border-color: var(--fg); }
-.segmented button[aria-pressed="true"]::before { box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.35); }
 .segmented button.open { color: var(--accent); border-style: dashed; background: transparent; }
-.segmented button.open::before { content: "+"; background: none; box-shadow: none; font: 500 1rem/1 var(--mono); text-align: center; }
-/* Samples are marked with the blend modes they use; backdrops with a
-   miniature of themselves. */
-#samples button[data-id="gels"] { --sw: var(--multiply); }
-#samples button[data-id="glass-card"] { --sw: linear-gradient(90deg, var(--multiply) 33.3%, var(--screen) 33.3% 66.6%, #9a9993 66.6%); }
-#samples button[data-id="lumen"] { --sw: var(--screen); }
-#samples button[data-id="inverse"] { --sw: linear-gradient(90deg, #18181a 50%, #fff 50%); }
+.segmented button.open::before { content: "+"; background: none; box-shadow: none; font: 500 1rem/1.25rem var(--mono); text-align: center; }
+/* Samples show their own fallback image; backdrops a miniature of themselves. */
+#samples button[data-id="shadow"] { --sw: #fff url(samples/shadow.vitral.png) center / contain no-repeat; }
+#samples button[data-id="stamp"] { --sw: #fff url(samples/stamp.vitral.png) center / contain no-repeat; }
+#samples button[data-id="light"] { --sw: #2a2a2e url(samples/light.vitral.png) center / cover no-repeat; }
+#samples button[data-id="window"] { --sw: #fff url(samples/window.vitral.png) center / contain no-repeat; }
 #samples button[data-id="own"] { --sw: repeating-conic-gradient(var(--check-a) 0 25%, var(--check-b) 0 50%) 0 0 / 8px 8px; }
-#backdrops button[data-id="grid"] { --sw: url(samples/grid.svg) center / 100% 100%; }
-#backdrops button[data-id="gradient"] { --sw: linear-gradient(135deg, #ffd166, #ff8a5b 45%, #7f9cff); }
 #backdrops button[data-id="text"] { --sw: repeating-linear-gradient(#f4f1e8 0 3px, #8f8a7e 3px 4px); }
-#backdrops button[data-id="tones"] { --sw: linear-gradient(90deg, #fff 0 25%, #aaa 0 50%, #555 0 75%, #000 0); }
-#backdrops button[data-id="night"] { --sw: #11151f; }
+#backdrops button[data-id="brand"] { --sw: #2f4bd8; }
+#backdrops button[data-id="gradient"] { --sw: linear-gradient(135deg, #ffd166, #ff8a5b 45%, #7f9cff); }
+#backdrops button[data-id="dark"] { --sw: linear-gradient(#26272e 0 30%, #15161a 30%); }
+#backdrops button[data-id="pattern"] { --sw: url(samples/grid.svg) center / 100% 100%; }
 
 /* Stages */
 .stages { display: grid; gap: 1.25rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr)); }
@@ -259,7 +271,7 @@ figure { margin: 0; display: grid; gap: 0.6rem; min-width: 0; }
 #sample-note.error { border-left-color: var(--ruby); }
 
 /* Backdrops are imagery, not theme colours: they stay the same in both themes. */
-.bd-grid { background: #18181a url(samples/grid.svg) center / 100% 100%; }
+.bd-brand { background: #2f4bd8; }
 .bd-gradient {
   background:
     radial-gradient(60% 80% at 12% 8%, #ffd166, transparent 70%),
@@ -267,12 +279,14 @@ figure { margin: 0; display: grid; gap: 0.6rem; min-width: 0; }
     radial-gradient(80% 90% at 45% 112%, #7f9cff, transparent 70%),
     #f3ede4;
 }
-.bd-tones {
-  background: linear-gradient(90deg,
-    #ffffff 0 12.5%, #dbdbdb 0 25%, #b6b6b6 0 37.5%, #929292 0 50%,
-    #6d6d6d 0 62.5%, #494949 0 75%, #242424 0 87.5%, #000000 0);
+.bd-dark {
+  background:
+    linear-gradient(#26272e, #26272e) 6% 12% / 40% 6% no-repeat,
+    linear-gradient(#1f2026, #1f2026) 6% 30% / 88% 56% no-repeat,
+    linear-gradient(#ff7a3d, #ff7a3d) 94% 12% / 10% 6% no-repeat,
+    #15161a;
 }
-.bd-night { background: radial-gradient(90% 90% at 70% 20%, #24304d, #0b0d12 70%); }
+.bd-pattern { background: #141416 url(samples/grid.svg) center / 100% 100%; }
 .bd-text { background: #f4f1e8; color: #23201b; }
 .bd-text .page-text {
   position: absolute; inset: 0; padding: 5% 6%;
@@ -281,57 +295,6 @@ figure { margin: 0; display: grid; gap: 0.6rem; min-width: 0; }
 }
 .bd-text .page-text p:first-child { font-size: 1.45em; line-height: 1.12; letter-spacing: -0.01em; margin-bottom: 0.7em; }
 .bd-text .page-text p + p { margin-top: 0.6em; }
-
-/* Layer breakdown */
-.formula {
-  display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.2em 0.45em;
-  font: 500 clamp(1.2rem, 2.5vw, 1.8rem)/1.3 var(--mono); letter-spacing: -0.02em;
-  padding: 1.5rem 1.75rem;
-  background: #18181a; color: #edece8; border: 1.5px solid var(--strong-line);
-  overflow-x: auto;
-}
-/* Fixed colours: the formula is always light on ink, in both themes. */
-.formula .k { color: #9a9993; }
-.formula .w { color: #ffffff; }
-.formula .b { color: #ff7a3d; }
-.breakdown { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr)); }
-.breakdown figure { gap: 0.55rem; }
-.breakdown figcaption { display: block; }
-.breakdown canvas {
-  width: 100%; height: auto; display: block; border: 1px solid var(--line);
-  background: repeating-conic-gradient(var(--check-a) 0 25%, var(--check-b) 0 50%) 0 0 / 14px 14px;
-}
-.breakdown .tag { font: 500 var(--step--1)/1.3 var(--mono); }
-.breakdown .tag span { color: var(--muted); font-family: var(--body); display: block; }
-
-table { border-collapse: collapse; width: 100%; font-size: var(--step--1); }
-th, td { text-align: left; padding: 0.8rem 1rem 0.8rem 0; border-bottom: 1px solid var(--line); vertical-align: top; }
-th { font: 500 0.7rem/1.2 var(--mono); text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); border-bottom: 1.5px solid var(--strong-line); }
-.table-wrap { overflow-x: auto; }
-.pill { display: inline-flex; align-items: center; gap: 0.45rem; font: 500 0.72rem/1 var(--mono); white-space: nowrap; }
-.pill::before { content: ""; width: 0.6rem; height: 0.6rem; flex: none; }
-.pill.exact { color: var(--fg); }
-.pill.exact::before { background: var(--fg); }
-.pill.approx { color: var(--muted); }
-.pill.approx::before { background: linear-gradient(90deg, var(--muted) 50%, transparent 50%); box-shadow: inset 0 0 0 1px var(--muted); }
-.pill.later { color: var(--muted); }
-.pill.later::before { box-shadow: inset 0 0 0 1px var(--muted); }
-@media (max-width: 40rem) {
-  .table-wrap thead { display: none; }
-  .table-wrap tr, .table-wrap td { display: block; }
-  .table-wrap tr { padding-block: 0.8rem; border-bottom: 1px solid var(--line); }
-  .table-wrap td { padding: 0; border: 0; }
-  .table-wrap td + td { margin-top: 0.4rem; }
-}
-
-/* Code */
-.code { display: grid; max-width: 46rem; border: 1.5px solid var(--strong-line); background: var(--surface); }
-.code .bar { display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0.5rem 0.5rem 1rem; border-bottom: 1px solid var(--line); }
-.code pre { margin: 0; padding: 1.1rem 1.25rem; overflow-x: auto; line-height: 1.65; }
-.code button {
-  font: 500 0.72rem/1 var(--mono); text-transform: uppercase; letter-spacing: 0.06em; padding: 0.5rem 0.75rem; cursor: pointer;
-  background: var(--fg); color: var(--bg); border: 0; border-radius: 0;
-}
 
 /* Encoder */
 .maker { display: grid; gap: 1.25rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 9.5rem), 1fr)); align-items: start; }
@@ -357,6 +320,64 @@ th { font: 500 0.7rem/1.2 var(--mono); text-transform: uppercase; letter-spacing
   font: 600 var(--step--1)/1 var(--body); padding: 0.75rem 1rem; cursor: pointer;
   background: var(--fg); color: var(--bg); border: 1.5px solid var(--fg); border-radius: 0;
 }
+.note { font-size: var(--step--1); color: var(--muted); max-width: 44rem; padding: 0.9rem 1rem; border: 1px solid var(--line); }
+.note strong { color: var(--fg); font-weight: 600; }
+
+/* Code */
+.code { display: grid; max-width: 46rem; border: 1.5px solid var(--strong-line); background: var(--surface); }
+.code .bar { display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0.5rem 0.5rem 1rem; border-bottom: 1px solid var(--line); }
+.code pre { margin: 0; padding: 1.1rem 1.25rem; overflow-x: auto; line-height: 1.65; }
+.code button {
+  font: 500 0.72rem/1 var(--mono); text-transform: uppercase; letter-spacing: 0.06em; padding: 0.5rem 0.75rem; cursor: pointer;
+  background: var(--fg); color: var(--bg); border: 0; border-radius: 0;
+}
+blockquote.handoff { margin: 0; max-width: 46rem; font: 500 var(--step-1)/1.35 var(--display); letter-spacing: -0.015em; padding-left: 1rem; border-left: 2px solid var(--accent); }
+blockquote.handoff span { display: block; margin-top: 0.4rem; font: 400 var(--step--1)/1.4 var(--body); color: var(--muted); letter-spacing: 0; }
+
+/* How it works: the details stay closed until asked for. */
+details.deep { border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+details.deep > summary {
+  cursor: pointer; list-style: none; padding-block: 1rem;
+  display: flex; justify-content: space-between; align-items: center;
+  font: 500 var(--step-0)/1.2 var(--display);
+}
+details.deep > summary::-webkit-details-marker { display: none; }
+details.deep > summary::after { content: "+"; font: 400 1.25rem/1 var(--mono); color: var(--accent); }
+details.deep[open] > summary::after { content: "−"; }
+details.deep .inside { display: grid; gap: 2rem; padding-bottom: 2rem; }
+.formula {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.2em 0.45em;
+  font: 500 clamp(1.15rem, 2.3vw, 1.6rem)/1.3 var(--mono); letter-spacing: -0.02em;
+  padding: 1.4rem 1.6rem;
+  background: #141416; color: #eeede9; border: 1.5px solid var(--strong-line);
+  overflow-x: auto;
+}
+/* Fixed colours: the formula is always light on ink, in both themes. */
+.formula .k { color: #9a9993; }
+.formula .w { color: #ffffff; }
+.formula .b { color: #ff7a3d; }
+.breakdown { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr)); }
+.breakdown figure { gap: 0.55rem; }
+.breakdown figcaption { display: block; }
+.breakdown canvas {
+  width: 100%; height: auto; display: block; border: 1px solid var(--line);
+  background: repeating-conic-gradient(var(--check-a) 0 25%, var(--check-b) 0 50%) 0 0 / 14px 14px;
+}
+.breakdown .tag { font: 500 var(--step--1)/1.3 var(--mono); }
+.breakdown .tag span { color: var(--muted); font-family: var(--body); display: block; }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); }
+th, td { text-align: left; padding: 0.8rem 1rem 0.8rem 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font: 500 0.7rem/1.2 var(--mono); text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); border-bottom: 1.5px solid var(--strong-line); }
+.table-wrap { overflow-x: auto; }
+.pill { font: 500 0.72rem/1 var(--mono); white-space: nowrap; color: var(--muted); }
+.pill.exact { color: var(--fg); }
+@media (max-width: 40rem) {
+  .table-wrap thead { display: none; }
+  .table-wrap tr, .table-wrap td { display: block; }
+  .table-wrap tr { padding-block: 0.8rem; border-bottom: 1px solid var(--line); }
+  .table-wrap td { padding: 0; border: 0; }
+  .table-wrap td + td { margin-top: 0.4rem; }
+}
 
 footer {
   max-width: 76rem; margin: 0 auto; padding-top: 1.25rem; border-top: 1px solid var(--strong-line);
@@ -372,12 +393,12 @@ footer a { color: var(--fg); }
 </head>
 <body>
 <div class="topbar">
-  <a class="mark" href="#top" aria-label="Vitral, back to top"><i aria-hidden="true"><b></b></i>Vitral</a>
+  <a class="mark" href="#top" aria-label="Vitral, back to top"><span class="dot">.</span>vitral</a>
   <nav aria-label="Sections">
-    <a href="#demo">Demo</a>
-    <a href="#how">How it works</a>
-    <a href="#use">Use it</a>
+    <a href="#demo">Try it</a>
     <a href="#make">Make one</a>
+    <a href="#use">Use it</a>
+    <a href="#how">How it works</a>
     <a class="ext" href="https://github.com/hugovalepereira/vitral-image-format">GitHub ↗</a>
   </nav>
 </div>
@@ -385,30 +406,40 @@ footer a { color: var(--fg); }
   <header class="hero">
     <div class="text">
       <p class="eyebrow">Image format · draft 0.1</p>
-      <h1>Vitral</h1>
-      <p class="lede">PNG has transparency. Vitral has <em>light and filter</em>: an image that carries its own blend modes and reacts to whatever is behind it.</p>
+      <h1 aria-label="Vitral"><span class="dot">.</span>vitral</h1>
+      <p class="claim">Blend modes that survive export.</p>
+      <p class="lede">A PNG that keeps its multiply, screen and difference. Export it from Figma, Illustrator or Photoshop, and it blends on the web the way it did in your design, over whatever is behind it.</p>
       <div class="ctas">
-        <a class="button primary" href="#demo">Try the demo</a>
+        <a class="button primary" href="#demo">Try it</a>
         <a class="button" href="https://github.com/hugovalepereira/vitral-image-format/blob/main/SPEC.md">Read the specification</a>
       </div>
+      <ul class="facts">
+        <li>Still a valid PNG</li>
+        <li>One script tag</li>
+        <li>Open specification</li>
+      </ul>
     </div>
-    <figure class="lens" id="lens">
-      <div class="frame" role="img" aria-label="A Vitral image in three strips, multiply, screen and difference, moving across a row of coloured bands and changing with each one">
-        <div class="pane"><img src="samples/hero.vitral.png" alt=""></div>
+    <figure class="show">
+      <div class="scene" id="scene">
+        <div class="beats" id="beats" aria-hidden="true"></div>
+        <div class="drop"><img id="hero-img" src="samples/window.vitral.png" alt="A stained glass window of rectangular panes over a page of changing shapes"></div>
+        <div class="file-chip" aria-hidden="true"><span>window.vitral.png</span></div>
       </div>
-      <figcaption class="legend">
-        <span><i class="mode multiply"></i>multiply</span>
-        <span><i class="mode screen"></i>screen</span>
-        <span><i class="mode difference"></i>difference</span>
-        <button type="button" id="lens-toggle" aria-pressed="false">Pause</button>
+      <figcaption>
+        <span>One still image, <code>window.vitral.png</code>. Only the page behind it moves.</span>
+        <span class="tools">
+          <button type="button" class="small-button" id="hero-png" aria-pressed="false">Plain PNG</button>
+          <button type="button" class="small-button" id="hero-pause" aria-pressed="false">Pause</button>
+        </span>
       </figcaption>
     </figure>
   </header>
 
   <section aria-labelledby="demo-title" class="section" id="demo">
     <div class="head">
-      <p class="eyebrow"><span class="num">01</span>Live comparison</p>
+      <p class="eyebrow"><span class="num">01</span>Try it</p>
       <h2 id="demo-title">Same file, two viewers</h2>
+      <div class="prose"><p>Pick an image and a backdrop. On the left, how any PNG viewer shows the file today; on the right, the same file with Vitral.</p></div>
     </div>
     <div class="controls">
       <div class="control">
@@ -423,71 +454,25 @@ footer a { color: var(--fg); }
     </div>
     <div class="stages">
       <figure>
-        <figcaption><span class="badge">A</span><strong>Any PNG viewer</strong><span>built-in fallback</span></figcaption>
+        <figcaption><span class="badge">A</span><strong>Any PNG viewer</strong><span>today</span></figcaption>
         <div class="stage" id="stage-png"></div>
       </figure>
       <figure>
-        <figcaption><span class="badge on">B</span><strong>Vitral</strong><span>blend modes applied</span></figcaption>
+        <figcaption><span class="badge on">B</span><strong>Vitral</strong><span>same file</span></figcaption>
         <div class="stage" id="stage-vitral"></div>
       </figure>
     </div>
     <p class="hint" id="sample-note">Drag the image, or focus it and use the arrow keys. Both views show the same <code>.vitral.png</code> file.</p>
   </section>
 
-  <section class="section split" id="how" aria-labelledby="how-title">
-    <div class="head">
-      <p class="eyebrow"><span class="num">02</span>How it works</p>
-      <h2 id="how-title">Every pixel is a function of its backdrop</h2>
-    </div>
-    <div class="body">
-      <div class="prose">
-        <p>A Vitral file stores how each pixel looks <strong>over black</strong> and <strong>over white</strong>. Over any other backdrop, each colour channel lands on the straight line between those two values.</p>
-      </div>
-      <div class="formula" aria-label="result = K + (W − K) × backdrop"><span>result</span><span>=</span><span class="k">K</span><span>+</span><span>(<span class="w">W</span> − <span class="k">K</span>)</span><span>×</span><span class="b">backdrop</span></div>
-      <div class="prose">
-        <p>That one line covers normal, multiply, screen, hard light, exclusion and inversion, mixed freely pixel by pixel. To draw it, a renderer stacks three layers with blend modes that every browser and design tool already has: <strong>difference</strong>, then <strong>screen</strong>, then <strong>multiply</strong>.</p>
-      </div>
-      <div class="breakdown" id="breakdown" aria-live="polite"></div>
-      <div class="table-wrap">
-        <table>
-          <thead><tr><th>Blend mode</th><th>In draft 0.1</th></tr></thead>
-          <tbody>
-            <tr><td>Normal, multiply, screen, hard light, exclusion, inversion</td><td><span class="pill exact">exact</span></td></tr>
-            <tr><td>Add (plus-lighter), linear burn, darken, lighten, difference</td><td><span class="pill approx">approximate</span></td></tr>
-            <tr><td>Overlay, soft light, colour dodge and burn, hue, saturation, colour, luminosity</td><td><span class="pill later">planned for v2 (layers)</span></td></tr>
-            <tr><td>Background blur, refraction</td><td><span class="pill later">planned for v2 (backdrop effects)</span></td></tr>
-          </tbody>
-        </table>
-      </div>
-      <p class="hint">Approximate modes are exact over black and white backdrops and follow a straight line in between: add behaves like screen, difference like exclusion.</p>
-    </div>
-  </section>
-
-  <section class="section split" id="use" aria-labelledby="use-title">
-    <div class="head">
-      <p class="eyebrow"><span class="num">03</span>Use it on a website</p>
-      <h2 id="use-title">One script tag</h2>
-    </div>
-    <div class="body">
-      <div class="prose">
-        <p>A Vitral file is a valid PNG, so the page works without JavaScript and shows the fallback. With the script, every <code>&lt;img&gt;</code> whose file ends in <code>.vitral.png</code> starts blending. As with CSS <code>mix-blend-mode</code>, the image blends with content in its own stacking context.</p>
-      </div>
-      <div class="code">
-        <div class="bar"><span class="eyebrow">HTML</span><button type="button" id="copy-snippet">Copy</button></div>
-        <pre id="snippet"><code>&lt;img src="window.vitral.png" alt="Stained glass window"&gt;
-&lt;script type="module" src="vitral.js"&gt;&lt;/script&gt;</code></pre>
-      </div>
-    </div>
-  </section>
-
   <section class="section split" id="make" aria-labelledby="make-title">
     <div class="head">
-      <p class="eyebrow"><span class="num">04</span>Make one</p>
-      <h2 id="make-title">Export from any tool</h2>
+      <p class="eyebrow"><span class="num">02</span>Make one</p>
+      <h2 id="make-title">Export twice, from any tool</h2>
     </div>
     <div class="body">
       <div class="prose">
-        <p>Put a black background behind your artwork and export a PNG, then switch it to white and export again. Layers keep their blend modes against the background, so these two exports hold the blending. A third export with a transparent background records each pixel's own colour, shown where nothing is behind the image and by software without Vitral support. The example below is loaded with the colour gels exports.</p>
+        <p>Put a black background behind your artwork and export a PNG, then switch it to white and export again. Blend modes act on that background, so the two exports carry the blending. An optional third export over transparency is what software without Vitral will show. The example below is loaded with the exports of the window at the top of the page.</p>
       </div>
       <div class="maker">
         <div class="slot">
@@ -513,6 +498,59 @@ footer a { color: var(--fg); }
           <button type="button" class="try" id="try-above" hidden>Try it on the backdrops above</button>
         </div>
       </div>
+      <p class="note"><strong>Works with</strong> normal, multiply, screen, hard light, exclusion and inversion, mixed freely in one image. Overlay, soft light and colour dodge or burn are not supported yet.</p>
+    </div>
+  </section>
+
+  <section class="section split" id="use" aria-labelledby="use-title">
+    <div class="head">
+      <p class="eyebrow"><span class="num">03</span>Use it</p>
+      <h2 id="use-title">One script tag on the website</h2>
+    </div>
+    <div class="body">
+      <blockquote class="handoff">“It's a PNG. Add one script tag and it blends like it did in Figma.”<span>What to tell your developer.</span></blockquote>
+      <div class="code">
+        <div class="bar"><span class="eyebrow">HTML</span><button type="button" id="copy-snippet">Copy</button></div>
+        <pre id="snippet"><code>&lt;img src="window.vitral.png" alt="Stained glass window"&gt;
+&lt;script type="module" src="vitral.js"&gt;&lt;/script&gt;</code></pre>
+      </div>
+      <div class="prose">
+        <p>Without the script, or in any other app, the file opens as an ordinary PNG, so nothing gets worse than today. With it, every <code>&lt;img&gt;</code> whose file ends in <code>.vitral.png</code> blends with what is behind it on the page.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section split" id="how" aria-labelledby="how-title">
+    <div class="head">
+      <p class="eyebrow"><span class="num">04</span>How it works</p>
+      <h2 id="how-title">Two exports, one straight line</h2>
+    </div>
+    <div class="body">
+      <div class="prose">
+        <p>Each pixel stores how it looks <strong>over black</strong> and <strong>over white</strong>. Over anything else, it lands on the straight line between the two. Browsers already have the blend modes to draw that line, so the script only has to stack them.</p>
+      </div>
+      <details class="deep">
+        <summary>Technical details</summary>
+        <div class="inside">
+          <div class="formula" aria-label="result = K + (W − K) × backdrop"><span>result</span><span>=</span><span class="k">K</span><span>+</span><span>(<span class="w">W</span> − <span class="k">K</span>)</span><span>×</span><span class="b">backdrop</span></div>
+          <div class="prose">
+            <p>K is the pixel over black and W the pixel over white, per colour channel. A renderer draws the line with three layers and the blend modes every browser and design tool has: <strong>difference</strong>, then <strong>screen</strong>, then <strong>multiply</strong>. These are the layers of the image selected above:</p>
+          </div>
+          <div class="breakdown" id="breakdown" aria-live="polite"></div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Blend mode</th><th>In draft 0.1</th></tr></thead>
+              <tbody>
+                <tr><td>Normal, multiply, screen, hard light, exclusion, inversion</td><td><span class="pill exact">exact</span></td></tr>
+                <tr><td>Add (plus-lighter), linear burn, darken, lighten, difference</td><td><span class="pill">exact over black and white, a straight line between</span></td></tr>
+                <tr><td>Overlay, soft light, colour dodge and burn, hue, saturation, colour, luminosity</td><td><span class="pill">planned for v2</span></td></tr>
+                <tr><td>Background blur, refraction</td><td><span class="pill">planned for v2</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="hint">The full format is in the <a href="https://github.com/hugovalepereira/vitral-image-format/blob/main/SPEC.md">specification</a>.</p>
+        </div>
+      </details>
     </div>
   </section>
 </main>
@@ -523,17 +561,80 @@ footer a { color: var(--fg); }
   <span>MIT licence</span>
 </footer>
 
-<script>
-// Pause and resume the opening animation.
-(() => {
-  const lens = document.getElementById('lens');
-  const toggle = document.getElementById('lens-toggle');
-  toggle.addEventListener('click', () => {
-    const paused = lens.classList.toggle('paused');
-    toggle.setAttribute('aria-pressed', String(paused));
-    toggle.textContent = paused ? 'Play' : 'Pause';
-  });
-})();
+<script type="module">
+// The opening scene: the file is carried in and dropped, then the shapes
+// behind it change on a steady beat. The image itself never moves.
+import { upgrade, downgrade } from './vitral.js';
+
+const scene = document.getElementById('scene');
+const beats = document.getElementById('beats');
+const heroImg = document.getElementById('hero-img');
+const COLS = 6;
+const ROWS = 4;
+const INKS = ['#141416', '#e5531a', '#2f4bd8', '#e8b931', '#b9b4aa'];
+const SHAPES = ['square', 'circle', 'quarter', 'half'];
+const cells = [];
+for (let r = 0; r < ROWS; r++) {
+  for (let c = 0; c < COLS; c++) {
+    const cell = document.createElement('div');
+    cell.className = 'cell';
+    const shape = document.createElement('i');
+    shape.style.setProperty('--delay', `${(c + r) * 55}ms`);
+    cell.append(shape);
+    beats.append(cell);
+    cells.push({ c, r, shape });
+  }
+}
+// A diagonal wave: about two cells in five are on. A cell only changes its
+// shape, ink and quarter turn while it is off, so shapes grow and shrink but
+// never spin.
+const on = (c, r, t) => (c + 2 * r + t + 5) % 5 < 2;
+const dress = ({ c, r, shape }, t) => {
+  shape.dataset.shape = SHAPES[(c * 3 + r + Math.floor(t / 2)) % SHAPES.length];
+  shape.style.setProperty('--c', INKS[(c + r + t) % INKS.length]);
+  shape.style.setProperty('--rot', `${((c + r + t) % 4) * 90}deg`);
+};
+function step(t) {
+  for (const cell of cells) {
+    const show = on(cell.c, cell.r, t);
+    if (!show && !on(cell.c, cell.r, t - 1)) dress(cell, t);
+    cell.shape.classList.toggle('on', show);
+  }
+}
+
+const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+let t = 0;
+let timer = null;
+for (const cell of cells) dress(cell, t);
+const play = () => { timer ??= setInterval(() => step(++t), 1400); };
+const stop = () => { clearInterval(timer); timer = null; };
+step(t);
+const land = () => {
+  if (scene.classList.contains('landed')) return;
+  scene.classList.add('landed');
+  if (!still) play();
+};
+if (still) land();
+else {
+  scene.querySelector('.file-chip').addEventListener('animationend', land);
+  setTimeout(land, 2500); // in case the animation never runs
+}
+
+const pause = document.getElementById('hero-pause');
+pause.hidden = still;
+pause.addEventListener('click', () => {
+  const paused = pause.getAttribute('aria-pressed') !== 'true';
+  pause.setAttribute('aria-pressed', String(paused));
+  pause.textContent = paused ? 'Play' : 'Pause';
+  if (paused) stop(); else play();
+});
+
+const plain = document.getElementById('hero-png');
+plain.addEventListener('click', () => {
+  const on = plain.getAttribute('aria-pressed') !== 'true';
+  plain.setAttribute('aria-pressed', String(on));
+  if (on) downgrade(heroImg); else upgrade(heroImg);
+});
 </script>
 
 <script type="module">
@@ -541,21 +642,21 @@ import { decode, encode, toCanvas } from './vitral.js';
 
 const STAGE_W = 640;
 const SAMPLES = [
-  { id: 'gels', label: 'Colour gels', w: 360, h: 240,
-    note: 'Two panes and a disc of coloured gel in multiply. Where they overlap they darken, like real filters.' },
-  { id: 'glass-card', label: 'Glass card', w: 360, h: 240,
-    note: 'An interface card: a multiply shadow, a faint white body, a screen highlight and normal marks.' },
-  { id: 'lumen', label: 'Light', w: 300, h: 300,
-    note: 'A disc of warm light in screen mode. It can only brighten what is behind it; a plain PNG can only fog it.' },
-  { id: 'inverse', label: 'Inversion', w: 240, h: 240,
-    note: 'Difference with white: the disc inverts its backdrop, the square cut-out leaves it alone.' },
+  { id: 'shadow', label: 'Shadow', w: 360, h: 260,
+    note: 'A ball with a multiply shadow. As a plain PNG the shadow is a grey film; with Vitral it darkens the backdrop and keeps its colour.' },
+  { id: 'stamp', label: 'Logo', w: 300, h: 300,
+    note: 'A logo printed in one ink, in multiply. As a plain PNG it covers what is behind it; with Vitral it sits on any backdrop like ink on paper.' },
+  { id: 'light', label: 'Light', w: 420, h: 280,
+    note: 'A beam of light in screen mode. As a plain PNG it can only fog the backdrop; with Vitral it brightens it.' },
+  { id: 'window', label: 'Window', w: 360, h: 360,
+    note: 'The window from the top of the page: tinted panes in multiply, a pane of light in screen and one that inverts, joined by lead.' },
 ];
 const BACKDROPS = [
   { id: 'text', label: 'Page' },
-  { id: 'grid', label: 'Colour grid' },
+  { id: 'brand', label: 'Brand colour' },
   { id: 'gradient', label: 'Gradient' },
-  { id: 'tones', label: 'Tones' },
-  { id: 'night', label: 'Night' },
+  { id: 'dark', label: 'Dark mode' },
+  { id: 'pattern', label: 'Pattern' },
 ];
 const PAGE_TEXT = `
 <p>Stained glass works by subtraction. Light from behind passes through pot-metal glass, which keeps some wavelengths and absorbs the rest, so a pane can only darken what it lets through.</p>
@@ -853,11 +954,11 @@ for (const which of ['black', 'white', 'transparent']) {
 }
 
 render();
-const source = (which) => `samples/sources/gels-over-${which}.png`;
+const source = (which) => `samples/sources/window-over-${which}.png`;
 const kinds = ['black', 'white', 'transparent'];
 const blobs = await Promise.all(kinds.map(async (k) => (await fetch(source(k))).blob()));
 kinds.forEach((k, i) => {
-  inputs[k] = { blob: blobs[i], name: `gels-over-${k}.png` };
+  inputs[k] = { blob: blobs[i], name: `window-over-${k}.png` };
   document.getElementById(`${k}-preview`).src = URL.createObjectURL(blobs[i]);
 });
 await runEncoder();

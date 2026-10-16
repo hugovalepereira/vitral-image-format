@@ -3,9 +3,10 @@
 //!     cargo run --release -p vitral --example demo_samples
 //!
 //! Each image is authored as a stack of blend-mode layers, like in a design
-//! tool, and flattened into a `.vitral.png`. The colour gels sample is also
-//! written as the three exports a designer would make (over black, over white
-//! and over transparency), which the demo's encoder section starts from.
+//! tool, and flattened into a `.vitral.png`. The window, which opens the page,
+//! is also written as the three exports a designer would make (over black,
+//! over white and over transparency): the demo's encoder section starts from
+//! them.
 
 use std::fs;
 use std::path::Path;
@@ -16,33 +17,32 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../web/samples");
     fs::create_dir_all(root.join("sources"))?;
 
-    let images: [(&str, VitralImage); 5] = [
-        ("gels", gels()),
-        ("glass-card", glass_card()),
-        ("lumen", lumen()),
-        ("inverse", inverse()),
-        ("hero", hero()),
+    let images: [(&str, VitralImage); 4] = [
+        ("window", window()),
+        ("shadow", shadow()),
+        ("stamp", stamp()),
+        ("light", light()),
     ];
     for (name, img) in images {
-        if name == "gels" {
+        if name == "window" {
             let (w, h) = (img.width, img.height);
             fs::write(
-                root.join("sources/gels-over-black.png"),
+                root.join("sources/window-over-black.png"),
                 vitral::write_rgb8(w, h, &img.black)?,
             )?;
             fs::write(
-                root.join("sources/gels-over-white.png"),
+                root.join("sources/window-over-white.png"),
                 vitral::write_rgb8(w, h, &img.white)?,
             )?;
             fs::write(
-                root.join("sources/gels-over-transparent.png"),
+                root.join("sources/window-over-transparent.png"),
                 vitral::write_rgba8(&img.native)?,
             )?;
         }
         let bytes = vitral::encode(&img)?;
         fs::write(root.join(format!("{name}.vitral.png")), &bytes)?;
         println!(
-            "{name:12} {:>4}x{:<4} {:>7} bytes",
+            "{name:8} {:>4}x{:<4} {:>7} bytes",
             img.width,
             img.height,
             bytes.len()
@@ -53,158 +53,236 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 // ---------------------------------------------------------------- samples ---
 
-/// Three overlapping colour gels in multiply: two panes and a disc.
-fn gels() -> VitralImage {
-    let (w, h) = (360, 240);
-    let pane = |x0: f32, y0: f32, x1: f32, y1: f32, colour: [u8; 3]| {
-        paint(w, h, move |x, y| {
-            rgba(colour, coverage(rect(x, y, x0, y0, x1, y1)) * 0.88)
+/// A pane of the window: x0, y0, x1, y1, blend mode, colour and opacity.
+type Pane = (f32, f32, f32, f32, BlendMode, [u8; 3], f32);
+
+/// A stained glass window cut into rectangles: tinted panes in multiply, one
+/// pane of light in screen, one that inverts in difference, joined by lead in
+/// normal mode.
+fn window() -> VitralImage {
+    let (w, h) = (360, 360);
+    let panes: [Pane; 7] = [
+        (
+            0.0,
+            0.0,
+            150.0,
+            210.0,
+            BlendMode::Multiply,
+            [52, 84, 212],
+            0.88,
+        ),
+        (
+            150.0,
+            0.0,
+            360.0,
+            110.0,
+            BlendMode::Multiply,
+            [242, 184, 48],
+            0.9,
+        ),
+        (
+            150.0,
+            110.0,
+            260.0,
+            210.0,
+            BlendMode::Screen,
+            [255, 176, 96],
+            0.95,
+        ),
+        (
+            260.0,
+            110.0,
+            360.0,
+            260.0,
+            BlendMode::Multiply,
+            [236, 92, 52],
+            0.88,
+        ),
+        (
+            0.0,
+            210.0,
+            90.0,
+            360.0,
+            BlendMode::Multiply,
+            [40, 140, 128],
+            0.88,
+        ),
+        (
+            90.0,
+            210.0,
+            260.0,
+            360.0,
+            BlendMode::Multiply,
+            [214, 216, 222],
+            0.9,
+        ),
+        (
+            260.0,
+            260.0,
+            360.0,
+            360.0,
+            BlendMode::Difference,
+            [255, 255, 255],
+            1.0,
+        ),
+    ];
+    let pane_at = move |x: f32, y: f32| {
+        panes
+            .iter()
+            .find(|p| x >= p.0 && x < p.2 && y >= p.1 && y < p.3)
+            .copied()
+    };
+    let glass = |mode: BlendMode| {
+        paint(w, h, move |x, y| match pane_at(x, y) {
+            Some((x0, y0, x1, y1, m, colour, alpha)) if m == mode => {
+                rgba(colour, coverage(rect(x, y, x0, y0, x1, y1) - 3.0) * alpha)
+            }
+            _ => [0.0; 4],
         })
     };
-    let disc = paint(w, h, |x, y| {
-        rgba(
-            [244, 184, 48],
-            coverage(circle(x, y, 262.0, 138.0, 74.0)) * 0.88,
-        )
+    let lead = paint(w, h, move |x, y| {
+        let inner = pane_at(x, y).map_or(0.0, |(x0, y0, x1, y1, ..)| {
+            coverage(3.5 - rect(x, y, x0, y0, x1, y1))
+        });
+        let frame = coverage(6.0 - rect(x, y, 0.0, 0.0, 360.0, 360.0));
+        rgba([26, 26, 30], inner.max(frame))
     });
     VitralImage::from_layers(
         w,
         h,
         &[
-            Layer::new(
-                pane(24.0, 28.0, 176.0, 208.0, [48, 84, 212]),
-                BlendMode::Multiply,
-            ),
-            Layer::new(
-                pane(112.0, 64.0, 292.0, 168.0, [236, 92, 52]),
-                BlendMode::Multiply,
-            ),
-            Layer::new(disc, BlendMode::Multiply),
+            Layer::new(glass(BlendMode::Multiply), BlendMode::Multiply),
+            Layer::new(glass(BlendMode::Screen), BlendMode::Screen),
+            Layer::new(glass(BlendMode::Difference), BlendMode::Difference),
+            Layer::new(lead, BlendMode::Normal),
         ],
     )
     .unwrap()
 }
 
-/// A frosted interface card: soft multiply shadow, a faint white body, a
-/// screen highlight, a hairline rim and two lines of placeholder text.
-fn glass_card() -> VitralImage {
-    let (w, h) = (360, 240);
-    let card =
-        |dy: f32| move |x: f32, y: f32| rounded_rect(x, y - dy, 180.0, 112.0, 140.0, 78.0, 16.0);
-    let shadow_alpha = blur(
-        &alpha_mask(w, h, |x, y| coverage(card(18.0)(x, y))),
-        w,
-        h,
-        16.0,
-    );
-    let shadow = paint(w, h, |x, y| {
-        rgba([12, 16, 28], shadow_alpha[idx(w, x, y)] * 0.5)
-    });
-    let body = paint(w, h, |x, y| {
-        rgba([255, 255, 255], coverage(card(0.0)(x, y)) * 0.18)
-    });
-    let highlight = paint(w, h, |x, y| {
-        let fade = ((120.0 - y) / 90.0).clamp(0.0, 1.0);
-        rgba(
-            [255, 255, 255],
-            coverage(card(0.0)(x, y) - 1.0) * fade * 0.35,
+/// A ceramic ball and its shadow. The shadow is in multiply, so it darkens
+/// whatever it falls on instead of greying it.
+fn shadow() -> VitralImage {
+    let (w, h) = (360, 260);
+    let (cx, cy, r) = (176.0, 100.0, 72.0);
+    let soft = |ex: f32, ey: f32, rx: f32, ry: f32, sigma: f32| {
+        blur(
+            &alpha_mask(w, h, |x, y| {
+                let d = ((x - ex) / rx).powi(2) + ((y - ey) / ry).powi(2);
+                if d <= 1.0 {
+                    1.0
+                } else {
+                    0.0
+                }
+            }),
+            w,
+            h,
+            sigma,
         )
+    };
+    let cast = soft(196.0, 196.0, 104.0, 20.0, 14.0);
+    let contact = soft(180.0, 176.0, 44.0, 7.0, 4.0);
+    let shade = paint(w, h, |x, y| {
+        let i = idx(w, x, y);
+        // Multiplying by this grey keeps about a third of the backdrop's light,
+        // and all of its hue.
+        let a = (cast[i] * 0.9 + contact[i] * 0.6).min(1.0);
+        rgba([86, 88, 104], a)
     });
-    let marks = paint(w, h, |x, y| {
-        let rim = {
-            let d = card(0.0)(x, y);
-            coverage(d) * coverage(1.2 - d) * 0.6
-        };
-        let dot = coverage(circle(x, y, 76.0, 72.0, 12.0));
-        let title = coverage(rounded_rect(x, y, 132.0, 120.0, 60.0, 5.0, 5.0)) * 0.9;
-        let line = coverage(rounded_rect(x, y, 154.0, 144.0, 82.0, 3.5, 3.5)) * 0.6;
-        if dot > 0.0 {
-            rgba([240, 96, 48], dot)
-        } else {
-            rgba([255, 255, 255], rim.max(title).max(line))
-        }
+    let ball = paint(w, h, |x, y| {
+        let (nx, ny) = ((x - cx) / r, (y - cy) / r);
+        let nz = (1.0 - nx * nx - ny * ny).max(0.0).sqrt();
+        let light = (-0.45 * nx - 0.6 * ny + 0.66 * nz).max(0.0);
+        let spec = light.powi(24) * 0.35;
+        let tone = 0.32 + 0.68 * light;
+        let c = [236.0, 232.0, 224.0].map(|v: f32| (v * tone / 255.0 + spec).min(1.0));
+        [c[0], c[1], c[2], coverage(circle(x, y, cx, cy, r))]
     });
     VitralImage::from_layers(
         w,
         h,
         &[
-            Layer::new(shadow, BlendMode::Multiply),
-            Layer::new(body, BlendMode::Normal),
-            Layer::new(highlight, BlendMode::Screen),
-            Layer::new(marks, BlendMode::Normal),
+            Layer::new(shade, BlendMode::Multiply),
+            Layer::new(ball, BlendMode::Normal),
         ],
     )
     .unwrap()
 }
 
-/// A disc of warm light in screen mode, ringed by a hairline.
-fn lumen() -> VitralImage {
+/// A round logo printed in one ink: multiply, with a little unevenness, so it
+/// sits on any backdrop like ink on paper.
+fn stamp() -> VitralImage {
     let (w, h) = (300, 300);
     let (cx, cy) = (150.0, 150.0);
-    let glow = |r: f32, colour: [u8; 3], strength: f32| {
+    let ink = paint(w, h, |x, y| {
+        let r = ((x - cx).powi(2) + (y - cy).powi(2)).sqrt();
+        let outer = coverage(140.0 - r) * coverage(r - 126.0);
+        let inner = coverage(116.0 - r) * coverage(r - 112.0);
+        let disc = coverage(circle(x, y, cx - 20.0, cy, 48.0));
+        let square = coverage(rect(x, y, cx - 4.0, cy - 44.0, cx + 64.0, cy + 44.0));
+        let mark = disc.max(square) * (1.0 - disc.min(square));
+        let grain = 0.8 + 0.2 * noise((x / 2.0).floor(), (y / 2.0).floor());
+        rgba([30, 52, 150], outer.max(inner).max(mark) * grain * 0.94)
+    });
+    VitralImage::from_layers(w, h, &[Layer::new(ink, BlendMode::Multiply)]).unwrap()
+}
+
+/// A beam of warm light in screen mode, like the light leaks photographers
+/// buy: it can only brighten what it falls on.
+fn light() -> VitralImage {
+    let (w, h) = (420, 280);
+    // Light fades out before the edges, so the frame of the image never shows.
+    let edge = move |x: f32, y: f32| {
+        let ramp = |d: f32| {
+            let t = (d / 80.0).clamp(0.0, 1.0);
+            t * t * (3.0 - 2.0 * t)
+        };
+        ramp(x) * ramp(w as f32 - x) * ramp(y) * ramp(h as f32 - y)
+    };
+    let glow = |gx: f32, gy: f32, rad: f32, colour: [u8; 3], strength: f32| {
         paint(w, h, move |x, y| {
-            let d2 = ((x - cx).powi(2) + (y - cy).powi(2)) / (r * r);
-            rgba(colour, (-d2).exp() * strength)
+            let d2 = ((x - gx).powi(2) + (y - gy).powi(2)) / (rad * rad);
+            rgba(colour, (-d2).exp() * strength * edge(x, y))
         })
     };
-    let ring = paint(w, h, |x, y| {
-        let d = circle(x, y, cx, cy, 132.0);
+    let beam = paint(w, h, |x, y| {
+        // Distance from the line through (0, 30) along (1, 0.6), normalised.
+        let (dx, dy) = (1.0 / 1.166, 0.6 / 1.166);
+        let (px, py) = (x, y - 30.0);
+        let across = px * dy - py * dx;
+        let along = px * dx + py * dy;
+        let fade = (1.0 - along / 460.0).clamp(0.0, 1.0);
         rgba(
-            [255, 255, 255],
-            coverage(d + 0.75) * coverage(0.75 - d) * 0.75,
+            [255, 206, 150],
+            (-(across / 34.0).powi(2)).exp() * fade * 0.8 * edge(x, y),
         )
     });
-    VitralImage::from_layers(
-        w,
-        h,
-        &[
-            Layer::new(glow(64.0, [255, 176, 104], 0.95), BlendMode::Screen),
-            Layer::new(glow(30.0, [255, 244, 226], 0.95), BlendMode::Screen),
-            Layer::new(ring, BlendMode::Screen),
-        ],
-    )
-    .unwrap()
-}
-
-/// A disc with a square cut out of it, in difference: it inverts whatever is
-/// behind it, except inside the square.
-fn inverse() -> VitralImage {
-    let (w, h) = (240, 240);
-    let shape = paint(w, h, |x, y| {
-        let disc = coverage(circle(x, y, 120.0, 120.0, 112.0));
-        let hole = coverage(rect(x, y, 84.0, 84.0, 156.0, 156.0));
-        rgba([255, 255, 255], disc * (1.0 - hole))
-    });
-    VitralImage::from_layers(w, h, &[Layer::new(shape, BlendMode::Difference)]).unwrap()
-}
-
-/// The opening image: one pane in three strips, multiply, screen and
-/// difference, inside a thin frame.
-fn hero() -> VitralImage {
-    let (w, h) = (360, 200);
-    let strip = |x0: f32, colour: [u8; 3], alpha: f32| {
-        paint(w, h, move |x, y| {
-            rgba(
-                colour,
-                coverage(rect(x, y, x0, 0.0, x0 + 120.0, 200.0)) * alpha,
-            )
-        })
-    };
-    let frame = paint(w, h, |x, y| {
-        let d = rect(x, y, 0.0, 0.0, 360.0, 200.0);
-        rgba([24, 24, 26], coverage(d) * coverage(1.5 - d))
+    let flare = paint(w, h, |x, y| {
+        let d = circle(x, y, 318.0, 214.0, 22.0);
+        let ring = coverage(d + 1.0) * coverage(1.0 - d);
+        rgba([255, 236, 214], (coverage(d) * 0.35).max(ring * 0.6))
     });
     VitralImage::from_layers(
         w,
         h,
         &[
-            Layer::new(strip(0.0, [48, 84, 212], 0.95), BlendMode::Multiply),
-            Layer::new(strip(120.0, [255, 184, 96], 0.95), BlendMode::Screen),
-            Layer::new(strip(240.0, [255, 255, 255], 1.0), BlendMode::Difference),
-            Layer::new(frame, BlendMode::Normal),
+            Layer::new(
+                glow(110.0, 84.0, 120.0, [255, 112, 48], 0.95),
+                BlendMode::Screen,
+            ),
+            Layer::new(beam, BlendMode::Screen),
+            Layer::new(flare, BlendMode::Screen),
         ],
     )
     .unwrap()
+}
+
+/// Repeatable value noise in [0, 1] for one cell.
+fn noise(x: f32, y: f32) -> f32 {
+    let mut n =
+        (x as i32 as u32).wrapping_mul(374_761_393) ^ (y as i32 as u32).wrapping_mul(668_265_263);
+    n = (n ^ (n >> 13)).wrapping_mul(1_274_126_177);
+    ((n ^ (n >> 16)) & 0xffff) as f32 / 65_535.0
 }
 
 // ---------------------------------------------------------------- helpers ---
@@ -244,13 +322,6 @@ fn rect(x: f32, y: f32, x0: f32, y0: f32, x1: f32, y1: f32) -> f32 {
 /// Signed distance to a circle (positive inside).
 fn circle(x: f32, y: f32, cx: f32, cy: f32, r: f32) -> f32 {
     r - ((x - cx).powi(2) + (y - cy).powi(2)).sqrt()
-}
-
-fn rounded_rect(x: f32, y: f32, cx: f32, cy: f32, hw: f32, hh: f32, r: f32) -> f32 {
-    let qx = (x - cx).abs() - (hw - r);
-    let qy = (y - cy).abs() - (hh - r);
-    let outside = (qx.max(0.0).powi(2) + qy.max(0.0).powi(2)).sqrt();
-    r - outside - qx.max(qy).min(0.0)
 }
 
 fn idx(w: u32, x: f32, y: f32) -> usize {
