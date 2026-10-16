@@ -328,7 +328,7 @@ footer { max-width: 72rem; margin: 4rem auto 0; padding-top: 1.5rem; border-top:
 </footer>
 
 <script type="module">
-import { decode, encode, toCanvas } from './vitral.js';
+import { decode, encodeExports, toCanvas } from './vitral.js';
 
 const STAGE_W = 640;
 const SAMPLES = [
@@ -340,6 +340,8 @@ const SAMPLES = [
     note: 'Three blobs of warm light in screen mode. A plain PNG can only fog the image.' },
   { id: 'invert-ring', label: 'Inverting ring', w: 260, h: 260,
     note: 'Difference with white: it inverts whatever is behind it.' },
+  { id: 'p3-neon', label: 'P3 neon', w: 320, h: 220,
+    note: 'Made in Display P3: neon in screen mode and a red bar in multiply, with colours beyond sRGB.' },
 ];
 const BACKDROPS = [
   { id: 'scene', label: 'Scene' },
@@ -529,21 +531,24 @@ async function showBreakdown(sample) {
   const bytes = new Uint8Array(await (await fetch(sample.src)).arrayBuffer());
   const p = await decode(bytes);
   if (state.sample !== sample) { p.free(); return; }
+  // K, W and the native look are in the file's colour space; the planes are
+  // in sRGB, where the page blends them.
+  const own = p.colourSpace;
   const tiles = [
-    ['K', 'over black', p.overBlack()],
-    ['W', 'over white', p.overWhite()],
-    ['native', 'over nothing', p.native()],
+    ['K', 'over black', p.overBlack(), own],
+    ['W', 'over white', p.overWhite(), own],
+    ['native', 'over nothing', p.native(), own],
   ];
   let n = 1;
   if (p.usesDifference) tiles.push([`${n++} difference`, 'inverts where W < K', p.difference()]);
   tiles.push([`${n++} screen`, 'lifts the dark end to K', p.screen()]);
   tiles.push([`${n++} multiply`, 'scales down to W', p.multiply()]);
-  box.replaceChildren(...tiles.map(([tag, caption, pixels]) => {
+  box.replaceChildren(...tiles.map(([tag, caption, pixels, space = 'srgb']) => {
     const fig = document.createElement('figure');
     const label = document.createElement('figcaption');
     label.className = 'tag';
     label.innerHTML = `${tag}<span>${caption}</span>`;
-    fig.append(toCanvas(p.width, p.height, pixels), label);
+    fig.append(toCanvas(p.width, p.height, pixels, space), label);
     return fig;
   }));
   p.free();
@@ -572,17 +577,9 @@ tryButton.addEventListener('click', () => {
   demo.scrollIntoView({ block: 'start' });
 });
 
-async function pixelsOf(blob) {
-  // Let the browser convert exports with a colour profile (e.g. Display P3) to
-  // sRGB, the colour space Vitral 0.1 blends in.
-  const bitmap = await createImageBitmap(blob, { colorSpaceConversion: 'default', premultiplyAlpha: 'none' });
-  const canvas = document.createElement('canvas');
-  canvas.width = bitmap.width;
-  canvas.height = bitmap.height;
-  const ctx = canvas.getContext('2d');
-  ctx.drawImage(bitmap, 0, 0);
-  return { w: bitmap.width, h: bitmap.height, data: ctx.getImageData(0, 0, bitmap.width, bitmap.height).data };
-}
+// The exports go to the encoder as files, not as canvas pixels, so that
+// Display P3 exports keep their colours instead of being converted to sRGB.
+const bytesOf = async (blob) => new Uint8Array(await blob.arrayBuffer());
 
 async function setInput(which, blob, name) {
   inputs[which] = { blob, name };
@@ -599,16 +596,14 @@ async function runEncoder() {
   status.classList.remove('error');
   try {
     const [b, w, t] = await Promise.all([
-      pixelsOf(inputs.black.blob),
-      pixelsOf(inputs.white.blob),
-      inputs.transparent ? pixelsOf(inputs.transparent.blob) : null,
+      bytesOf(inputs.black.blob),
+      bytesOf(inputs.white.blob),
+      inputs.transparent ? bytesOf(inputs.transparent.blob) : undefined,
     ]);
-    for (const other of [w, t].filter(Boolean)) {
-      if (other.w !== b.w || other.h !== b.h) {
-        throw new Error(`All exports must be the same size (${b.w}×${b.h} and ${other.w}×${other.h}).`);
-      }
-    }
-    const bytes = await encode(b.w, b.h, b.data, w.data, t?.data);
+    const bytes = await encodeExports(b, w, t);
+    const info = await decode(bytes);
+    const [width, height, space] = [info.width, info.height, info.colourSpace];
+    info.free();
     if (resultUrl) URL.revokeObjectURL(resultUrl);
     const blob = new Blob([bytes], { type: 'image/png' });
     resultUrl = URL.createObjectURL(blob);
@@ -626,7 +621,8 @@ async function runEncoder() {
     link.hidden = false;
     result = { blob, name: link.download };
     tryButton.hidden = false;
-    status.textContent = `${b.w} × ${b.h} px · ${bytes.length.toLocaleString('en')} bytes`;
+    const p3 = space === 'display-p3' ? ' · Display P3' : '';
+    status.textContent = `${width} × ${height} px${p3} · ${bytes.length.toLocaleString('en')} bytes`;
   } catch (error) {
     status.textContent = error.message;
     status.classList.add('error');

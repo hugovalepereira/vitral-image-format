@@ -40,7 +40,7 @@ fundação  spec+core  web   │  Figma    outras   v2       normalização
 * [x] *Fuzzing* do descodificador (300 000 mutações sem *panics*) e variantes de
       PNG (paleta, cinzento, entrelaçado). Ver [05](05-verificacoes-v1.md).
 * [x] Cor nativa sobre fundo transparente (D9), chunk *safe-to-copy* (D2),
-      armazenamento direto de K/W (D10), regra sRGB (D11).
+      armazenamento direto de K/W (D10), regra sRGB (D11), Display P3 (D13).
 * [ ] **Seguinte**: vetores de conformidade publicados.
 
 **Critério de saída**: qualquer pessoa consegue criar um `.vitral.png` a partir
@@ -74,7 +74,8 @@ Ver também a lista de pontos pequenos em [06 — Todo](06-todo.md).
 * [ ] Exportações reais de Photoshop, Illustrator e After Effects.
 * [ ] Vetores de conformidade publicados.
 * [ ] Compressão melhor (deflate ao nível do oxipng) e rever a meta RNF1.
-* [ ] Conversão de cor no CLI (Display P3 → sRGB, com a biblioteca `moxcms`).
+* [x] Display P3 no formato, no CLI, no polyfill e na demo; luz linear recusada
+      (D13).
 * [ ] Documentar o uso em produção: servir sem otimização automática (CDNs e
       Next.js removem o chunk); otimizadores que o mantêm (optipng, oxipng,
       pngcrush, `zopflipng --keepchunks=viTr`).
@@ -86,7 +87,8 @@ Ver também a lista de pontos pequenos em [06 — Todo](06-todo.md).
   * Seleciona-se um frame.
   * O plugin exporta-o sempre três vezes, sem o designer ter de pensar nisso:
     com fundo preto, com fundo branco e como PNG normal, com fundo transparente
-    (`exportAsync` com `colorProfile: 'SRGB'`).
+    (`exportAsync` com `colorProfile: 'DOCUMENT'`, para manter o P3 dos
+    ficheiros P3; ver D13).
   * Codifica em WASM e descarrega o `nome.vitral.png`.
 * **Avisar** quando um grupo dentro do frame está em Normal: os modos lá dentro
   não chegam ao fundo, e o Vitral vai guardar isso tal como está.
@@ -246,9 +248,9 @@ subtítulo.
 | Adoção lenta: "mais um formato" | É um PNG válido, por isso não há custo de experimentar. O polyfill e os plugins dão valor imediato. |
 | CDNs e otimizadores retiram o chunk | Fallback razoável + CRC. Documentar as opções que preservam chunks (ex.: `oxipng --strip safe`). |
 | Isolamento por contextos de empilhamento no CSS | Documentar. O polyfill avisa em modo debug quando um antepassado isola. |
-| Cores diferentes entre ferramentas | Mistura em sRGB codificado, igual ao CSS e ao Figma. Testes de referência. |
+| Cores diferentes entre ferramentas | Mistura nos valores codificados do espaço de cor do ficheiro (sRGB ou Display P3, D13), como o Figma. Testes de referência. |
 | Expectativa de "funcionar em todo o lado" | Comunicar claramente: funciona onde há suporte, degrada noutros sítios. |
 | Tamanho dos ficheiros | Residual nulo nas zonas normais. Medir e otimizar (fase 2). |
 | Fundo transparente (design tools) | Definido (D9): mostra a cor nativa. A pilha de 3 camadas só é exata sobre fundos opacos; nos programas de design é preciso um fundo preenchido. |
 | CDNs que recodificam (sharp, Cloudinary) | Medido (D2, [05](05-verificacoes-v1.md)): removem o chunk. Servir os ficheiros sem otimização automática. |
-| Exportações em Display P3 | Detetadas e recusadas no CLI (D11); a demo converte. |
+| Exportações em Display P3 | Guardadas em P3 (D13). Nos browsers que misturam em sRGB, exatas sobre preto e branco e aproximadas no resto. |

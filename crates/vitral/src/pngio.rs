@@ -2,6 +2,7 @@
 
 use std::io::Cursor;
 
+use crate::colour::{colour_space, display_p3_icc, ColourSpace, RgbSpace};
 use crate::Error;
 
 /// A straight-alpha (non-premultiplied) RGBA8 image, row-major.
@@ -144,21 +145,68 @@ fn encoder<'a>(
     enc
 }
 
-/// Encodes an RGBA8 image as a PNG tagged as sRGB.
-pub fn write_rgba8(img: &RgbaImage) -> Result<Vec<u8>, Error> {
-    write_with_chunk(img, None)
+/// Decodes a PNG that may be used as Vitral input, with the colour space it
+/// declares. Fails for colour spaces Vitral cannot carry (SPEC §4.1).
+pub fn read_rgba8_in_space(bytes: &[u8]) -> Result<(RgbaImage, RgbSpace), Error> {
+    let space = match colour_space(bytes) {
+        ColourSpace::Other(what) => {
+            let advice = if what.starts_with("linear light") {
+                " (it blends gamma-encoded values, as Figma and CSS do)"
+            } else {
+                ""
+            };
+            return Err(Error::InvalidInput(format!(
+                "the image declares {what}; Vitral takes sRGB or Display P3{advice}"
+            )));
+        }
+        known => known.rgb_space().unwrap_or_default(),
+    };
+    Ok((read_rgba8(bytes)?, space))
 }
 
-/// Encodes an RGBA8 image, optionally appending one extra chunk after `IDAT`.
+/// Encodes an RGBA8 image as a PNG tagged as sRGB.
+pub fn write_rgba8(img: &RgbaImage) -> Result<Vec<u8>, Error> {
+    write_with_chunk(img, RgbSpace::Srgb, None)
+}
+
+/// Encodes an RGBA8 image as a PNG tagged with the given colour space.
+pub fn write_rgba8_in(img: &RgbaImage, space: RgbSpace) -> Result<Vec<u8>, Error> {
+    write_with_chunk(img, space, None)
+}
+
+/// Writes the chunks that declare a colour space. Display P3 gets an ICC
+/// profile, which every colour-managed viewer reads, and a `cICP` chunk.
+fn tag_colour_space<W: std::io::Write>(
+    writer: &mut png::Writer<W>,
+    space: RgbSpace,
+) -> Result<(), Error> {
+    if space == RgbSpace::DisplayP3 {
+        let mut iccp = b"Display P3\0\0".to_vec();
+        iccp.extend(miniz_oxide::deflate::compress_to_vec_zlib(
+            &display_p3_icc(),
+            9,
+        ));
+        writer.write_chunk(png::chunk::ChunkType(*b"iCCP"), &iccp)?;
+        writer.write_chunk(png::chunk::ChunkType(*b"cICP"), &[12, 13, 0, 1])?;
+    }
+    Ok(())
+}
+
+/// Encodes an RGBA8 image tagged with a colour space, optionally appending one
+/// extra chunk after `IDAT`.
 pub(crate) fn write_with_chunk(
     img: &RgbaImage,
+    space: RgbSpace,
     extra: Option<(png::chunk::ChunkType, &[u8])>,
 ) -> Result<Vec<u8>, Error> {
     let mut out = Vec::new();
     {
         let mut enc = encoder(&mut out, img.width, img.height, png::ColorType::Rgba);
-        enc.set_source_srgb(png::SrgbRenderingIntent::Perceptual);
+        if space == RgbSpace::Srgb {
+            enc.set_source_srgb(png::SrgbRenderingIntent::Perceptual);
+        }
         let mut writer = enc.write_header()?;
+        tag_colour_space(&mut writer, space)?;
         writer.write_image_data(&img.data)?;
         if let Some((kind, data)) = extra {
             writer.write_chunk(kind, data)?;
@@ -170,13 +218,38 @@ pub(crate) fn write_with_chunk(
 
 /// Encodes an RGB8 buffer as a plain PNG (no colour-space chunks).
 pub fn write_rgb8(width: u32, height: u32, rgb: &[u8]) -> Result<Vec<u8>, Error> {
+    write_rgb8_tagged(width, height, rgb, None)
+}
+
+/// Encodes an RGB8 buffer as a PNG tagged with the given colour space.
+pub fn write_rgb8_in(
+    width: u32,
+    height: u32,
+    rgb: &[u8],
+    space: RgbSpace,
+) -> Result<Vec<u8>, Error> {
+    write_rgb8_tagged(width, height, rgb, Some(space))
+}
+
+fn write_rgb8_tagged(
+    width: u32,
+    height: u32,
+    rgb: &[u8],
+    space: Option<RgbSpace>,
+) -> Result<Vec<u8>, Error> {
     if rgb.len() != width as usize * height as usize * 3 {
         return Err(Error::InvalidInput("RGB buffer size mismatch".into()));
     }
     let mut out = Vec::new();
     {
-        let enc = encoder(&mut out, width, height, png::ColorType::Rgb);
+        let mut enc = encoder(&mut out, width, height, png::ColorType::Rgb);
+        if space == Some(RgbSpace::Srgb) {
+            enc.set_source_srgb(png::SrgbRenderingIntent::Perceptual);
+        }
         let mut writer = enc.write_header()?;
+        if let Some(space) = space {
+            tag_colour_space(&mut writer, space)?;
+        }
         writer.write_image_data(rgb)?;
         writer.finish()?;
     }

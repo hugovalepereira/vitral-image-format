@@ -21,6 +21,7 @@ today.
 | ![Inverting ring](examples/renders/invert-ring.png) |
 | ![Two multiply shapes exported from Figma](examples/renders/figma-multiply.png) |
 | ![Screen, multiply and 50% normal shapes exported from Figma](examples/renders/figma-mixed.png) |
+| ![Neon made in Display P3](examples/renders/p3-neon.png) |
 
 > Status: **proposal, draft 0.1** (October 2026). The format, the Rust
 > reference implementation, the command-line tool and the web polyfill work;
@@ -100,7 +101,8 @@ layers with blend modes every host already has: **difference**, **screen**,
 
 Export your artwork over a black background and over a white background (keep
 the layers' blend modes active), and optionally once more with a transparent
-background, then:
+background, then run the command below. The exports can be sRGB or Display P3;
+the file keeps their colour space and blends in it, as the design tool did.
 
 ```sh
 cargo install --path crates/vitral-cli        # installs the `vitral` command
@@ -108,11 +110,9 @@ vitral encode --black art-on-black.png --white art-on-white.png \
               --transparent art.png -o art.vitral.png
 ```
 
-Export in sRGB: `vitral encode` refuses Display P3 exports, which Figma makes
-when the document's colour profile is set to P3. Keep the
-artwork in a pass-through group (in Photoshop a Pass Through group, in
-Illustrator with "Isolate Blending" off), so its blend modes reach the black
-and white backgrounds.
+Keep the artwork in a pass-through group (in Photoshop a Pass Through group, in
+Illustrator with "Isolate Blending" off), so its blend modes reach the black and
+white backgrounds.
 
 Other commands:
 

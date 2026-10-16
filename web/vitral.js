@@ -10,12 +10,14 @@
 // How it works: the file is decoded (WebAssembly) into three layers that are
 // stacked over the image with CSS blend modes — difference, screen, multiply —
 // which together reproduce `result = K + (W − K) × backdrop` per channel.
+// The layers are built for blending in sRGB, the CSS default; a Display P3
+// file is converted first (exact over black and white, close elsewhere).
 //
 // Limitation shared with CSS `mix-blend-mode`: the image only blends with
 // content inside the same stacking context. An ancestor with opacity,
 // transform, filter, isolation or a z-index creates an isolated group.
 
-import init, { decodePlanes, encodeFromRenders } from './pkg/vitral_wasm.js';
+import init, { decodePlanes, encodeFromExports, encodeFromRenders } from './pkg/vitral_wasm.js';
 
 const SELECTOR = 'img[data-vitral], img[src$=".vitral.png"]';
 const LAYERS = [
@@ -41,22 +43,34 @@ export async function decode(bytes) {
 /**
  * Encodes a .vitral.png from RGBA8 renders of the same artwork: over black,
  * over white and, optionally, over transparency (its look with nothing behind
- * it; approximated when omitted). Returns the file bytes.
+ * it; approximated when omitted). The pixels are in `colourSpace` ("srgb" or
+ * "display-p3"). Returns the file bytes.
  */
-export async function encode(width, height, overBlack, overWhite, overTransparent) {
+export async function encode(width, height, overBlack, overWhite, overTransparent, colourSpace = 'srgb') {
   await loadWasm();
-  return encodeFromRenders(width, height, overBlack, overWhite, overTransparent);
+  return encodeFromRenders(width, height, overBlack, overWhite, overTransparent, colourSpace);
 }
 
-/** Puts RGBA8 pixels into a new canvas of the given size. */
-export function toCanvas(width, height, pixels) {
+/**
+ * Encodes a .vitral.png from the PNG files a design tool exported (bytes):
+ * over black, over white and, optionally, over transparency. sRGB and
+ * Display P3 exports are both kept in their colour space. Returns the file.
+ */
+export async function encodeExports(overBlack, overWhite, overTransparent) {
+  await loadWasm();
+  return encodeFromExports(overBlack, overWhite, overTransparent);
+}
+
+/** Puts RGBA8 pixels in `colourSpace` into a new canvas of the given size. */
+export function toCanvas(width, height, pixels, colourSpace = 'srgb') {
   const canvas = document.createElement('canvas');
   canvas.width = width;
   canvas.height = height;
-  const context = canvas.getContext('2d');
+  const options = colourSpace === 'srgb' ? undefined : { colorSpace: colourSpace };
+  const context = canvas.getContext('2d', options);
   // Browsers return null when a page uses up its canvas memory (e.g. on iOS).
   if (!context) throw new Error('could not create a canvas');
-  context.putImageData(new ImageData(new Uint8ClampedArray(pixels), width, height), 0, 0);
+  context.putImageData(new ImageData(new Uint8ClampedArray(pixels), width, height, options), 0, 0);
   return canvas;
 }
 

@@ -16,12 +16,15 @@ PR #1 (out/2026). Os itens maiores da fase 2.5 continuam no
 
 ## Cor
 
-- [ ] **Verificar o espaço de cor em todos os comandos.** Hoje só o
-  `vitral encode` recusa exportações em Display P3; o `from-image` e o `compose`
-  aceitam-nas sem aviso.
-- [ ] **Detetar imagens em luz linear.** Um PNG pode declarar que guarda valores
-  "lineares" (chunk `gAMA`, ou um perfil ICC com gama 1,0). Hoje passa como sRGB,
-  e as misturas sairiam com cores erradas.
+- [x] **Verificar o espaço de cor em todos os comandos** (decisão D13). Todos
+  os comandos aceitam sRGB e Display P3 e mantêm o espaço de cor no ficheiro.
+- [x] **Detetar imagens em luz linear** (decisão D13). Os ficheiros marcados
+  como lineares (chunk `gAMA`, perfil ICC com gama 1,0 ou `cICP`) são recusados
+  com uma mensagem clara.
+- [ ] **Polyfill em browsers que misturam em P3.** O polyfill monta as camadas
+  para mistura em sRGB. Num browser que mistura em P3, um ficheiro P3 seria
+  exato se as camadas fossem P3, mas o JavaScript não consegue saber em que
+  espaço o browser mistura. Testar no Safari de um Mac com ecrã P3.
 
 ## Polyfill (rever depois de analisar a demo online)
 
