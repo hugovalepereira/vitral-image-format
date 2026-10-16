@@ -74,6 +74,24 @@ As instruções mais recentes do autor sobrepõem-se às regras acima.
 
 Uma entrada por execução, a mais recente em cima: o que foi feito e porquê.
 
+### 2026-10-16 16h55 — Testes de conformidade
+
+**O quê:** nova pasta [`conformance/`](../../conformance/) com 12 casos pequenos
+e os resultados que qualquer leitor de Vitral tem de produzir: o estado (válido,
+PNG simples, imagem editada, chunk danificado, versão desconhecida…), K e W
+exatos, e o resultado sobre um fundo opaco e sobre um fundo que se torna
+transparente. O teste `conformance.rs` confirma no CI que a implementação de
+referência continua a passar em todos. A SPEC (§11) e o README apontam para lá.
+
+**Porquê:** para o Vitral funcionar "em qualquer sítio", outras pessoas vão ter
+de o ler fora do nosso código: o plugin do Figma, scripts para Illustrator ou
+After Effects, leitores noutras linguagens. Sem ficheiros de teste, cada uma
+pode interpretar a especificação de forma diferente, e o mesmo ficheiro deixa
+de dar o mesmo resultado. Era o passo pendente das fases 1 e 2.5 do plano, e é
+o que uma proposta aberta a contribuições precisa para alguém começar.
+
+**A seguir:** pôr o polyfill a correr contra estes casos no browser.
+
 ### 2026-10-16 12h50 — Ritmo de hora a hora
 
 A pedido do autor: passa a correr de hora a hora, salta quando ele está ativo,

@@ -167,12 +167,15 @@ cargo run --release -p vitral --example samples       # regenerate examples/
 node web/test/run.mjs                                 # Chromium vs reference compositor (needs Playwright)
 ```
 
+Writing your own decoder or renderer? Test it against the
+[conformance suite](conformance/).
+
 ## Roadmap
 
 1. **Done in 0.1**: specification draft, Rust implementation, CLI, web polyfill,
    demo.
 2. **Next**: Figma plugin (export and import), playground and packages on
-   crates.io and npm, conformance test suite, fuzzing.
+   crates.io and npm.
 3. **Then**: Illustrator, After Effects and Photoshop scripts; Vitral video for
    light leaks and overlays.
 4. **v2**: layers with overlay, soft light and HSL modes; backdrop blur and

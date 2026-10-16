@@ -200,7 +200,5 @@ branco. A comparação visual está em
 
 - **Exportações reais de outras ferramentas** (Photoshop, Illustrator, After
   Effects).
-- **Testes de conformidade publicados:** ficheiros de referência e resultados
-  esperados, para outras implementações.
 - **Desempenho em imagens grandes** (meta RNF3: 1 megapixel em menos de 50 ms no
   browser).

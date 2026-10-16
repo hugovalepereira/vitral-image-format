@@ -1,0 +1,124 @@
+{
+  "suite": "Vitral conformance",
+  "spec_version": "0.1",
+  "backdrop": "backdrop.png",
+  "backdrop_transparent": "backdrop-transparent.png",
+  "cases": [
+    {
+      "name": "ok-grid",
+      "file": "ok-grid.vitral.png",
+      "status": "ok",
+      "colour_space": "srgb",
+      "k": "ok-grid.k.png",
+      "w": "ok-grid.w.png",
+      "render": "ok-grid.render.png",
+      "render_transparent": "ok-grid.render-transparent.png",
+      "description": "Every (K, W) pair on a 16-step grid, different per channel, including inversion (W < K). Native appearance approximated."
+    },
+    {
+      "name": "ok-predicted",
+      "file": "ok-predicted.vitral.png",
+      "status": "ok",
+      "colour_space": "srgb",
+      "k": "ok-predicted.k.png",
+      "w": "ok-predicted.w.png",
+      "render": "ok-predicted.render.png",
+      "render_transparent": "ok-predicted.render-transparent.png",
+      "description": "Multiply, screen, exclusion and normal at 50% over a partly transparent native image. Residual stored as differences (flag 0)."
+    },
+    {
+      "name": "ok-direct",
+      "file": "ok-direct.vitral.png",
+      "status": "ok",
+      "colour_space": "srgb",
+      "k": "ok-direct.k.png",
+      "w": "ok-direct.w.png",
+      "render": "ok-direct.render.png",
+      "render_transparent": "ok-direct.render-transparent.png",
+      "description": "Same image, residual storing K and W directly (flag bit 0 set)."
+    },
+    {
+      "name": "ok-display-p3",
+      "file": "ok-display-p3.vitral.png",
+      "status": "ok",
+      "colour_space": "display-p3",
+      "k": "ok-display-p3.k.png",
+      "w": "ok-display-p3.w.png",
+      "render": "ok-display-p3.render.png",
+      "render_transparent": "ok-display-p3.render-transparent.png",
+      "description": "Same values, declared as Display P3 (iCCP and cICP). Blending happens on the encoded P3 values."
+    },
+    {
+      "name": "not-vitral",
+      "file": "not-vitral.vitral.png",
+      "status": "not-vitral",
+      "colour_space": "srgb",
+      "render": "not-vitral.render.png",
+      "render_transparent": "not-vitral.render-transparent.png",
+      "description": "A plain PNG: rendered as a normal image with alpha."
+    },
+    {
+      "name": "fallback-mismatch",
+      "file": "fallback-mismatch.vitral.png",
+      "status": "fallback-mismatch",
+      "colour_space": "srgb",
+      "render": "fallback-mismatch.render.png",
+      "render_transparent": "fallback-mismatch.render-transparent.png",
+      "description": "The main image was edited after encoding (last pixel); the fallback CRC no longer matches, so the chunk is ignored."
+    },
+    {
+      "name": "corrupt-chunk-crc",
+      "file": "corrupt-chunk-crc.vitral.png",
+      "status": "corrupt",
+      "colour_space": "srgb",
+      "render": "corrupt-chunk-crc.render.png",
+      "render_transparent": "corrupt-chunk-crc.render-transparent.png",
+      "description": "The viTr chunk's PNG CRC is wrong."
+    },
+    {
+      "name": "corrupt-residual",
+      "file": "corrupt-residual.vitral.png",
+      "status": "corrupt",
+      "colour_space": "srgb",
+      "render": "corrupt-residual.render.png",
+      "render_transparent": "corrupt-residual.render-transparent.png",
+      "description": "The embedded residual PNG is cut in half."
+    },
+    {
+      "name": "corrupt-short-payload",
+      "file": "corrupt-short-payload.vitral.png",
+      "status": "corrupt",
+      "colour_space": "srgb",
+      "render": "corrupt-short-payload.render.png",
+      "render_transparent": "corrupt-short-payload.render-transparent.png",
+      "description": "The payload is shorter than its 8-byte header."
+    },
+    {
+      "name": "corrupt-two-chunks",
+      "file": "corrupt-two-chunks.vitral.png",
+      "status": "corrupt",
+      "colour_space": "srgb",
+      "render": "corrupt-two-chunks.render.png",
+      "render_transparent": "corrupt-two-chunks.render-transparent.png",
+      "description": "Two viTr chunks, each valid on its own."
+    },
+    {
+      "name": "unsupported-version",
+      "file": "unsupported-version.vitral.png",
+      "status": "unsupported",
+      "colour_space": "srgb",
+      "render": "unsupported-version.render.png",
+      "render_transparent": "unsupported-version.render-transparent.png",
+      "description": "Major version 1, which a 0.x decoder does not know."
+    },
+    {
+      "name": "unsupported-model",
+      "file": "unsupported-model.vitral.png",
+      "status": "unsupported",
+      "colour_space": "srgb",
+      "render": "unsupported-model.render.png",
+      "render_transparent": "unsupported-model.render-transparent.png",
+      "description": "Model 2, reserved for layered images (SPEC §12)."
+    }
+  ]
+}
