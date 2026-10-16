@@ -81,21 +81,41 @@ Ver também a lista de pontos pequenos em [06 — Todo](06-todo.md).
       pngcrush, `zopflipng --keepchunks=viTr`).
 * [ ] Desempenho: 1 megapixel em menos de 50 ms no browser.
 
-## Fase 3 — Plugin Figma
+## Fase 3 — Plugin Figma 🟡 (primeira versão em `figma/`)
 
-* **Exportar**:
-  * Seleciona-se um frame.
-  * O plugin exporta-o sempre três vezes, sem o designer ter de pensar nisso:
-    com fundo preto, com fundo branco e como PNG normal, com fundo transparente
+* [x] **Exportar**:
+  * Seleciona-se uma ou mais camadas (frame, grupo, componente, forma).
+  * O plugin exporta cada uma três vezes, sem o designer ter de pensar nisso:
+    com fundo preto, com fundo branco e com fundo transparente
     (`exportAsync` com `colorProfile: 'DOCUMENT'`, para manter o P3 dos
-    ficheiros P3; ver D13).
-  * Codifica em WASM e descarrega o `nome.vitral.png`.
-* **Avisar** quando um grupo dentro do frame está em Normal: os modos lá dentro
-  não chegam ao fundo, e o Vitral vai guardar isso tal como está.
-* **Importar**: cria um grupo *pass-through* com 3 camadas de imagem (Difference,
-  Screen, Multiply). Só é exato sobre fundos preenchidos (D9); o plugin deve
-  avisar quando o frame não tem fundo.
-* **Publicar na Figma Community**: é o primeiro grande canal de divulgação.
+    ficheiros P3; ver D13). As três saem de um frame temporário com uma cópia
+    da camada no mesmo sítio da página; só muda o preenchimento do frame.
+  * Codifica em WASM (`encodeFromExports`) e descarrega o `nome.vitral.png`.
+  * Mostra o resultado ao lado do PNG normal, sobre o mesmo fundo.
+* [x] **Avisar**:
+  * quando um grupo ou frame dentro da seleção (ou o próprio frame
+    selecionado) não está em Pass through: os modos lá dentro não chegam ao
+    fundo, e o Vitral guarda isso tal como está;
+  * quando o frame selecionado tem preenchimento;
+  * quando há modos que a v0.1 só aproxima ou perde, e blur de fundo;
+  * quando o resultado é opaco (igual a um PNG).
+* [x] **Painel único** (out/2026, pedido do autor): exportar e importar no
+  mesmo painel; várias camadas saem num ficheiro cada (num ZIP, um só
+  download) ou num ficheiro só; o frame temporário fica fora do ecrã, para nada
+  piscar.
+* [x] **Arrastar para o canvas**: com o plugin aberto, um `.vitral.png`
+  largado no canvas é reconstruído onde cai. Com o plugin fechado fica uma
+  imagem plana; ao selecioná-la, o plugin oferece reconstruí-la (confirmado
+  pelo autor no Figma).
+* [x] **Importar**: cria um grupo *pass-through* com as camadas de imagem
+  (Difference, só quando é precisa, Screen, Multiply), no espaço de cor do
+  documento. Só é exato sobre fundos preenchidos (D9); o plugin avisa quando o
+  frame não tem fundo.
+* [x] Teste automático (`figma/test/plugin.mjs`, no CI): o código do plugin
+  corre contra uma imitação da API do Figma e o painel corre no Chromium.
+* [ ] **Confirmar no Figma** (só o autor pode): que o Figma mistura em P3 nos
+  ficheiros P3 e que lê o perfil das camadas importadas.
+* [ ] **Publicar na Figma Community**: é o primeiro grande canal de divulgação.
 
 ## Fase 4 — Outras ferramentas e vídeo
 
@@ -168,6 +188,8 @@ Screen") num MP4 empilhado e mostrá-lo sobre uma página com o polyfill.
 
 * **Nível 2**: camadas com modos não-lineares (overlay, soft light, difference,
   HSL), renderizadas como camadas DOM com o respetivo `mix-blend-mode`.
+  Prioridade: difference, darken e lighten, que o autor já encontrou no Figma
+  (ver [06](06-todo.md#formato)).
 * **Nível 3**: efeitos de vizinhança.
   * **Blur de fundo** com máscara por pixel: na web via `backdrop-filter`, no
     Figma via *background blur*.

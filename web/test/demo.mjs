@@ -93,7 +93,7 @@ for (const engine of engines) {
     await noteStarting('Could not open notes.txt');
     check('invalid file shows an error', (await note()).error, await note());
 
-    await page.click('#samples button[data-id="light-leak"]');
+    await page.click('#samples button[data-id="film"]');
     await settled('ok');
     await page.click('#samples button[data-id="own"]');
     await settled('not-vitral');
@@ -119,7 +119,7 @@ for (const engine of engines) {
 
     await page.waitForSelector('#try-above:not([hidden])', { timeout: 15000 });
     await page.click('#try-above');
-    await noteStarting('stained-glass.vitral.png, 300 × 360 px.');
+    await noteStarting('capsule.vitral.png, 640 × 640 px.');
     await settled('ok');
     check('encoder result opens in the stages', true);
 

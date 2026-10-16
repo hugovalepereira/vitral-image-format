@@ -7,54 +7,58 @@
 <meta name="description" content="An image format that carries its own blend modes. Valid PNG, blends with whatever is behind it.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gloock&family=IBM+Plex+Mono:wght@400;500&family=Public+Sans:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&family=Newsreader:opsz,wght@6..72,400&family=Outfit:wght@400;500;600&display=swap">
 <style>
-/* Layout: a light table. The live stage is the opening statement; everything
-   below is one reading column that widens only for the layer breakdown. */
+/* Layout: a quiet grid. Neutral surfaces, hairline rules and numbered
+   sections; strong colour lives only in the images and their backdrops, and
+   one signal orange marks what you can act on. */
 :root {
-  --bg: #eceef1;
-  --surface: #f8f9fa;
-  --fg: #15171c;
-  --muted: #586070;
-  --line: #c8cdd5;
-  --accent: #2343c4;
-  --ruby: #a8243a;
+  --bg: #f1f0ec;
+  --surface: #fafaf7;
+  --fg: #141416;
+  --muted: #5d5c58;
+  --line: #d4d2cb;
+  --strong-line: #141416;
+  --accent: #d9480f;
+  --ruby: #b3261e;
   --check-a: #ffffff;
-  --check-b: #d9dde3;
-  --display: "Gloock", "Iowan Old Style", "Palatino Linotype", Georgia, serif;
-  --body: "Public Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
-  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --check-b: #e3e1dc;
+  --display: "Outfit", "Futura", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --body: "DM Sans", "Avenir Next", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --mono: "DM Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
   --step--1: 0.8125rem;
   --step-0: 1rem;
   --step-1: 1.25rem;
-  --step-2: 1.75rem;
-  --step-3: clamp(2.6rem, 6vw, 4.25rem);
+  --step-2: clamp(1.75rem, 3.2vw, 2.5rem);
+  --step-3: clamp(4.25rem, 11vw, 8.5rem);
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #101216;
-    --surface: #171a20;
-    --fg: #e7e9ee;
-    --muted: #9aa2b0;
-    --line: #2b3039;
-    --accent: #8ea4ff;
-    --ruby: #ff7d91;
-    --check-a: #2a2e36;
-    --check-b: #1d2026;
+    --bg: #111113;
+    --surface: #19191c;
+    --fg: #eeede9;
+    --muted: #a09f99;
+    --line: #2c2c30;
+    --strong-line: #eeede9;
+    --accent: #ff7a3d;
+    --ruby: #ff8a80;
+    --check-a: #2c2c30;
+    --check-b: #1f1f23;
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
-  --bg: #101216;
-  --surface: #171a20;
-  --fg: #e7e9ee;
-  --muted: #9aa2b0;
-  --line: #2b3039;
-  --accent: #8ea4ff;
-  --ruby: #ff7d91;
-  --check-a: #2a2e36;
-  --check-b: #1d2026;
+  --bg: #111113;
+  --surface: #19191c;
+  --fg: #eeede9;
+  --muted: #a09f99;
+  --line: #2c2c30;
+  --strong-line: #eeede9;
+  --accent: #ff7a3d;
+  --ruby: #ff8a80;
+  --check-a: #2c2c30;
+  --check-b: #1f1f23;
   color-scheme: dark;
 }
 
@@ -65,62 +69,219 @@ body {
   color: var(--fg);
   font: 400 var(--step-0)/1.6 var(--body);
   padding-inline: max(16px, 4vw);
-  padding-block: 0 4rem;
+  padding-block: 0 3rem;
 }
-main { max-width: 72rem; margin-inline: auto; display: grid; grid-template-columns: minmax(0, 1fr); gap: 4.5rem; }
-h1, h2 { font-family: var(--display); font-weight: 400; text-wrap: balance; margin: 0; }
-h1 { font-size: var(--step-3); line-height: 1; letter-spacing: -0.01em; }
-h2 { font-size: var(--step-2); line-height: 1.15; }
+main { max-width: 76rem; margin-inline: auto; display: grid; grid-template-columns: minmax(0, 1fr); }
+h1, h2 { font-family: var(--display); text-wrap: balance; margin: 0; }
+h1 { font-size: var(--step-3); font-weight: 600; line-height: 0.85; letter-spacing: -0.05em; margin-left: -0.04em; }
+h2 { font-size: var(--step-2); font-weight: 500; line-height: 1.08; letter-spacing: -0.025em; }
 p { margin: 0; }
-a { color: var(--accent); }
-code, pre { font-family: var(--mono); font-size: 0.9em; }
+a { color: var(--fg); text-decoration-color: var(--accent); text-decoration-thickness: 1.5px; text-underline-offset: 0.22em; }
+a:hover { color: var(--accent); }
+code, pre { font-family: var(--mono); font-size: 0.88em; }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.dot { color: var(--accent); }
 
 .eyebrow {
-  font: 500 var(--step--1)/1.2 var(--mono);
+  font: 500 0.72rem/1.2 var(--mono);
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.1em;
   color: var(--muted);
 }
+.num { color: var(--accent); margin-right: 0.6em; }
 .prose { display: grid; gap: 1rem; max-width: 40rem; }
 .prose p { color: var(--muted); }
 .prose strong { color: var(--fg); font-weight: 600; }
+.small-button {
+  font: 500 0.72rem/1 var(--mono); text-transform: uppercase; letter-spacing: 0.06em;
+  color: var(--fg); background: none; border: 1px solid var(--line); border-radius: 0;
+  padding: 0.5rem 0.65rem; cursor: pointer;
+}
+.small-button:hover { border-color: var(--strong-line); }
+.small-button[aria-pressed="true"] { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+
+/* Top bar */
+.topbar {
+  max-width: 76rem; margin-inline: auto;
+  display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+  padding-block: 1.1rem; border-bottom: 1px solid var(--strong-line);
+}
+.mark { font: 600 1.25rem/1 var(--display); letter-spacing: -0.03em; color: var(--fg); text-decoration: none; }
+.topbar nav { display: flex; gap: 1.75rem; }
+.topbar nav a { font: 500 var(--step--1)/1 var(--body); color: var(--muted); text-decoration: none; }
+.topbar nav a:hover { color: var(--fg); }
+@media (max-width: 47.99rem) { .topbar nav a:not(.ext) { display: none; } }
 
 /* Hero */
-header.hero { display: grid; gap: 1.25rem; padding-top: 3.5rem; }
-.hero .lede { font-size: var(--step-1); line-height: 1.4; max-width: 34rem; }
-.hero .lede em { font-style: normal; color: var(--accent); }
+header.hero {
+  display: grid; gap: 2.5rem; align-items: center;
+  padding-block: clamp(2.5rem, 6vw, 4.5rem) clamp(2.5rem, 5vw, 4rem);
+}
+.hero .text { display: grid; gap: 1.4rem; }
+.hero .claim { font: 500 clamp(1.5rem, 2.6vw, 2.1rem)/1.12 var(--display); letter-spacing: -0.025em; max-width: 26rem; }
+.hero .lede { color: var(--muted); font-size: clamp(1.02rem, 1.3vw, 1.12rem); line-height: 1.55; max-width: 31rem; }
+.ctas { display: flex; flex-wrap: wrap; gap: 0.6rem; }
+.button {
+  display: inline-flex; align-items: center; gap: 0.55rem;
+  font: 600 var(--step--1)/1 var(--body); text-decoration: none;
+  padding: 0.9rem 1.2rem; border: 1.5px solid var(--strong-line); color: var(--fg); background: transparent;
+}
+.button.primary { background: var(--fg); color: var(--bg); }
+.button.primary::before { content: ""; width: 0.5rem; height: 0.5rem; background: var(--accent); }
+.button:hover { background: var(--fg); color: var(--bg); }
+.facts { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 0.4rem 1.5rem; font: 400 0.75rem/1.4 var(--mono); color: var(--muted); }
+.facts li::before { content: "— "; color: var(--accent); }
+@media (min-width: 58rem) {
+  header.hero { grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); gap: 4rem; }
+}
 
-#demo { scroll-margin-top: 1.5rem; }
+/* The opening scene: a still .vitral.png is dropped on a page whose shapes
+   change behind it. Nothing above the image may create a stacking context
+   inside the scene, or it would stop blending with the shapes. */
+.show { margin: 0; display: grid; gap: 0.75rem; min-width: 0; }
+.scene {
+  position: relative; aspect-ratio: 3 / 2; overflow: hidden; isolation: isolate;
+  background: #f1eee7; border: 1.5px solid var(--strong-line);
+}
+.beats { position: absolute; inset: 0; display: grid; grid-template-columns: repeat(6, 1fr); grid-template-rows: repeat(4, 1fr); }
+.beats .cell { position: relative; }
+.beats .cell i {
+  position: absolute; inset: 0; display: block;
+  background: var(--c, #141416);
+  transform: rotate(var(--rot, 0deg)) scale(0);
+}
+.beats .cell i.on { transform: rotate(var(--rot, 0deg)) scale(1); }
+.beats .cell i[data-shape="circle"] { border-radius: 50%; }
+.beats .cell i[data-shape="quarter"] { border-top-left-radius: 100%; }
+.beats .cell i[data-shape="half"] { clip-path: circle(50% at 50% 100%); }
+@media (prefers-reduced-motion: no-preference) {
+  .beats .cell i { transition: transform 700ms cubic-bezier(0.2, 0.7, 0.2, 1), background-color 700ms; transition-delay: var(--delay, 0ms); }
+}
+/* Two copies of the same artwork lie off the 6 x 4 grid behind them, so
+   they read as put on top: on the left an ordinary PNG with transparency, on
+   the right the Vitral. Each is 36% wide and square, 54% of the height. */
+.scene .a { --x: 7%; --y: 25%; }
+.scene .b { --x: 55%; --y: 13%; }
+.scene .drop { position: absolute; width: 36%; left: var(--x); top: var(--y); visibility: hidden; }
+.scene.landed-a .drop.a, .scene.landed-b .drop.b { visibility: visible; }
+.scene .drop img { display: block; width: 100%; height: auto; }
+.file-chip {
+  position: absolute; left: var(--x); top: var(--y); width: 36%; aspect-ratio: 1;
+  display: grid; place-items: end start; padding: 0.6rem;
+  font: 500 0.7rem/1 var(--mono); color: #141416;
+  border: 1.5px dashed #141416; background: rgb(255 255 255 / 0.55);
+  opacity: 0; pointer-events: none;
+}
+.file-chip span { background: #fff; padding: 0.35rem 0.45rem; border: 1px solid #141416; }
+.file-chip::after {
+  content: ""; position: absolute; right: 12%; bottom: 20%; width: 1.1rem; height: 1.1rem; background: #141416;
+  clip-path: polygon(0 0, 0 100%, 30% 72%, 52% 100%, 66% 92%, 45% 64%, 85% 64%);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .scene:not(.landed-a) .file-chip.a { animation: carry-in 1.4s cubic-bezier(0.3, 0.6, 0.2, 1) 0.3s both; --from: -70%; }
+  .scene:not(.landed-b) .file-chip.b { animation: carry-in 1.4s cubic-bezier(0.3, 0.6, 0.2, 1) 1.5s both; --from: 70%; }
+}
+@keyframes carry-in {
+  0% { opacity: 0; transform: translate(var(--from), -60%) scale(0.5) rotate(-6deg); }
+  20% { opacity: 1; }
+  80%, 100% { opacity: 1; transform: translate(0, 0) scale(1) rotate(0); }
+}
+/* Once dropped, each file keeps its name, like a selected layer. */
+.file-tag {
+  /* Next to the O, which starts 8% into its square. */
+  position: absolute; left: calc(var(--x) + 2.9%); top: calc(var(--y) + 4.3%); margin-top: -1.6rem;
+  font: 500 0.68rem/1 var(--mono); color: #fff; background: #141416; padding: 0.3rem 0.45rem;
+  visibility: hidden;
+}
+.file-tag.b { background: var(--accent); }
+.scene.landed-a .file-tag.a, .scene.landed-b .file-tag.b { visibility: visible; }
+.show figcaption { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 0.6rem 1rem; font-size: var(--step--1); color: var(--muted); }
+.show figcaption code { color: var(--fg); }
+.show .tools { display: flex; gap: 0.4rem; }
 
-/* Controls */
-.controls { display: flex; flex-wrap: wrap; gap: 1rem 2rem; align-items: end; }
-.control { display: grid; gap: 0.4rem; min-width: 0; }
-.segmented { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+/* Sections */
+.section {
+  display: grid; grid-template-columns: minmax(0, 1fr); gap: 2rem;
+  padding-block: clamp(2.5rem, 6vw, 4.5rem);
+  border-top: 1px solid var(--strong-line);
+}
+.section .head { display: grid; gap: 0.9rem; align-content: start; }
+.section > .body { display: grid; gap: 2rem; min-width: 0; }
+@media (min-width: 60rem) {
+  .section.split { grid-template-columns: 17rem minmax(0, 1fr); gap: 3rem; }
+  .section.split > .head { position: sticky; top: 1.5rem; }
+}
+#demo { scroll-margin-top: 1rem; }
+#demo .head .prose { margin-top: 0.25rem; }
+
+/* Controls: each group is a row of a small table, a label and a grid of
+   equal cells. */
+.controls { display: grid; border-top: 1px solid var(--line); }
+.control { display: grid; gap: 0.6rem; min-width: 0; padding-block: 0.9rem; border-bottom: 1px solid var(--line); }
+@media (min-width: 48rem) { .control { grid-template-columns: 8rem minmax(0, 1fr); align-items: center; gap: 1.5rem; } }
+.segmented { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 8.75rem), 1fr)); gap: 0.4rem; }
+@media (max-width: 30rem) { .segmented { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .segmented button {
-  font: 500 var(--step--1)/1 var(--body);
-  color: var(--fg);
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  padding: 0.55rem 0.85rem;
+  display: flex; align-items: center; gap: 0.6rem; min-width: 0;
+  font: 500 var(--step--1)/1.1 var(--body); text-align: left;
+  color: var(--fg); background: var(--surface);
+  border: 1px solid var(--line); border-radius: 0;
+  padding: 0.6rem 0.7rem;
   cursor: pointer;
 }
+.segmented button::before {
+  content: ""; width: 1.25rem; height: 1.25rem; flex: none;
+  background: var(--sw, var(--line)); box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.12);
+}
+.segmented button:hover { border-color: var(--strong-line); }
 .segmented button[aria-pressed="true"] { background: var(--fg); color: var(--bg); border-color: var(--fg); }
-.segmented button.open { border-style: dashed; color: var(--accent); }
+.segmented button.open { color: var(--accent); border-style: dashed; background: transparent; }
+.segmented button.open::before { content: "+"; background: none; box-shadow: none; font: 500 1rem/1.25rem var(--mono); text-align: center; }
+/* Samples show their own fallback image; backdrops a miniature of themselves. */
+#samples button[data-id="overprint"] { --sw: #fff url(samples/overprint.vitral.png) center / contain no-repeat; }
+#samples button[data-id="highlighter"] { --sw: #fff url(samples/highlighter.vitral.png) center / contain no-repeat; }
+#samples button[data-id="sunglasses"] { --sw: #fff url(samples/sunglasses.vitral.png) center / contain no-repeat; }
+#samples button[data-id="glasses-3d"] { --sw: #fff url(samples/glasses-3d.vitral.png) center / contain no-repeat; }
+#samples button[data-id="film"] { --sw: #e8e5dd url(samples/film.vitral.png) center / contain no-repeat; }
+#samples button[data-id="blinds"] { --sw: #2a2a2e url(samples/blinds.vitral.png) center / cover no-repeat; }
+#samples button[data-id="tape"] { --sw: #fff url(samples/tape.vitral.png) center / contain no-repeat; }
+#samples button[data-id="halftone"] { --sw: #fff url(samples/halftone.vitral.png) center / contain no-repeat; }
+#samples button[data-id="neon"] { --sw: #141416 url(samples/neon.vitral.png) center / contain no-repeat; }
+#samples button[data-id="postmark"] { --sw: #fff url(samples/postmark.vitral.png) center / contain no-repeat; }
+#samples button[data-id="stencil"] { --sw: #fff url(samples/stencil.vitral.png) center / contain no-repeat; }
+#samples button[data-id="own"] { --sw: repeating-conic-gradient(var(--check-a) 0 25%, var(--check-b) 0 50%) 0 0 / 8px 8px; }
+#backdrops button[data-id="pattern"] { --sw: url(samples/grid.svg) center / 100% 100%; }
+#backdrops button[data-id="text"] { --sw: repeating-linear-gradient(#f4f1e8 0 3px, #8f8a7e 3px 4px); }
+#backdrops button[data-id="type"] { --sw: #f2eee4 url(samples/type.svg) left center / cover; }
+#backdrops button[data-id="website"] { --sw: #fff url(samples/website.svg) center / cover; }
+#backdrops button[data-id="studio"] { --sw: url(samples/studio.jpg) 30% center / cover; }
+#backdrops button[data-id="gradient"] { --sw: url(samples/gradient.jpg) center / cover; }
+#backdrops button[data-id="poster"] { --sw: url(samples/poster.jpg) 75% center / cover; }
+#backdrops button[data-id="dark"] { --sw: url(samples/dark.jpg) left top / cover; }
 
 /* Stages */
 .stages { display: grid; gap: 1.25rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr)); }
 figure { margin: 0; display: grid; gap: 0.6rem; min-width: 0; }
-figcaption { display: flex; justify-content: space-between; gap: 1rem; font-size: var(--step--1); color: var(--muted); }
-figcaption strong { color: var(--fg); font-weight: 600; }
+.stages figure { gap: 0; border: 1.5px solid var(--strong-line); background: var(--surface); }
+.stages figcaption {
+  display: flex; align-items: center; gap: 0.75rem;
+  padding: 0.7rem 0.9rem; border-bottom: 1.5px solid var(--strong-line);
+  font-size: var(--step--1); color: var(--muted);
+}
+.stages figcaption .badge {
+  display: grid; place-items: center; width: 1.5rem; height: 1.5rem; flex: none;
+  font: 500 0.72rem/1 var(--mono); background: var(--line); color: var(--fg);
+}
+.stages figcaption .badge.on { background: var(--accent); color: #fff; }
+.stages figcaption strong { color: var(--fg); font-weight: 600; }
+.stages figcaption span:last-child { margin-left: auto; text-align: right; }
 .stage {
   position: relative;
   aspect-ratio: 16 / 10;
   max-width: 100%;
   overflow: hidden;
-  border-radius: 6px;
   isolation: isolate; /* the image blends with this stage, not with the page */
+  container-type: inline-size; /* the page backdrop's type scales with the stage */
   touch-action: none;
   user-select: none;
 }
@@ -129,103 +290,180 @@ figcaption strong { color: var(--fg); font-weight: 600; }
 .obj img { display: block; width: 100%; height: auto; -webkit-user-drag: none; }
 .hint { font-size: var(--step--1); color: var(--muted); }
 .hint.error { color: var(--ruby); }
+#sample-note { padding-left: 0.9rem; border-left: 2px solid var(--accent); max-width: 52rem; }
+#sample-note.error { border-left-color: var(--ruby); }
 
 /* Backdrops are imagery, not theme colours: they stay the same in both themes. */
-.bd-scene { background: #333 url(../examples/backdrop.png) center / cover; }
-.bd-spectrum {
-  background:
-    linear-gradient(to bottom, rgb(0 0 0 / 0), rgb(0 0 0 / 0.65)),
-    linear-gradient(90deg, #ff2d2d, #ffd52d, #3bd13b, #2de0ff, #2d5bff, #e02dff, #ff2d2d);
-}
-.bd-stripes { background: repeating-linear-gradient(45deg, #121212 0 14px, #f2f2f2 14px 28px); }
-.bd-night { background: radial-gradient(circle at 70% 25%, #3b4a8a, #0c1024 60%); }
+.bd-type { background: #f2eee4 url(samples/type.svg) center / cover; }
+.bd-website { background: #fff url(samples/website.svg) center / cover; }
+.bd-studio { background: #b9b2a6 url(samples/studio.jpg) center / cover; }
+.bd-gradient { background: #c2307a url(samples/gradient.jpg) center / cover; }
+.bd-poster { background: #ece8dc url(samples/poster.jpg) center / cover; }
+.bd-dark { background: #121317 url(samples/dark.jpg) center / cover; }
+.bd-pattern { background: #141416 url(samples/grid.svg) center / 100% 100%; }
 .bd-text { background: #f4f1e8; color: #23201b; }
 .bd-text .page-text {
-  position: absolute; inset: 0; padding: 4% 5%;
-  font: 400 clamp(0.62rem, 1.55vw, 0.95rem)/1.45 "Iowan Old Style", Georgia, serif;
-  column-count: 2; column-gap: 5%;
+  position: absolute; inset: 0; padding: 5% 6%;
+  font: 400 2.05cqw/1.42 "Newsreader", "Iowan Old Style", Georgia, serif;
+  column-count: 2; column-gap: 6%; column-rule: 1px solid #d8d2c2;
 }
+.bd-text .page-text p:first-child { font-size: 1.45em; line-height: 1.12; letter-spacing: -0.01em; margin-bottom: 0.7em; }
 .bd-text .page-text p + p { margin-top: 0.6em; }
 
-/* Layer breakdown */
-.how { display: grid; grid-template-columns: minmax(0, 1fr); gap: 2rem; }
+/* Encoder */
+.maker { display: grid; gap: 1.25rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 9.5rem), 1fr)); align-items: start; }
+.slot { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0.6rem; min-width: 0; }
+.slot label { font-weight: 600; font-size: var(--step--1); }
+.slot input { font: inherit; font-size: 0.75rem; max-width: 100%; color: var(--muted); }
+.slot input::file-selector-button {
+  font: 600 0.75rem/1 var(--body); margin-right: 0.6rem; padding: 0.5rem 0.75rem; cursor: pointer;
+  color: var(--fg); background: var(--surface); border: 1.5px solid var(--strong-line); border-radius: 0;
+}
+.slot img { width: 100%; height: auto; display: block; border: 1px solid var(--line); }
+.slot .optional { font-weight: 400; color: var(--muted); }
+.steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 1px; background: var(--line); border: 1px solid var(--line);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr)); }
+.steps li { display: grid; gap: 0.35rem; align-content: start; padding: 1rem 1.1rem 1.2rem; background: var(--bg); }
+.steps .step { font: 500 0.72rem/1 var(--mono); color: var(--accent); }
+.steps strong { font: 500 1.05rem/1.25 var(--display); letter-spacing: -0.01em; }
+.steps li > span:last-child { font-size: var(--step--1); color: var(--muted); }
+.ctas .hint { align-self: center; }
+h3.sub { font: 500 1.25rem/1.2 var(--display); letter-spacing: -0.015em; margin: 1rem 0 0; padding-top: 1.5rem; border-top: 1px solid var(--line); }
+#transparent-preview { background: repeating-conic-gradient(var(--check-a) 0 25%, var(--check-b) 0 50%) 0 0 / 14px 14px; }
+.result .stage { aspect-ratio: auto; display: grid; place-items: center; padding: 8%; border: 1.5px solid var(--strong-line); }
+.result .stage > div { width: 80%; }
+.result img { width: 100%; height: auto; display: block; }
+.status { font: 400 0.75rem/1.4 var(--mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+.status.error { font-family: var(--body); color: var(--ruby); }
+.download { font-weight: 600; font-size: var(--step--1); }
+.try {
+  justify-self: start;
+  font: 600 var(--step--1)/1 var(--body); padding: 0.75rem 1rem; cursor: pointer;
+  background: var(--fg); color: var(--bg); border: 1.5px solid var(--fg); border-radius: 0;
+}
+.note { font-size: var(--step--1); color: var(--muted); max-width: 44rem; padding: 0.9rem 1rem; border: 1px solid var(--line); }
+.note strong { color: var(--fg); font-weight: 600; }
+
+/* Code */
+.code { display: grid; max-width: 46rem; border: 1.5px solid var(--strong-line); background: var(--surface); }
+.code .bar { display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0.5rem 0.5rem 1rem; border-bottom: 1px solid var(--line); }
+.code pre { margin: 0; padding: 1.1rem 1.25rem; overflow-x: auto; line-height: 1.65; }
+.code button {
+  font: 500 0.72rem/1 var(--mono); text-transform: uppercase; letter-spacing: 0.06em; padding: 0.5rem 0.75rem; cursor: pointer;
+  background: var(--fg); color: var(--bg); border: 0; border-radius: 0;
+}
+blockquote.handoff { margin: 0; max-width: 46rem; font: 500 var(--step-1)/1.35 var(--display); letter-spacing: -0.015em; padding-left: 1rem; border-left: 2px solid var(--accent); }
+blockquote.handoff span { display: block; margin-top: 0.4rem; font: 400 var(--step--1)/1.4 var(--body); color: var(--muted); letter-spacing: 0; }
+
+/* How it works: the details stay closed until asked for. */
+details.deep { border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+details.deep > summary {
+  cursor: pointer; list-style: none; padding-block: 1rem;
+  display: flex; justify-content: space-between; align-items: center;
+  font: 500 var(--step-0)/1.2 var(--display);
+}
+details.deep > summary::-webkit-details-marker { display: none; }
+details.deep > summary::after { content: "+"; font: 400 1.25rem/1 var(--mono); color: var(--accent); }
+details.deep[open] > summary::after { content: "−"; }
+details.deep .inside { display: grid; gap: 2rem; padding-bottom: 2rem; }
 .formula {
-  font: 500 var(--step-1)/1.4 var(--mono);
-  padding: 1rem 1.25rem;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: 6px;
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.2em 0.45em;
+  font: 500 clamp(1.15rem, 2.3vw, 1.6rem)/1.3 var(--mono); letter-spacing: -0.02em;
+  padding: 1.4rem 1.6rem;
+  background: #141416; color: #eeede9; border: 1.5px solid var(--strong-line);
   overflow-x: auto;
 }
-.breakdown { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr)); }
-.breakdown figure { gap: 0.4rem; }
+/* Fixed colours: the formula is always light on ink, in both themes. */
+.formula .k { color: #9a9993; }
+.formula .w { color: #ffffff; }
+.formula .b { color: #ff7a3d; }
+.breakdown { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr)); }
+.breakdown figure { gap: 0.55rem; }
 .breakdown figcaption { display: block; }
 .breakdown canvas {
-  width: 100%; height: auto; display: block; border-radius: 4px;
+  width: 100%; height: auto; display: block; border: 1px solid var(--line);
   background: repeating-conic-gradient(var(--check-a) 0 25%, var(--check-b) 0 50%) 0 0 / 14px 14px;
 }
 .breakdown .tag { font: 500 var(--step--1)/1.3 var(--mono); }
 .breakdown .tag span { color: var(--muted); font-family: var(--body); display: block; }
-
 table { border-collapse: collapse; width: 100%; font-size: var(--step--1); }
-th, td { text-align: left; padding: 0.55rem 0.75rem 0.55rem 0; border-bottom: 1px solid var(--line); vertical-align: top; }
-th { font-weight: 600; }
-.table-wrap { overflow-x: auto; max-width: 44rem; }
-.pill { display: inline-block; font: 500 0.72rem/1 var(--mono); padding: 0.3rem 0.5rem; border-radius: 999px; border: 1px solid currentColor; white-space: nowrap; }
-.pill.exact { color: var(--accent); }
-.pill.approx { color: var(--muted); }
-.pill.later { color: var(--ruby); }
-
-/* Code */
-.code { display: grid; gap: 0.5rem; max-width: 44rem; }
-.code pre {
-  margin: 0; padding: 1rem 1.25rem; overflow-x: auto;
-  background: var(--surface); border: 1px solid var(--line); border-radius: 6px; line-height: 1.55;
-}
-.code button {
-  justify-self: end;
-  font: 500 0.75rem/1 var(--body); padding: 0.4rem 0.6rem; cursor: pointer;
-  background: var(--bg); color: var(--fg); border: 1px solid var(--line); border-radius: 4px;
+th, td { text-align: left; padding: 0.8rem 1rem 0.8rem 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font: 500 0.7rem/1.2 var(--mono); text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); border-bottom: 1.5px solid var(--strong-line); }
+.table-wrap { overflow-x: auto; }
+.pill { font: 500 0.72rem/1 var(--mono); white-space: nowrap; color: var(--muted); }
+.pill.exact { color: var(--fg); }
+@media (max-width: 40rem) {
+  .table-wrap thead { display: none; }
+  .table-wrap tr, .table-wrap td { display: block; }
+  .table-wrap tr { padding-block: 0.8rem; border-bottom: 1px solid var(--line); }
+  .table-wrap td { padding: 0; border: 0; }
+  .table-wrap td + td { margin-top: 0.4rem; }
 }
 
-/* Encoder */
-.maker { display: grid; gap: 1.25rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr)); align-items: start; }
-.slot { display: grid; gap: 0.5rem; min-width: 0; }
-.slot label { font-weight: 600; font-size: var(--step--1); }
-.slot input { font: inherit; font-size: var(--step--1); max-width: 100%; color: var(--muted); }
-.slot img { width: 100%; height: auto; border-radius: 4px; display: block; }
-.slot .optional { font-weight: 400; color: var(--muted); }
-#transparent-preview { background: repeating-conic-gradient(var(--check-a) 0 25%, var(--check-b) 0 50%) 0 0 / 14px 14px; }
-.result .stage { aspect-ratio: auto; display: grid; place-items: center; padding: 6%; }
-.result .stage > div { width: 70%; }
-.result img { width: 100%; height: auto; display: block; }
-.status { font-size: var(--step--1); color: var(--muted); font-variant-numeric: tabular-nums; }
-.status.error { color: var(--ruby); }
-.download { font-weight: 600; font-size: var(--step--1); }
-.try {
-  justify-self: start;
-  font: 600 var(--step--1)/1 var(--body); padding: 0.55rem 0.85rem; cursor: pointer;
-  background: var(--fg); color: var(--bg); border: 1px solid var(--fg); border-radius: 999px;
+footer {
+  max-width: 76rem; margin: 0 auto; padding-top: 1.25rem; border-top: 1px solid var(--strong-line);
+  display: flex; flex-wrap: wrap; gap: 0.5rem 1.75rem; font: 400 0.72rem/1.4 var(--mono); color: var(--muted);
 }
-
-footer { max-width: 72rem; margin: 4rem auto 0; padding-top: 1.5rem; border-top: 1px solid var(--line); display: flex; flex-wrap: wrap; gap: 0.5rem 1.5rem; font-size: var(--step--1); color: var(--muted); }
+footer a { color: var(--fg); }
 
 @media (prefers-reduced-motion: no-preference) {
   html { scroll-behavior: smooth; }
-  .segmented button { transition: background-color 120ms, color 120ms; }
+  .segmented button, .button { transition: background-color 120ms, color 120ms, border-color 120ms; }
 }
 </style>
 </head>
 <body>
-<main>
+<div class="topbar">
+  <a class="mark" href="#top" aria-label="Vitral, back to top"><span class="dot">.</span>vitral</a>
+  <nav aria-label="Sections">
+    <a href="#demo">Try it</a>
+    <a href="#make">Make one</a>
+    <a href="#use">Use it</a>
+    <a href="#how">How it works</a>
+    <a class="ext" href="https://github.com/hugovalepereira/vitral-image-format">GitHub ↗</a>
+  </nav>
+</div>
+<main id="top">
   <header class="hero">
-    <p class="eyebrow">Image format · draft 0.1</p>
-    <h1>Vitral</h1>
-    <p class="lede">PNG has transparency. Vitral has <em>light and filter</em>: an image that carries its own blend modes and reacts to whatever is behind it.</p>
+    <div class="text">
+      <p class="eyebrow">Image format · draft 0.1</p>
+      <h1 aria-label="Vitral"><span class="dot">.</span>vitral</h1>
+      <p class="claim">Blend modes that survive export.</p>
+      <p class="lede">A proposal for an image format that carries its own blend modes. What multiplies in Figma, Illustrator or Photoshop keeps multiplying on the website, without anyone rebuilding it.</p>
+      <div class="ctas">
+        <a class="button primary" href="#demo">Try it</a>
+        <a class="button" href="https://github.com/hugovalepereira/vitral-image-format/blob/main/SPEC.md">Read the specification</a>
+      </div>
+      <ul class="facts">
+        <li>Still a valid PNG</li>
+        <li>One script tag</li>
+        <li>Open proposal, help welcome</li>
+      </ul>
+    </div>
+    <figure class="show">
+      <div class="scene" id="scene">
+        <div class="beats" id="beats" aria-hidden="true"></div>
+        <div class="drop a"><img src="samples/capsule.png" alt="The artwork as an ordinary PNG: a tilted capsule with bands across its top and a magenta disc and green square in its lower end, all only a pale, half-transparent veil over the shapes"></div>
+        <div class="drop b"><img id="hero-img" src="samples/capsule.vitral.png" alt="The same artwork as a Vitral: its bands invert the shapes passing underneath, and its magenta disc and green square darken them like ink"></div>
+        <div class="file-tag a" aria-hidden="true">capsule.png</div>
+        <div class="file-tag b" aria-hidden="true">capsule.vitral.png</div>
+        <div class="file-chip a" aria-hidden="true"><span>capsule.png</span></div>
+        <div class="file-chip b" aria-hidden="true"><span>capsule.vitral.png</span></div>
+      </div>
+      <figcaption>
+        <span class="tools">
+          <button type="button" class="small-button" id="hero-pause" aria-pressed="false">Pause</button>
+        </span>
+      </figcaption>
+    </figure>
   </header>
 
-  <section aria-labelledby="demo-title" class="how" id="demo">
-    <h2 id="demo-title" hidden>Live comparison</h2>
+  <section aria-labelledby="demo-title" class="section" id="demo">
+    <div class="head">
+      <p class="eyebrow"><span class="num">01</span>Try it</p>
+      <h2 id="demo-title">Same file, two viewers</h2>
+      <div class="prose"><p>A blend mode lives in the design tool, not in the file. Export a multiply layer and you get a flat PNG that looks grey on a new background, so someone rebuilds it by hand, or it gets flattened over one background and breaks when that changes.</p><p>Pick an image and a backdrop. Same file, same backdrop: on the left, what any PNG viewer shows; on the right, Vitral.</p></div>
+    </div>
     <div class="controls">
       <div class="control">
         <span class="eyebrow" id="sample-label">Image</span>
@@ -239,83 +477,130 @@ footer { max-width: 72rem; margin: 4rem auto 0; padding-top: 1.5rem; border-top:
     </div>
     <div class="stages">
       <figure>
-        <figcaption><strong>Any PNG viewer</strong><span>shows the built-in fallback</span></figcaption>
+        <figcaption><span class="badge">A</span><strong>Any PNG viewer</strong><span>today</span></figcaption>
         <div class="stage" id="stage-png"></div>
       </figure>
       <figure>
-        <figcaption><strong>Vitral</strong><span>same file, blend modes applied</span></figcaption>
+        <figcaption><span class="badge on">B</span><strong>Vitral</strong><span>same file</span></figcaption>
         <div class="stage" id="stage-vitral"></div>
       </figure>
     </div>
     <p class="hint" id="sample-note">Drag the image, or focus it and use the arrow keys. Both views show the same <code>.vitral.png</code> file.</p>
   </section>
 
-  <section class="how" aria-labelledby="how-title">
-    <div class="prose">
-      <p class="eyebrow">How it works</p>
-      <h2 id="how-title">Every pixel is a function of its backdrop</h2>
-      <p>A Vitral file stores how each pixel looks <strong>over black</strong> and <strong>over white</strong>. Over any other backdrop, each colour channel lands on the straight line between those two values.</p>
+  <section class="section split" id="make" aria-labelledby="make-title">
+    <div class="head">
+      <p class="eyebrow"><span class="num">02</span>Make one</p>
+      <h2 id="make-title">Export it from Figma</h2>
     </div>
-    <div class="formula">result = K + (W − K) × backdrop</div>
-    <div class="prose">
-      <p>That one line covers normal, multiply, screen, hard light, exclusion and inversion, mixed freely pixel by pixel. To draw it, a renderer stacks three layers with blend modes that every browser and design tool already has: <strong>difference</strong>, then <strong>screen</strong>, then <strong>multiply</strong>.</p>
+    <div class="body">
+      <div class="prose">
+        <p>The Vitral plugin for Figma exports a layer as a <code>.vitral.png</code> in one click, blend modes included. It also places Vitral files back in Figma as layers that keep blending.</p>
+      </div>
+      <ol class="steps">
+        <li><span class="step">1</span><strong>Select a layer</strong><span>A frame, a group or a shape, with blend modes inside.</span></li>
+        <li><span class="step">2</span><strong>Press Export .vitral.png</strong><span>One file, still a PNG, with the blends kept.</span></li>
+        <li><span class="step">3</span><strong>Place it anywhere</strong><span>On a website with one script tag, or back in Figma.</span></li>
+      </ol>
+      <div class="ctas">
+        <a class="button primary" href="https://github.com/hugovalepereira/vitral-image-format/tree/main/figma">Get the Figma plugin</a>
+        <span class="hint">A first version, installed from the repository. Not on Figma Community yet.</span>
+      </div>
+      <h3 class="sub" id="other-tools">From another tool</h3>
+      <div class="prose">
+        <p>Any tool that exports PNG can make one. Export the artwork over a black background and over a white one, and drop both files here: how each pixel changes between the two is what records the blending. A third export with no background is optional. It sets the picture that software without Vitral shows; leave it out and Vitral works that picture out from the other two. The example below is loaded with the exports of the image at the top of the page.</p>
+      </div>
+      <div class="maker">
+        <div class="slot">
+          <label for="black-input">Over black</label>
+          <input type="file" id="black-input" accept="image/png">
+          <img id="black-preview" alt="Artwork exported over a black background">
+        </div>
+        <div class="slot">
+          <label for="white-input">Over white</label>
+          <input type="file" id="white-input" accept="image/png">
+          <img id="white-preview" alt="Artwork exported over a white background">
+        </div>
+        <div class="slot">
+          <label for="transparent-input">No background <span class="optional">(optional)</span></label>
+          <input type="file" id="transparent-input" accept="image/png">
+          <img id="transparent-preview" alt="Artwork exported over a transparent background">
+        </div>
+        <div class="slot result">
+          <span class="eyebrow">Result, over the colour grid</span>
+          <div class="stage bd-pattern" id="result-stage"></div>
+          <p class="status" id="encode-status">Encoding…</p>
+          <a class="download" id="download" hidden>Download</a>
+          <button type="button" class="try" id="try-above" hidden>Try it on the backdrops above</button>
+        </div>
+      </div>
+      <p class="note"><strong>Works with</strong> normal, multiply, screen, hard light, exclusion and inversion, mixed freely in one image. Display P3 exports stay in Display P3. Overlay, soft light and colour dodge or burn are not supported yet.</p>
     </div>
-    <div class="breakdown" id="breakdown" aria-live="polite"></div>
-    <div class="table-wrap">
-      <table>
-        <thead><tr><th>Blend mode</th><th>In draft 0.1</th></tr></thead>
-        <tbody>
-          <tr><td>Normal, multiply, screen, hard light, exclusion, inversion</td><td><span class="pill exact">exact</span></td></tr>
-          <tr><td>Add (plus-lighter), linear burn, darken, lighten, difference</td><td><span class="pill approx">approximate</span></td></tr>
-          <tr><td>Overlay, soft light, colour dodge and burn, hue, saturation, colour, luminosity</td><td><span class="pill later">planned for v2 (layers)</span></td></tr>
-          <tr><td>Background blur, refraction</td><td><span class="pill later">planned for v2 (backdrop effects)</span></td></tr>
-        </tbody>
-      </table>
-    </div>
-    <p class="hint">Approximate modes are exact over black and white backdrops and follow a straight line in between: add behaves like screen, difference like exclusion.</p>
   </section>
 
-  <section class="how" aria-labelledby="use-title">
-    <div class="prose">
-      <p class="eyebrow">Use it on a website</p>
-      <h2 id="use-title">One script tag</h2>
-      <p>A Vitral file is a valid PNG, so the page works without JavaScript and shows the fallback. With the script, every <code>&lt;img&gt;</code> whose file ends in <code>.vitral.png</code> starts blending. As with CSS <code>mix-blend-mode</code>, the image blends with content in its own stacking context.</p>
+  <section class="section split" id="use" aria-labelledby="use-title">
+    <div class="head">
+      <p class="eyebrow"><span class="num">03</span>Use it</p>
+      <h2 id="use-title">One script tag on the website</h2>
     </div>
-    <div class="code">
-      <button type="button" id="copy-snippet">Copy</button>
-      <pre id="snippet"><code>&lt;img src="window.vitral.png" alt="Stained glass window"&gt;
+    <div class="body">
+      <blockquote class="handoff">“It's a PNG. Add one script tag and it blends like it did in Figma.”<span>What to tell your developer.</span></blockquote>
+      <div class="code">
+        <div class="bar"><span class="eyebrow">HTML</span><button type="button" id="copy-snippet">Copy</button></div>
+        <pre id="snippet"><code>&lt;img src="capsule.vitral.png" alt="Capsule"&gt;
 &lt;script type="module" src="vitral.js"&gt;&lt;/script&gt;</code></pre>
+      </div>
+      <div class="prose">
+        <p>With the script, every <code>&lt;img&gt;</code> whose file ends in <code>.vitral.png</code> blends with what is behind it on the page. It works on websites with the script and in Figma with the plugin. Everywhere else it shows the PNG you would export today, never worse.</p>
+      </div>
     </div>
   </section>
 
-  <section class="how" aria-labelledby="make-title">
-    <div class="prose">
-      <p class="eyebrow">Make one</p>
-      <h2 id="make-title">Export from any tool</h2>
-      <p>Put a black background behind your artwork and export a PNG, then switch it to white and export again. Layers keep their blend modes against the background, so these two exports hold the blending. A third export with a transparent background records each pixel's own colour, shown where nothing is behind the image and by software without Vitral support. The example below is loaded with the stained glass exports.</p>
+  <section class="section split" id="how" aria-labelledby="how-title">
+    <div class="head">
+      <p class="eyebrow"><span class="num">04</span>How it works</p>
+      <h2 id="how-title">Two exports, one straight line</h2>
     </div>
-    <div class="maker">
-      <div class="slot">
-        <label for="black-input">Artwork over black</label>
-        <input type="file" id="black-input" accept="image/png">
-        <img id="black-preview" alt="Artwork exported over a black background">
+    <div class="body">
+      <div class="prose">
+        <p>Each pixel stores how it looks <strong>over black</strong> and <strong>over white</strong>. Over anything else, it lands on the straight line between the two. Browsers already have the blend modes to draw that line, so the script only has to stack them.</p>
       </div>
-      <div class="slot">
-        <label for="white-input">Artwork over white</label>
-        <input type="file" id="white-input" accept="image/png">
-        <img id="white-preview" alt="Artwork exported over a white background">
+      <details class="deep">
+        <summary>Technical details</summary>
+        <div class="inside">
+          <div class="formula" aria-label="result = K + (W − K) × backdrop"><span>result</span><span>=</span><span class="k">K</span><span>+</span><span>(<span class="w">W</span> − <span class="k">K</span>)</span><span>×</span><span class="b">backdrop</span></div>
+          <div class="prose">
+            <p>K is the pixel over black and W the pixel over white, per colour channel. A renderer draws the line with three layers and the blend modes every browser and design tool has: <strong>difference</strong>, then <strong>screen</strong>, then <strong>multiply</strong>. These are the layers of the image selected above:</p>
+          </div>
+          <div class="breakdown" id="breakdown" aria-live="polite"></div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Blend mode</th><th>In draft 0.1</th></tr></thead>
+              <tbody>
+                <tr><td>Normal, multiply, screen, hard light, exclusion, inversion</td><td><span class="pill exact">exact, mixed per pixel and stacked</span></td></tr>
+                <tr><td>Add (plus-lighter), linear burn, darken, lighten, difference</td><td><span class="pill">approximate: exact over black and white, a straight line between</span></td></tr>
+                <tr><td>Overlay, soft light, colour dodge and burn, hue, saturation, colour, luminosity, background blur</td><td><span class="pill">not yet</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="hint">The full format is in the <a href="https://github.com/hugovalepereira/vitral-image-format/blob/main/SPEC.md">specification</a>.</p>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <section class="section split" id="join" aria-labelledby="join-title">
+    <div class="head">
+      <p class="eyebrow"><span class="num">05</span>Help shape it</p>
+      <h2 id="join-title">A proposal, in the open</h2>
+    </div>
+    <div class="body">
+      <div class="prose">
+        <p>Vitral is an open proposal, published so that people who care about this problem can try it, break it and help improve it. Open an issue with your own exports, a case where you had to rebuild a blend by hand, or an idea for overlay, soft light or background blur.</p><p>PNG has transparency. Vitral has light and filter.</p>
       </div>
-      <div class="slot">
-        <label for="transparent-input">Artwork over transparency <span class="optional">(optional)</span></label>
-        <input type="file" id="transparent-input" accept="image/png">
-        <img id="transparent-preview" alt="Artwork exported over a transparent background">
-      </div>
-      <div class="slot result">
-        <span class="eyebrow">Result, over the spectrum</span>
-        <div class="stage bd-spectrum" id="result-stage"></div>
-        <p class="status" id="encode-status">Encoding…</p>
-        <a class="download" id="download" hidden>Download</a>
-        <button type="button" class="try" id="try-above" hidden>Try it on the backdrops above</button>
+      <div class="ctas">
+        <a class="button primary" href="https://github.com/hugovalepereira/vitral-image-format/issues">Open an issue</a>
+        <a class="button" href="https://github.com/hugovalepereira/vitral-image-format/blob/main/SPEC.md">Read the specification</a>
       </div>
     </div>
   </section>
@@ -328,27 +613,113 @@ footer { max-width: 72rem; margin: 4rem auto 0; padding-top: 1.5rem; border-top:
 </footer>
 
 <script type="module">
+// The opening scene: the same artwork is dropped twice, as a PNG and as a
+// Vitral, then the shapes behind them change on a steady beat. The images
+// themselves never move.
+
+const scene = document.getElementById('scene');
+const beats = document.getElementById('beats');
+const COLS = 6;
+const ROWS = 4;
+const INKS = ['#141416', '#e5531a', '#2f4bd8', '#e8b931', '#b9b4aa'];
+const SHAPES = ['square', 'circle', 'quarter', 'half'];
+const cells = [];
+for (let r = 0; r < ROWS; r++) {
+  for (let c = 0; c < COLS; c++) {
+    const cell = document.createElement('div');
+    cell.className = 'cell';
+    const shape = document.createElement('i');
+    shape.style.setProperty('--delay', `${(c + r) * 55}ms`);
+    cell.append(shape);
+    beats.append(cell);
+    cells.push({ c, r, shape });
+  }
+}
+// A diagonal wave: about two cells in five are on. A cell only changes its
+// shape, ink and quarter turn while it is off, so shapes grow and shrink but
+// never spin.
+const on = (c, r, t) => (c + 2 * r + t + 5) % 5 < 2;
+const dress = ({ c, r, shape }, t) => {
+  shape.dataset.shape = SHAPES[(c * 3 + r + Math.floor(t / 2)) % SHAPES.length];
+  shape.style.setProperty('--c', INKS[(c + r + t) % INKS.length]);
+  shape.style.setProperty('--rot', `${((c + r + t) % 4) * 90}deg`);
+};
+function step(t) {
+  for (const cell of cells) {
+    const show = on(cell.c, cell.r, t);
+    if (!show && !on(cell.c, cell.r, t - 1)) dress(cell, t);
+    cell.shape.classList.toggle('on', show);
+  }
+}
+
+const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+// Start on a beat that puts colour, not black, under the Vitral as it lands.
+let t = 3;
+let timer = null;
+for (const cell of cells) dress(cell, t);
+const play = () => { timer ??= setInterval(() => step(++t), 1400); };
+const stop = () => { clearInterval(timer); timer = null; };
+step(t);
+const land = (which) => {
+  scene.classList.add(`landed-${which}`);
+  if (which === 'b' && !still) play();
+};
+if (still) { land('a'); land('b'); }
+else {
+  for (const which of ['a', 'b']) {
+    scene.querySelector(`.file-chip.${which}`).addEventListener('animationend', () => land(which));
+  }
+  setTimeout(() => { land('a'); land('b'); }, 3600); // in case the animation never runs
+}
+
+const pause = document.getElementById('hero-pause');
+pause.hidden = still;
+pause.addEventListener('click', () => {
+  const paused = pause.getAttribute('aria-pressed') !== 'true';
+  pause.setAttribute('aria-pressed', String(paused));
+  pause.textContent = paused ? 'Play' : 'Pause';
+  if (paused) stop(); else play();
+});
+
+</script>
+
+<script type="module">
 import { decode, encodeExports, toCanvas } from './vitral.js';
 
 const STAGE_W = 640;
 const SAMPLES = [
-  { id: 'stained-glass', label: 'Stained glass', w: 300, h: 360,
-    note: 'Tinted panes in multiply, a sheen in screen and lead lines in normal mode.' },
-  { id: 'glass-badge', label: 'Amber glass', w: 360, h: 260,
-    note: 'A multiply shadow and amber tint, a screen highlight and a normal rim.' },
-  { id: 'light-leak', label: 'Light leak', w: 420, h: 280,
-    note: 'Three blobs of warm light in screen mode. A plain PNG can only fog the image.' },
-  { id: 'invert-ring', label: 'Inverting ring', w: 260, h: 260,
-    note: 'Difference with white: it inverts whatever is behind it.' },
-  { id: 'p3-neon', label: 'P3 neon', w: 320, h: 220,
-    note: 'Made in Display P3: neon in screen mode and a red bar in multiply, with colours beyond sRGB.' },
+  { id: 'overprint', label: 'Overprint', w: 340, h: 320,
+    note: 'Three discs of process ink in multiply, overprinted like a risograph. As a plain PNG they hide the backdrop; with Vitral it shows through every ink.' },
+  { id: 'highlighter', label: 'Highlighter', w: 360, h: 220,
+    note: 'Highlighter strokes in multiply. As a plain PNG they paint over the text; with Vitral the text stays readable under the ink.' },
+  { id: 'sunglasses', label: 'Sunglasses', w: 360, h: 150,
+    note: 'Sunglasses with bottle-green lenses in multiply and a glint of light in screen. As a plain PNG the lenses are a thin green veil; with Vitral they darken what you see through them, as tinted glass does.' },
+  { id: 'glasses-3d', label: '3D glasses', w: 360, h: 150,
+    note: '3D glasses with a red and a cyan lens in multiply. As a plain PNG the lenses are a pale wash of colour; with Vitral each one filters the backdrop like coloured film.' },
+  { id: 'film', label: 'Negative', w: 400, h: 220,
+    note: 'A strip of 35 mm colour negative: frames that invert under an orange base in multiply, with the numbers along its edges. As a plain PNG the frames are flat orange; with Vitral they show the backdrop as a negative.' },
+  { id: 'halftone', label: 'Halftone', w: 300, h: 300,
+    note: 'A disc of halftone dots in multiply. As a plain PNG it is a pink pattern on top; with Vitral it prints onto the backdrop.' },
+  { id: 'stencil', label: 'Stencil', w: 320, h: 210,
+    note: 'Three bars sprayed in orange through a stencil, in multiply. As a plain PNG they are flat orange shapes; with Vitral the backdrop shows through the paint.' },
+  { id: 'neon', label: 'Neon', w: 400, h: 230,
+    note: 'A neon circle and triangle in screen: white-hot tubes and their glow. As a plain PNG the glow is a coloured haze; with Vitral it lights up the backdrop. Try it in dark mode.' },
+  { id: 'blinds', label: 'Blinds', w: 380, h: 260,
+    note: 'Afternoon sun through blinds, cast on the wall in screen. As a plain PNG the light can only fog the backdrop; with Vitral it brightens it.' },
+  { id: 'tape', label: 'Tape', w: 340, h: 240,
+    note: 'Masking tape and painter\'s tape in multiply. As a plain PNG they are opaque stickers; with Vitral the backdrop shows through the paper.' },
+  { id: 'postmark', label: 'Postmark', w: 320, h: 210,
+    note: 'A rubber-stamp postmark in one ink, in multiply. As a plain PNG it covers what it lands on; with Vitral it is printed on it.' },
 ];
 const BACKDROPS = [
-  { id: 'scene', label: 'Scene' },
-  { id: 'spectrum', label: 'Spectrum' },
-  { id: 'text', label: 'Text' },
-  { id: 'stripes', label: 'Stripes' },
-  { id: 'night', label: 'Night' },
+  { id: 'pattern', label: 'Colour grid' },
+  { id: 'text', label: 'Page' },
+  { id: 'type', label: 'Type' },
+  { id: 'website', label: 'Website' },
+  { id: 'studio', label: 'Studio' },
+  { id: 'gradient', label: 'Gradient' },
+  { id: 'poster', label: 'Poster' },
+  { id: 'dark', label: 'Dark mode' },
 ];
 const PAGE_TEXT = `
 <p>Stained glass works by subtraction. Light from behind passes through pot-metal glass, which keeps some wavelengths and absorbs the rest, so a pane can only darken what it lets through.</p>
@@ -357,7 +728,7 @@ const PAGE_TEXT = `
 <p>Vitral keeps two exports of the artwork, one over black and one over white. Between those two extremes, every pixel follows a straight line, and that line is enough to rebuild multiply, screen and their relatives over any backdrop.</p>
 <p>Software that has never heard of Vitral sees an ordinary PNG and shows the fallback image stored inside it.</p>`;
 
-for (const sample of SAMPLES) sample.src = `../examples/${sample.id}.vitral.png`;
+for (const sample of SAMPLES) sample.src = `samples/${sample.id}.vitral.png`;
 const state = { sample: SAMPLES[0], backdrop: BACKDROPS[0], x: 0.5, y: 0.5 };
 const stages = [document.getElementById('stage-png'), document.getElementById('stage-vitral')];
 const note = document.getElementById('sample-note');
@@ -640,11 +1011,11 @@ for (const which of ['black', 'white', 'transparent']) {
 }
 
 render();
-const source = (which) => `../examples/sources/stained-glass-over-${which}.png`;
+const source = (which) => `samples/sources/capsule-over-${which}.png`;
 const kinds = ['black', 'white', 'transparent'];
 const blobs = await Promise.all(kinds.map(async (k) => (await fetch(source(k))).blob()));
 kinds.forEach((k, i) => {
-  inputs[k] = { blob: blobs[i], name: `stained-glass-over-${k}.png` };
+  inputs[k] = { blob: blobs[i], name: `capsule-over-${k}.png` };
   document.getElementById(`${k}-preview`).src = URL.createObjectURL(blobs[i]);
 });
 await runEncoder();

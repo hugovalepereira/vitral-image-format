@@ -52,8 +52,9 @@ where the image is used.
 | Background blur, refraction | Not yet |
 
 * **It works where Vitral is supported.** Today that means websites with the
-  polyfill script; a Figma plugin is next. Image viewers, email, slides and
-  native apps show the normal PNG.
+  polyfill script, and Figma with the [plugin](figma) (a first version, not yet
+  on Figma Community). Image viewers, email, slides and native apps show the
+  normal PNG.
 * **On the web it blends with content in its own stacking context**, like CSS
   blend modes do: an ancestor with `opacity`, `transform` or `isolation`
   isolates it.
@@ -96,6 +97,15 @@ layers with blend modes every host already has: **difference**, **screen**,
 **multiply**. Read the full [specification](SPEC.md).
 
 ## Quick start
+
+### Export from Figma
+
+The [Figma plugin](figma) exports the selected layers as `.vitral.png` files
+and places Vitral files back in a document as blended layers. It is not on
+Figma Community yet: load it in the Figma desktop app with **Plugins →
+Development → Import plugin from manifest…** and pick
+[`figma/manifest.json`](figma/manifest.json). See [`figma/`](figma) for what it
+checks and its limits.
 
 ### Make a Vitral image from any design tool
 
@@ -154,7 +164,8 @@ python3 -m http.server 8000    # then open http://localhost:8000/web/
 | [`crates/vitral`](crates/vitral) | Rust reference implementation: codec, reference compositor, W3C blend modes, render planes |
 | [`crates/vitral-cli`](crates/vitral-cli) | `vitral` command-line tool |
 | [`crates/vitral-wasm`](crates/vitral-wasm) | WebAssembly bindings |
-| [`web/`](web) | Polyfill (`vitral.js`), demo page, prebuilt WebAssembly in `web/pkg`, browser tests |
+| [`web/`](web) | Polyfill (`vitral.js`), demo page and its images in `web/samples`, prebuilt WebAssembly in `web/pkg`, browser tests |
+| [`figma/`](figma) | Figma plugin: export the selection as Vitral, import Vitral files as layers |
 | [`examples/`](examples) | Sample files, the two source exports of one sample, comparison renders |
 | [`docs/pt/`](docs/pt) | Planning documents in Portuguese: state of the art, requirements, decisions, roadmap |
 
@@ -163,8 +174,10 @@ python3 -m http.server 8000    # then open http://localhost:8000/web/
 ```sh
 cargo test --release                                  # unit and round-trip tests
 cargo run --release -p vitral --example samples       # regenerate examples/
+python3 tools/demo_samples.py                         # regenerate web/samples/ (demo page images; needs numpy, Pillow)
 ./web/build.sh                                        # rebuild web/pkg (needs wasm-bindgen-cli 0.2.129)
 node web/test/run.mjs                                 # Chromium vs reference compositor (needs Playwright)
+./figma/build.sh && node figma/test/plugin.mjs        # rebuild and test the Figma plugin
 ```
 
 Writing your own decoder or renderer? Test it against the
@@ -174,8 +187,8 @@ Writing your own decoder or renderer? Test it against the
 
 1. **Done in 0.1**: specification draft, Rust implementation, CLI, web polyfill,
    demo.
-2. **Next**: Figma plugin (export and import), playground and packages on
-   crates.io and npm.
+2. **Next**: the Figma plugin on Figma Community (a first version, with
+   export and import, is in [`figma/`](figma)), packages on crates.io and npm.
 3. **Then**: Illustrator, After Effects and Photoshop scripts; Vitral video for
    light leaks and overlays.
 4. **v2**: layers with overlay, soft light and HSL modes; backdrop blur and
