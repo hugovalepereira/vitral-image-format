@@ -66,6 +66,9 @@ As instruções mais recentes do autor sobrepõem-se às regras acima.
   não está a trabalhar; iterar sobre o trabalho já feito em vez de recomeçar do
   `main`; adaptar-se ao que ele juntar ao `main`; mudanças visuais permitidas
   quando justificadas.
+* **2026-10-16 (13h19):** não chamar a atenção dele na conversa do projeto. O
+  progresso fica neste diário e no PR; a conversa só reabre quando houver uma
+  decisão que só ele pode tomar.
 
 ## Diário
 
