@@ -21,6 +21,9 @@
 //! which software without Vitral support shows as a fallback, and an ancillary
 //! `viTr` chunk carries the residual needed to recover `K` and `W` exactly. See
 //! `SPEC.md` for the normative text.
+//!
+//! An image is in sRGB or Display P3 (the colour space its PNG declares), and
+//! blends the encoded values of that space.
 
 mod blend;
 mod codec;
@@ -33,8 +36,11 @@ mod pngio;
 
 pub use blend::{BlendMode, Fidelity, Layer};
 pub use codec::{decode, encode, Decoded, VitralStatus, CHUNK_TYPE};
-pub use colour::{colour_space, ColourSpace};
+pub use colour::{colour_space, convert_rgba, ColourSpace, RgbSpace};
 pub use error::Error;
 pub use fallback::least_squares_native;
 pub use model::{RenderPlanes, VitralImage};
-pub use pngio::{read_rgba8, write_rgb8, write_rgba8, RgbaImage};
+pub use pngio::{
+    read_rgba8, read_rgba8_in_space, write_rgb8, write_rgb8_in, write_rgba8, write_rgba8_in,
+    RgbaImage,
+};

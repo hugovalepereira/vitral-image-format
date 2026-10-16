@@ -3,10 +3,15 @@
 
 use wasm_bindgen::prelude::*;
 
-use vitral::{RenderPlanes, RgbaImage, VitralImage, VitralStatus};
+use vitral::{RenderPlanes, RgbSpace, RgbaImage, VitralImage, VitralStatus};
 
 /// The three blend-mode layers of a decoded file, ready to be drawn into
 /// canvases stacked as difference → screen → multiply.
+///
+/// The layers are in sRGB, the colour space CSS blends in by default: a
+/// Display P3 file is converted first, which is exact over black and white
+/// backdrops and close elsewhere (SPEC §7.2). K, W and the native look are
+/// returned in the file's own colour space (see `colourSpace`).
 #[wasm_bindgen]
 pub struct Planes {
     image: VitralImage,
@@ -44,6 +49,13 @@ impl Planes {
     #[wasm_bindgen(getter, js_name = isVitral)]
     pub fn is_vitral(&self) -> bool {
         self.status == "ok"
+    }
+
+    /// `"srgb"` or `"display-p3"`: the colour space of the file, and of
+    /// `overBlack`, `overWhite` and `native`.
+    #[wasm_bindgen(getter, js_name = colourSpace)]
+    pub fn colour_space(&self) -> String {
+        self.image.colour_space.css_name().into()
     }
 
     #[wasm_bindgen(getter, js_name = usesDifference)]
@@ -105,15 +117,26 @@ pub fn decode_planes(bytes: &[u8]) -> Result<Planes, JsError> {
     let decoded = vitral::decode(bytes).map_err(js_err)?;
     let image = decoded.image();
     Ok(Planes {
-        planes: image.render_planes(),
+        planes: image.to_colour_space(RgbSpace::Srgb).render_planes(),
         image,
         status: status_code(&decoded.status),
     })
 }
 
+fn parse_space(name: Option<String>) -> Result<RgbSpace, JsError> {
+    match name.as_deref() {
+        None | Some("srgb") => Ok(RgbSpace::Srgb),
+        Some("display-p3") => Ok(RgbSpace::DisplayP3),
+        Some(other) => Err(JsError::new(&format!(
+            "colour space '{other}' must be srgb or display-p3"
+        ))),
+    }
+}
+
 /// Encodes a Vitral file from RGBA8 renders of the same artwork: over a black
 /// background, over a white background and, optionally, over a transparent
-/// background (its native look; approximated when omitted).
+/// background (its native look; approximated when omitted). The pixels are in
+/// `colour_space` (`"srgb"`, the default, or `"display-p3"`).
 #[wasm_bindgen(js_name = encodeFromRenders)]
 pub fn encode_from_renders(
     width: u32,
@@ -121,10 +144,14 @@ pub fn encode_from_renders(
     over_black: Vec<u8>,
     over_white: Vec<u8>,
     over_transparent: Option<Vec<u8>>,
+    colour_space: Option<String>,
 ) -> Result<Vec<u8>, JsError> {
+    let space = parse_space(colour_space)?;
     let black = RgbaImage::new(width, height, over_black).map_err(js_err)?;
     let white = RgbaImage::new(width, height, over_white).map_err(js_err)?;
-    let mut img = VitralImage::from_renders(&black, &white).map_err(js_err)?;
+    let mut img = VitralImage::from_renders(&black, &white)
+        .map_err(js_err)?
+        .in_colour_space(space);
     if let Some(pixels) = over_transparent {
         let native = RgbaImage::new(width, height, pixels).map_err(js_err)?;
         img = img.with_native(native).map_err(js_err)?;
@@ -132,9 +159,24 @@ pub fn encode_from_renders(
     vitral::encode(&img).map_err(js_err)
 }
 
-/// Reference composite of a file over an RGBA8 backdrop (which may be partly
-/// transparent) with the image's top-left corner at `(x, y)`. Returns the new
-/// backdrop pixels.
+/// Encodes a Vitral file from the PNG files a design tool exported: the
+/// artwork over black, over white and, optionally, over nothing. Exports may
+/// be sRGB or Display P3, and the file keeps their colour space; this is the
+/// path to use for exports from Figma.
+#[wasm_bindgen(js_name = encodeFromExports)]
+pub fn encode_from_exports(
+    over_black: &[u8],
+    over_white: &[u8],
+    over_transparent: Option<Vec<u8>>,
+) -> Result<Vec<u8>, JsError> {
+    let img = VitralImage::from_exports(over_black, over_white, over_transparent.as_deref())
+        .map_err(js_err)?;
+    vitral::encode(&img).map_err(js_err)
+}
+
+/// Reference composite of a file over an RGBA8 sRGB backdrop (which may be
+/// partly transparent) with the image's top-left corner at `(x, y)`, blending
+/// in sRGB as CSS does. Returns the new backdrop pixels.
 #[wasm_bindgen]
 pub fn composite(
     bytes: &[u8],
@@ -148,6 +190,7 @@ pub fn composite(
     let mut canvas = RgbaImage::new(width, height, backdrop).map_err(js_err)?;
     decoded
         .image()
+        .to_colour_space(RgbSpace::Srgb)
         .composite_onto(&mut canvas, x as i64, y as i64);
     Ok(canvas.data)
 }

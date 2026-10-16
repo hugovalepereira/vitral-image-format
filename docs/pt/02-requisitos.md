@@ -39,7 +39,7 @@ nome original, *Graphic Function Image*). O Vitral organiza essa ideia em nívei
 | RF10 | Camadas com modos não-lineares (nível 2). | 🟣 |
 | RF11 | Efeitos de vizinhança, como o blur de fundo (nível 3). | 🟣 |
 | RF12 | Animação e vídeo (ex.: light leaks Vitral). | 🟣 |
-| RF13 | 16 bits por canal, HDR, wide gamut (Display P3), mistura em luz linear. | 🟣 |
+| RF13 | 16 bits por canal, HDR, gamas mais largas do que o Display P3, mistura em luz linear. (O Display P3 entrou na v1, D13.) | 🟣 |
 | RF14 | Vetorial (perfil SVG). | 🟣 |
 
 ## Requisitos não funcionais
@@ -51,7 +51,7 @@ nome original, *Graphic Function Image*). O Vitral organiza essa ideia em nívei
 | RNF3 | Desempenho | Descodificar e preparar 1 megapixel em < 50 ms (WASM, portátil médio). |
 | RNF4 | Segurança | Parser robusto (testes de *fuzzing*). Nenhum código acede aos pixels do fundo; só se usam os modos de mistura do anfitrião, com aritmética de tempo constante. |
 | RNF5 | Abertura | Especificação livre de *royalties*; código MIT. |
-| RNF6 | Cor | Mistura sobre valores sRGB codificados (não lineares), como CSS, Canvas, Figma e Photoshop por omissão. |
+| RNF6 | Cor | Mistura sobre valores codificados (não lineares) do espaço de cor da imagem, sRGB ou Display P3, como CSS, Canvas, Figma e Photoshop por omissão. |
 | RNF7 | Portabilidade | Núcleo em Rust, compilável para nativo e WebAssembly. |
 
 ## Fora de âmbito (v1)
