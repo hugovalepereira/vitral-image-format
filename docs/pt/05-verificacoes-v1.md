@@ -15,6 +15,7 @@ uma ferramenta de otimização, os dados Vitral sobrevivem?
 |---|---|
 | optipng (por omissão) | ✅ mantém (ficheiro fica 3–22% menor) |
 | oxipng (por omissão) | ✅ mantém (9–24% menor) |
+| `oxipng -a` (limpa a cor dos pixels transparentes) | ✅ mantém, depois da mudança do CRC (D12); antes o ficheiro passava a PNG normal. O `pngcrush -blacken` faz a mesma limpeza, mas não foi medido |
 | pngcrush (por omissão e `-rem allb`) | ✅ mantém, depois da mudança para *safe-to-copy* (antes removia) |
 | zopflipng com `--keepchunks=viTr` | ✅ mantém |
 | zopflipng (por omissão), advpng, `optipng -strip all`, `oxipng --strip safe/all` | ⚪ remove o chunk |

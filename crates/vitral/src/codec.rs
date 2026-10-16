@@ -8,7 +8,7 @@
 //! | 1      | 1    | minor version (1)                                  |
 //! | 2      | 1    | model (1 = affine, black/white)                    |
 //! | 3      | 1    | flags (bit 0: K and W stored directly)             |
-//! | 4      | 4    | CRC-32 of the main image pixels, as decoded to RGBA8 |
+//! | 4      | 4    | CRC-32 of the main image pixels (see [`fallback_crc`]) |
 //! | 8      | ...  | residual: a PNG datastream, 8-bit RGB, width x 2*height |
 //!
 //! The main PNG image is the native appearance (how the artwork looks with
@@ -21,8 +21,8 @@ use crate::{Error, RgbaImage, VitralImage};
 
 /// The PNG chunk type: ancillary, private, reserved bit clear, safe to copy.
 /// The chunk depends on the pixel values but checks them itself (the CRC of
-/// the main image), so lossless optimisers may keep it and any change to the
-/// pixels is detected.
+/// the main image), so lossless optimisers may keep it and any visible change
+/// to the pixels is detected.
 pub const CHUNK_TYPE: [u8; 4] = *b"viTr";
 
 const VERSION_MAJOR: u8 = 0;
@@ -129,7 +129,7 @@ fn encode_with(img: &VitralImage, storage: Storage) -> Result<Vec<u8>, Error> {
     };
     let mut payload = Vec::with_capacity(HEADER_LEN + residual_png.len());
     payload.extend_from_slice(&[VERSION_MAJOR, VERSION_MINOR, MODEL_AFFINE_KW, flags]);
-    payload.extend_from_slice(&crc32fast::hash(&fallback.data).to_be_bytes());
+    payload.extend_from_slice(&fallback_crc(fallback).to_be_bytes());
     payload.extend_from_slice(&residual_png);
 
     write_with_chunk(
@@ -188,7 +188,7 @@ fn parse_payload(payload: &[u8], fallback: &RgbaImage) -> Result<VitralImage, Vi
         return Err(VitralStatus::Unsupported(format!("model {model}")));
     }
     let stored_crc = u32::from_be_bytes(payload[4..8].try_into().unwrap());
-    if crc32fast::hash(&fallback.data) != stored_crc {
+    if fallback_crc(fallback) != stored_crc {
         return Err(VitralStatus::FallbackMismatch);
     }
     let residual_height = fallback
@@ -227,6 +227,26 @@ fn parse_payload(payload: &[u8], fallback: &RgbaImage) -> Result<VitralImage, Vi
         white,
         native: fallback.clone(),
     })
+}
+
+/// The fallback CRC (SPEC §4.4): CRC-32 of the main image as RGBA8, with
+/// every fully transparent pixel counted as (0, 0, 0, 0).
+///
+/// The colour of a pixel with alpha 0 is invisible and plays no part in K and
+/// W, and optimisers such as `oxipng -a` or `pngcrush -blacken` rewrite it.
+/// Leaving it out keeps the Vitral data valid after such a cleanup.
+fn fallback_crc(img: &RgbaImage) -> u32 {
+    let mut hasher = crc32fast::Hasher::new();
+    let row_len = img.width as usize * 4;
+    let mut row = Vec::with_capacity(row_len);
+    for src in img.data.chunks(row_len.max(1)) {
+        row.clear();
+        for px in src.as_chunks::<4>().0 {
+            row.extend_from_slice(if px[3] == 0 { &[0; 4] } else { px });
+        }
+        hasher.update(&row);
+    }
+    hasher.finalize()
 }
 
 /// Interprets a plain RGBA image as a Vitral image with normal blending.
@@ -345,6 +365,44 @@ mod tests {
         assert!(decoded.vitral.is_none());
     }
 
+    /// Optimisers may rewrite the colour of fully transparent pixels; that
+    /// colour is invisible, so the Vitral data must survive it.
+    #[test]
+    fn colour_of_transparent_pixels_is_ignored() {
+        let mut native = RgbaImage::filled(16, 16, [200, 30, 90, 255]);
+        for px in native.data.chunks_mut(4).step_by(3) {
+            px.copy_from_slice(&[12, 34, 56, 0]);
+        }
+        let img = sample().with_native(native).unwrap();
+        let bytes = encode(&img).unwrap();
+        let mut main = read_rgba8(&bytes).unwrap();
+        for px in main.data.chunks_mut(4).filter(|px| px[3] == 0) {
+            px.copy_from_slice(&[0, 0, 0, 0]);
+        }
+        let payload: Vec<u8> = chunks(&bytes)
+            .find(|c| c.0 == CHUNK_TYPE)
+            .unwrap()
+            .1
+            .to_vec();
+        let cleaned =
+            write_with_chunk(&main, Some((png::chunk::ChunkType(CHUNK_TYPE), &payload))).unwrap();
+        let decoded = decode(&cleaned).unwrap();
+        assert_eq!(decoded.status, VitralStatus::Ok);
+        let vitral = decoded.vitral.unwrap();
+        assert_eq!((vitral.black, vitral.white), (img.black, img.white));
+    }
+
+    #[test]
+    fn fallback_crc_ignores_only_fully_transparent_colour() {
+        let a = RgbaImage::filled(2, 1, [9, 8, 7, 0]);
+        let b = RgbaImage::filled(2, 1, [0, 0, 0, 0]);
+        assert_eq!(fallback_crc(&a), fallback_crc(&b));
+        assert_eq!(fallback_crc(&b), crc32fast::hash(&b.data));
+        let c = RgbaImage::filled(2, 1, [9, 8, 7, 1]);
+        let d = RgbaImage::filled(2, 1, [0, 0, 0, 1]);
+        assert_ne!(fallback_crc(&c), fallback_crc(&d));
+    }
+
     #[test]
     fn damaged_chunk_is_detected() {
         let bytes = encode(&sample()).unwrap();
@@ -405,7 +463,7 @@ mod tests {
         let fallback = img.native.clone();
         // A residual that claims to be far larger than the image.
         let mut payload = vec![VERSION_MAJOR, VERSION_MINOR, MODEL_AFFINE_KW, 0];
-        payload.extend_from_slice(&crc32fast::hash(&fallback.data).to_be_bytes());
+        payload.extend_from_slice(&fallback_crc(&fallback).to_be_bytes());
         payload.extend_from_slice(&write_rgb8(1, 1, &[0, 0, 0]).unwrap());
         let mut big = payload.clone();
         // Patch the embedded IHDR width/height (bytes 16..24 of the PNG).
