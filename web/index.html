@@ -249,7 +249,6 @@ header.hero {
 #samples button[data-id="neon"] { --sw: #141416 url(samples/neon.vitral.png) center / contain no-repeat; }
 #samples button[data-id="postmark"] { --sw: #fff url(samples/postmark.vitral.png) center / contain no-repeat; }
 #samples button[data-id="stencil"] { --sw: #fff url(samples/stencil.vitral.png) center / contain no-repeat; }
-#samples button[data-id="stencil-bars"] { --sw: #fff url(samples/stencil-bars.vitral.png) center / contain no-repeat; }
 #samples button[data-id="own"] { --sw: repeating-conic-gradient(var(--check-a) 0 25%, var(--check-b) 0 50%) 0 0 / 8px 8px; }
 #backdrops button[data-id="pattern"] { --sw: url(samples/grid.svg) center / 100% 100%; }
 #backdrops button[data-id="text"] { --sw: repeating-linear-gradient(#f4f1e8 0 3px, #8f8a7e 3px 4px); }
@@ -315,7 +314,6 @@ figure { margin: 0; display: grid; gap: 0.6rem; min-width: 0; }
 .maker { display: grid; gap: 1.25rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 9.5rem), 1fr)); align-items: start; }
 .slot { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0.6rem; min-width: 0; }
 .slot label { font-weight: 600; font-size: var(--step--1); }
-.slot label .step { font: 500 0.72rem/1 var(--mono); color: var(--accent); margin-right: 0.4rem; }
 .slot input { font: inherit; font-size: 0.75rem; max-width: 100%; color: var(--muted); }
 .slot input::file-selector-button {
   font: 600 0.75rem/1 var(--body); margin-right: 0.6rem; padding: 0.5rem 0.75rem; cursor: pointer;
@@ -323,6 +321,14 @@ figure { margin: 0; display: grid; gap: 0.6rem; min-width: 0; }
 }
 .slot img { width: 100%; height: auto; display: block; border: 1px solid var(--line); }
 .slot .optional { font-weight: 400; color: var(--muted); }
+.steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 1px; background: var(--line); border: 1px solid var(--line);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr)); }
+.steps li { display: grid; gap: 0.35rem; align-content: start; padding: 1rem 1.1rem 1.2rem; background: var(--bg); }
+.steps .step { font: 500 0.72rem/1 var(--mono); color: var(--accent); }
+.steps strong { font: 500 1.05rem/1.25 var(--display); letter-spacing: -0.01em; }
+.steps li > span:last-child { font-size: var(--step--1); color: var(--muted); }
+.ctas .hint { align-self: center; }
+h3.sub { font: 500 1.25rem/1.2 var(--display); letter-spacing: -0.015em; margin: 1rem 0 0; padding-top: 1.5rem; border-top: 1px solid var(--line); }
 #transparent-preview { background: repeating-conic-gradient(var(--check-a) 0 25%, var(--check-b) 0 50%) 0 0 / 14px 14px; }
 .result .stage { aspect-ratio: auto; display: grid; place-items: center; padding: 8%; border: 1.5px solid var(--strong-line); }
 .result .stage > div { width: 80%; }
@@ -485,25 +491,38 @@ footer a { color: var(--fg); }
   <section class="section split" id="make" aria-labelledby="make-title">
     <div class="head">
       <p class="eyebrow"><span class="num">02</span>Make one</p>
-      <h2 id="make-title">Export twice, from any tool</h2>
+      <h2 id="make-title">Export it from Figma</h2>
     </div>
     <div class="body">
       <div class="prose">
-        <p>You make a Vitral in your own design tool. Until the Figma plugin does it in one click, this page packs your exports into one file: export the artwork over black, over white and once with no background, and drop the three files here. Blend modes act on the background, so the black and white exports carry the blending; the one with no background is what software without Vitral will show. The example below is loaded with the exports of the image at the top of the page.</p>
+        <p>The Vitral plugin for Figma exports a layer as a <code>.vitral.png</code> in one click, blend modes included. It also places Vitral files back in Figma as layers that keep blending.</p>
+      </div>
+      <ol class="steps">
+        <li><span class="step">1</span><strong>Select a layer</strong><span>A frame, a group or a shape, with blend modes inside.</span></li>
+        <li><span class="step">2</span><strong>Press Export .vitral.png</strong><span>One file, still a PNG, with the blends kept.</span></li>
+        <li><span class="step">3</span><strong>Place it anywhere</strong><span>On a website with one script tag, or back in Figma.</span></li>
+      </ol>
+      <div class="ctas">
+        <a class="button primary" href="https://github.com/hugovalepereira/vitral-image-format/tree/main/figma">Get the Figma plugin</a>
+        <span class="hint">A first version, installed from the repository. Not on Figma Community yet.</span>
+      </div>
+      <h3 class="sub" id="other-tools">From another tool</h3>
+      <div class="prose">
+        <p>Any tool that exports PNG can make one. Export the artwork over a black background and over a white one, and drop both files here: how each pixel changes between the two is what records the blending. A third export with no background is optional. It sets the picture that software without Vitral shows; leave it out and Vitral works that picture out from the other two. The example below is loaded with the exports of the image at the top of the page.</p>
       </div>
       <div class="maker">
         <div class="slot">
-          <label for="black-input"><span class="step">1</span>Artwork over black</label>
+          <label for="black-input">Over black</label>
           <input type="file" id="black-input" accept="image/png">
           <img id="black-preview" alt="Artwork exported over a black background">
         </div>
         <div class="slot">
-          <label for="white-input"><span class="step">2</span>Artwork over white</label>
+          <label for="white-input">Over white</label>
           <input type="file" id="white-input" accept="image/png">
           <img id="white-preview" alt="Artwork exported over a white background">
         </div>
         <div class="slot">
-          <label for="transparent-input"><span class="step">3</span>Artwork over transparency <span class="optional">(optional)</span></label>
+          <label for="transparent-input">No background <span class="optional">(optional)</span></label>
           <input type="file" id="transparent-input" accept="image/png">
           <img id="transparent-preview" alt="Artwork exported over a transparent background">
         </div>
@@ -532,7 +551,7 @@ footer a { color: var(--fg); }
 &lt;script type="module" src="vitral.js"&gt;&lt;/script&gt;</code></pre>
       </div>
       <div class="prose">
-        <p>With the script, every <code>&lt;img&gt;</code> whose file ends in <code>.vitral.png</code> blends with what is behind it on the page. It works on websites with the script today, and in Figma with the plugin next. Everywhere else it shows the PNG you would export today, never worse.</p>
+        <p>With the script, every <code>&lt;img&gt;</code> whose file ends in <code>.vitral.png</code> blends with what is behind it on the page. It works on websites with the script and in Figma with the plugin. Everywhere else it shows the PNG you would export today, never worse.</p>
       </div>
     </div>
   </section>
@@ -634,7 +653,8 @@ function step(t) {
 }
 
 const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
-let t = 0;
+// Start on a beat that puts colour, not black, under the Vitral as it lands.
+let t = 3;
 let timer = null;
 for (const cell of cells) dress(cell, t);
 const play = () => { timer ??= setInterval(() => step(++t), 1400); };
@@ -680,9 +700,7 @@ const SAMPLES = [
     note: 'A strip of 35 mm colour negative: frames that invert under an orange base in multiply, with the numbers along its edges. As a plain PNG the frames are flat orange; with Vitral they show the backdrop as a negative.' },
   { id: 'halftone', label: 'Halftone', w: 300, h: 300,
     note: 'A disc of halftone dots in multiply. As a plain PNG it is a pink pattern on top; with Vitral it prints onto the backdrop.' },
-  { id: 'stencil', label: 'Arrow', w: 320, h: 210,
-    note: 'An arrow sprayed through a stencil in dark ink, in multiply. As a plain PNG it is a black sticker; with Vitral the paint soaks into the backdrop.' },
-  { id: 'stencil-bars', label: 'Bars', w: 320, h: 210,
+  { id: 'stencil', label: 'Stencil', w: 320, h: 210,
     note: 'Three bars sprayed in orange through a stencil, in multiply. As a plain PNG they are flat orange shapes; with Vitral the backdrop shows through the paint.' },
   { id: 'neon', label: 'Neon', w: 400, h: 230,
     note: 'A neon circle and triangle in screen: white-hot tubes and their glow. As a plain PNG the glow is a coloured haze; with Vitral it lights up the backdrop. Try it in dark mode.' },

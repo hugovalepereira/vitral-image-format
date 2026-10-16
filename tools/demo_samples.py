@@ -338,11 +338,9 @@ def halftone():
     return a
 
 
-def spray(a, d, colour, seed, bridges=None):
+def spray(a, d, colour, seed):
     """Paint sprayed through a stencil cut to the shape d, with overspray."""
     body = smooth(d, 3)
-    if bridges is not None:
-        body = body * smooth(bridges, 2)
     even = 0.78 + 0.22 * blotches(a.w, a.h, 40, seed)
     grain = 0.88 + 0.12 * blotches(a.w, a.h, 2.5, seed + 1)
     blur = Image.fromarray((body * 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(16))
@@ -352,17 +350,6 @@ def spray(a, d, colour, seed, bridges=None):
 
 
 def stencil():
-    """An arrow sprayed through a stencil in dark ink, in multiply."""
-    a = Art(640, 420)
-    shaft = rect(a.x, a.y, 70, 168, 352, 252)
-    u, v = a.x - 352, np.abs(a.y - 210)
-    head = np.minimum(u + 4, (130 * (1 - u / 212) - v) * 0.85)
-    bridges = np.minimum(np.abs(a.x - 214), np.abs(a.x - 356)) - 6
-    spray(a, np.maximum(shaft, head), (26, 26, 30), 4, bridges)
-    return a
-
-
-def stencil_bars():
     """Three bars sprayed in orange through a stencil, a little crooked."""
     a = Art(640, 420)
     d = np.maximum.reduce([box(a.x, a.y, 320, cy, 240, 34, -3) for cy in (110, 210, 310)])
@@ -446,7 +433,6 @@ SAMPLES = {
     "film": film,
     "halftone": halftone,
     "stencil": stencil,
-    "stencil-bars": stencil_bars,
     "neon": neon,
     "blinds": blinds,
     "tape": tape,
