@@ -241,6 +241,7 @@ header.hero {
 #samples button[data-id="overprint"] { --sw: #fff url(samples/overprint.vitral.png) center / contain no-repeat; }
 #samples button[data-id="highlighter"] { --sw: #fff url(samples/highlighter.vitral.png) center / contain no-repeat; }
 #samples button[data-id="sunglasses"] { --sw: #fff url(samples/sunglasses.vitral.png) center / contain no-repeat; }
+#samples button[data-id="glasses-3d"] { --sw: #fff url(samples/glasses-3d.vitral.png) center / contain no-repeat; }
 #samples button[data-id="film"] { --sw: #e8e5dd url(samples/film.vitral.png) center / contain no-repeat; }
 #samples button[data-id="blinds"] { --sw: #2a2a2e url(samples/blinds.vitral.png) center / cover no-repeat; }
 #samples button[data-id="tape"] { --sw: #fff url(samples/tape.vitral.png) center / contain no-repeat; }
@@ -248,6 +249,7 @@ header.hero {
 #samples button[data-id="neon"] { --sw: #141416 url(samples/neon.vitral.png) center / contain no-repeat; }
 #samples button[data-id="postmark"] { --sw: #fff url(samples/postmark.vitral.png) center / contain no-repeat; }
 #samples button[data-id="stencil"] { --sw: #fff url(samples/stencil.vitral.png) center / contain no-repeat; }
+#samples button[data-id="stencil-bars"] { --sw: #fff url(samples/stencil-bars.vitral.png) center / contain no-repeat; }
 #samples button[data-id="own"] { --sw: repeating-conic-gradient(var(--check-a) 0 25%, var(--check-b) 0 50%) 0 0 / 8px 8px; }
 #backdrops button[data-id="pattern"] { --sw: url(samples/grid.svg) center / 100% 100%; }
 #backdrops button[data-id="text"] { --sw: repeating-linear-gradient(#f4f1e8 0 3px, #8f8a7e 3px 4px); }
@@ -435,12 +437,12 @@ footer a { color: var(--fg); }
     <figure class="show">
       <div class="scene" id="scene">
         <div class="beats" id="beats" aria-hidden="true"></div>
-        <div class="drop a"><img src="samples/ring.png" alt="The artwork as an ordinary PNG: a striped disc crossed by a magenta bar, both only a pale, half-transparent veil over the shapes"></div>
-        <div class="drop b"><img id="hero-img" src="samples/ring.vitral.png" alt="The same artwork as a Vitral: its bands invert the shapes passing underneath and its magenta bar darkens them"></div>
-        <div class="file-tag a" aria-hidden="true">ring.png</div>
-        <div class="file-tag b" aria-hidden="true">ring.vitral.png</div>
-        <div class="file-chip a" aria-hidden="true"><span>ring.png</span></div>
-        <div class="file-chip b" aria-hidden="true"><span>ring.vitral.png</span></div>
+        <div class="drop a"><img src="samples/capsule.png" alt="The artwork as an ordinary PNG: a tilted capsule with bands across its top and a magenta disc and green square in its lower end, all only a pale, half-transparent veil over the shapes"></div>
+        <div class="drop b"><img id="hero-img" src="samples/capsule.vitral.png" alt="The same artwork as a Vitral: its bands invert the shapes passing underneath, and its magenta disc and green square darken them like ink"></div>
+        <div class="file-tag a" aria-hidden="true">capsule.png</div>
+        <div class="file-tag b" aria-hidden="true">capsule.vitral.png</div>
+        <div class="file-chip a" aria-hidden="true"><span>capsule.png</span></div>
+        <div class="file-chip b" aria-hidden="true"><span>capsule.vitral.png</span></div>
       </div>
       <figcaption>
         <span class="tools">
@@ -526,7 +528,7 @@ footer a { color: var(--fg); }
       <blockquote class="handoff">“It's a PNG. Add one script tag and it blends like it did in Figma.”<span>What to tell your developer.</span></blockquote>
       <div class="code">
         <div class="bar"><span class="eyebrow">HTML</span><button type="button" id="copy-snippet">Copy</button></div>
-        <pre id="snippet"><code>&lt;img src="ring.vitral.png" alt="Ring"&gt;
+        <pre id="snippet"><code>&lt;img src="capsule.vitral.png" alt="Capsule"&gt;
 &lt;script type="module" src="vitral.js"&gt;&lt;/script&gt;</code></pre>
       </div>
       <div class="prose">
@@ -671,15 +673,19 @@ const SAMPLES = [
   { id: 'highlighter', label: 'Highlighter', w: 360, h: 220,
     note: 'Highlighter strokes in multiply. As a plain PNG they paint over the text; with Vitral the text stays readable under the ink.' },
   { id: 'sunglasses', label: 'Sunglasses', w: 360, h: 150,
-    note: 'Sunglasses with bottle-green lenses in multiply and a glint of light in screen. As a plain PNG the lenses are flat green; with Vitral you see through them.' },
-  { id: 'film', label: 'Negative', w: 380, h: 210,
-    note: 'A torn strip of colour negative: frames that invert under an orange base in multiply, scratches in screen and a grease-pencil loop. As a plain PNG the frames are flat orange; with Vitral they show the backdrop as a negative.' },
+    note: 'Sunglasses with bottle-green lenses in multiply and a glint of light in screen. As a plain PNG the lenses are a thin green veil; with Vitral they darken what you see through them, as tinted glass does.' },
+  { id: 'glasses-3d', label: '3D glasses', w: 360, h: 150,
+    note: '3D glasses with a red and a cyan lens in multiply. As a plain PNG the lenses are a pale wash of colour; with Vitral each one filters the backdrop like coloured film.' },
+  { id: 'film', label: 'Negative', w: 400, h: 220,
+    note: 'A strip of 35 mm colour negative: frames that invert under an orange base in multiply, with the numbers along its edges. As a plain PNG the frames are flat orange; with Vitral they show the backdrop as a negative.' },
   { id: 'halftone', label: 'Halftone', w: 300, h: 300,
     note: 'A disc of halftone dots in multiply. As a plain PNG it is a pink pattern on top; with Vitral it prints onto the backdrop.' },
-  { id: 'stencil', label: 'Stencil', w: 320, h: 210,
-    note: 'An arrow sprayed through a stencil, in multiply. As a plain PNG it is a red sticker; with Vitral the paint soaks into the backdrop.' },
+  { id: 'stencil', label: 'Arrow', w: 320, h: 210,
+    note: 'An arrow sprayed through a stencil in dark ink, in multiply. As a plain PNG it is a black sticker; with Vitral the paint soaks into the backdrop.' },
+  { id: 'stencil-bars', label: 'Bars', w: 320, h: 210,
+    note: 'Three bars sprayed in orange through a stencil, in multiply. As a plain PNG they are flat orange shapes; with Vitral the backdrop shows through the paint.' },
   { id: 'neon', label: 'Neon', w: 400, h: 230,
-    note: 'A neon sign in screen: white-hot tubes and their glow. As a plain PNG the glow is a coloured haze; with Vitral it lights up the backdrop. Try it in dark mode.' },
+    note: 'A neon circle and triangle in screen: white-hot tubes and their glow. As a plain PNG the glow is a coloured haze; with Vitral it lights up the backdrop. Try it in dark mode.' },
   { id: 'blinds', label: 'Blinds', w: 380, h: 260,
     note: 'Afternoon sun through blinds, cast on the wall in screen. As a plain PNG the light can only fog the backdrop; with Vitral it brightens it.' },
   { id: 'tape', label: 'Tape', w: 340, h: 240,
@@ -987,11 +993,11 @@ for (const which of ['black', 'white', 'transparent']) {
 }
 
 render();
-const source = (which) => `samples/sources/ring-over-${which}.png`;
+const source = (which) => `samples/sources/capsule-over-${which}.png`;
 const kinds = ['black', 'white', 'transparent'];
 const blobs = await Promise.all(kinds.map(async (k) => (await fetch(source(k))).blob()));
 kinds.forEach((k, i) => {
-  inputs[k] = { blob: blobs[i], name: `ring-over-${k}.png` };
+  inputs[k] = { blob: blobs[i], name: `capsule-over-${k}.png` };
   document.getElementById(`${k}-preview`).src = URL.createObjectURL(blobs[i]);
 });
 await runEncoder();
