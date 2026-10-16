@@ -2,10 +2,10 @@
 
 **Blend modes that survive export.**
 
-Vitral is an experimental proposal for an image format that carries its own
-blend modes. What multiplies in Figma, Illustrator or Photoshop keeps
-multiplying on the website, without anyone rebuilding it: multiply, screen and
-their relatives, mixed freely per pixel in one PNG.
+Vitral is a proposal for an image format that carries its own blend modes.
+What multiplies in Figma, Illustrator or Photoshop keeps multiplying on the
+website, without anyone rebuilding it: multiply, screen and their relatives,
+mixed freely per pixel in one PNG.
 
 PNG has transparency. Vitral has light and filter.
 
@@ -22,9 +22,9 @@ today.
 | ![Two multiply shapes exported from Figma](examples/renders/figma-multiply.png) |
 | ![Screen, multiply and 50% normal shapes exported from Figma](examples/renders/figma-mixed.png) |
 
-> Status: **experimental proposal, draft 0.1** (October 2026). The format, the
-> Rust reference implementation, the command-line tool and the web polyfill
-> work; everything may still change. This project was first published as "GFI
+> Status: **proposal, draft 0.1** (October 2026). The format, the Rust
+> reference implementation, the command-line tool and the web polyfill work;
+> everything may still change. This project was first published as "GFI
 > (Graphic Function Image)".
 
 ## Why
@@ -58,10 +58,10 @@ where the image is used.
   isolates it.
 * **Files are larger**: 2.5 to 4.7 times the plain PNG in the samples.
 
-Growing the format past these limits is the point of the experiment (see the
+Growing the format past these limits is the point of the proposal (see the
 [roadmap](#roadmap)).
 
-## An experiment, open to help
+## A proposal, open to help
 
 Vitral is published as a proposal so that people interested in the problem can
 try it, break it and help improve it. Useful ways to help:

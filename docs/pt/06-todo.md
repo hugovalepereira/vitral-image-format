@@ -83,7 +83,7 @@ Já corrigido na mesma revisão:
   multiply?"**, quando o Vitral estiver pronto para ser experimentado por
   designers (idealmente com o plugin do Figma).
   - Uma resposta por tópico, a dizer que o autor é o próprio, que é uma
-    proposta experimental, que modos cobre (multiply, screen e companhia, não
+    proposta, que modos cobre (multiply, screen e companhia, não
     overlay nem soft light) e onde funciona (sites com o script, Figma com o
     plugin). Ligação para a demo e para as *issues*.
   - Vários tópicos estão fechados a respostas. Nesses, responder num tópico
