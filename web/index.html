@@ -157,12 +157,13 @@ header.hero {
 @media (prefers-reduced-motion: no-preference) {
   .beats .cell i { transition: transform 700ms cubic-bezier(0.2, 0.7, 0.2, 1), background-color 700ms; transition-delay: var(--delay, 0ms); }
 }
-/* The poster covers four by two squares of the 6 x 4 grid behind it. */
-.scene .drop { position: absolute; width: 66.6667%; left: 16.6667%; top: 25%; visibility: hidden; }
+/* The lens lies off the 6 x 4 grid behind it, so it reads as put on top.
+   40% wide and square: 60% of the scene's height. */
+.scene .drop { position: absolute; width: 40%; left: 46%; top: 9%; visibility: hidden; }
 .scene.landed .drop { visibility: visible; }
 .scene .drop img { display: block; width: 100%; height: auto; }
 .file-chip {
-  position: absolute; left: 16.6667%; top: 25%; width: 66.6667%; aspect-ratio: 2;
+  position: absolute; left: 46%; top: 9%; width: 40%; aspect-ratio: 1;
   display: grid; place-items: end start; padding: 0.6rem;
   font: 500 0.7rem/1 var(--mono); color: #141416;
   border: 1.5px dashed #141416; background: rgb(255 255 255 / 0.55);
@@ -184,7 +185,7 @@ header.hero {
 }
 /* Once dropped, the file keeps its name, like a selected layer. */
 .file-tag {
-  position: absolute; left: 16.6667%; bottom: 75%; margin-bottom: 0.35rem;
+  position: absolute; left: 46%; top: 9%; margin-top: -1.6rem;
   font: 500 0.68rem/1 var(--mono); color: #fff; background: #141416; padding: 0.3rem 0.45rem;
   visibility: hidden;
 }
@@ -232,10 +233,13 @@ header.hero {
 .segmented button.open { color: var(--accent); border-style: dashed; background: transparent; }
 .segmented button.open::before { content: "+"; background: none; box-shadow: none; font: 500 1rem/1.25rem var(--mono); text-align: center; }
 /* Samples show their own fallback image; backdrops a miniature of themselves. */
-#samples button[data-id="poster"] { --sw: #e8e5dd url(samples/poster.vitral.png) center / contain no-repeat; }
-#samples button[data-id="mark"] { --sw: #e8e5dd url(samples/mark.vitral.png) center / contain no-repeat; }
 #samples button[data-id="overprint"] { --sw: #fff url(samples/overprint.vitral.png) center / contain no-repeat; }
-#samples button[data-id="bars"] { --sw: #141416 url(samples/bars.vitral.png) center / contain no-repeat; }
+#samples button[data-id="highlighter"] { --sw: #fff url(samples/highlighter.vitral.png) center / contain no-repeat; }
+#samples button[data-id="sunglasses"] { --sw: #fff url(samples/sunglasses.vitral.png) center / contain no-repeat; }
+#samples button[data-id="film"] { --sw: #e8e5dd url(samples/film.vitral.png) center / contain no-repeat; }
+#samples button[data-id="blinds"] { --sw: #2a2a2e url(samples/blinds.vitral.png) center / cover no-repeat; }
+#samples button[data-id="tape"] { --sw: #fff url(samples/tape.vitral.png) center / contain no-repeat; }
+#samples button[data-id="cup"] { --sw: #fff url(samples/cup.vitral.png) center / contain no-repeat; }
 #samples button[data-id="own"] { --sw: repeating-conic-gradient(var(--check-a) 0 25%, var(--check-b) 0 50%) 0 0 / 8px 8px; }
 #backdrops button[data-id="text"] { --sw: repeating-linear-gradient(#f4f1e8 0 3px, #8f8a7e 3px 4px); }
 #backdrops button[data-id="blocks"] { --sw: linear-gradient(90deg, #e8b931 0 40%, #2f4bd8 40% 100%); }
@@ -436,9 +440,9 @@ footer a { color: var(--fg); }
     <figure class="show">
       <div class="scene" id="scene">
         <div class="beats" id="beats" aria-hidden="true"></div>
-        <div class="drop"><img id="hero-img" src="samples/poster.vitral.png" alt="A poster of a disc that inverts and two shapes in multiply, over a page of changing shapes"></div>
-        <div class="file-tag" id="hero-tag" aria-hidden="true">poster.vitral.png</div>
-        <div class="file-chip" aria-hidden="true"><span>poster.vitral.png</span></div>
+        <div class="drop"><img id="hero-img" src="samples/lens.vitral.png" alt="A disc of fine bands that invert and a blue disc in multiply, casting a soft shadow on a page of changing shapes"></div>
+        <div class="file-tag" id="hero-tag" aria-hidden="true">lens.vitral.png</div>
+        <div class="file-chip" aria-hidden="true"><span>lens.vitral.png</span></div>
       </div>
       <figcaption>
         <span class="tools">
@@ -486,7 +490,7 @@ footer a { color: var(--fg); }
     </div>
     <div class="body">
       <div class="prose">
-        <p>You make a Vitral in your own design tool. Until the Figma plugin does it in one click, this page packs your exports into one file: export the artwork over black, over white and once with no background, and drop the three files here. Blend modes act on the background, so the black and white exports carry the blending; the one with no background is what software without Vitral will show. The example below is loaded with the exports of the poster at the top of the page.</p>
+        <p>You make a Vitral in your own design tool. Until the Figma plugin does it in one click, this page packs your exports into one file: export the artwork over black, over white and once with no background, and drop the three files here. Blend modes act on the background, so the black and white exports carry the blending; the one with no background is what software without Vitral will show. The example below is loaded with the exports of the image at the top of the page.</p>
       </div>
       <div class="maker">
         <div class="slot">
@@ -525,7 +529,7 @@ footer a { color: var(--fg); }
       <blockquote class="handoff">“It's a PNG. Add one script tag and it blends like it did in Figma.”<span>What to tell your developer.</span></blockquote>
       <div class="code">
         <div class="bar"><span class="eyebrow">HTML</span><button type="button" id="copy-snippet">Copy</button></div>
-        <pre id="snippet"><code>&lt;img src="poster.vitral.png" alt="Poster"&gt;
+        <pre id="snippet"><code>&lt;img src="lens.vitral.png" alt="Lens"&gt;
 &lt;script type="module" src="vitral.js"&gt;&lt;/script&gt;</code></pre>
       </div>
       <div class="prose">
@@ -662,7 +666,7 @@ const plain = document.getElementById('hero-png');
 plain.addEventListener('click', () => {
   const on = plain.getAttribute('aria-pressed') !== 'true';
   plain.setAttribute('aria-pressed', String(on));
-  document.getElementById('hero-tag').textContent = on ? 'poster.vitral.png, as a plain PNG' : 'poster.vitral.png';
+  document.getElementById('hero-tag').textContent = on ? 'lens.vitral.png, as a plain PNG' : 'lens.vitral.png';
   if (on) downgrade(heroImg); else upgrade(heroImg);
 });
 </script>
@@ -672,14 +676,20 @@ import { decode, encode, toCanvas } from './vitral.js';
 
 const STAGE_W = 640;
 const SAMPLES = [
-  { id: 'poster', label: 'Poster', w: 400, h: 200,
-    note: 'The poster from the top of the page: a disc that inverts, a bar and a half disc in multiply. As a plain PNG it is a flat white disc and two flat colours.' },
-  { id: 'mark', label: 'Logo', w: 300, h: 300,
-    note: 'A logo made of a square of ink in multiply and a disc that inverts. As a plain PNG it is a sticker; with Vitral it is printed on the backdrop.' },
   { id: 'overprint', label: 'Overprint', w: 340, h: 320,
     note: 'Three discs of process ink in multiply, overprinted like a risograph. As a plain PNG they hide the backdrop; with Vitral it shows through every ink.' },
-  { id: 'bars', label: 'Bars', w: 360, h: 240,
-    note: 'Bars that invert what they cross, over a band of light in screen. As a plain PNG they are white stripes.' },
+  { id: 'highlighter', label: 'Highlighter', w: 360, h: 220,
+    note: 'Highlighter strokes in multiply. As a plain PNG they paint over the text; with Vitral the text stays readable under the ink.' },
+  { id: 'sunglasses', label: 'Sunglasses', w: 360, h: 150,
+    note: 'Tinted lenses in multiply in a black frame. As a plain PNG the lenses are flat brown; with Vitral you see through them.' },
+  { id: 'film', label: 'Negative', w: 380, h: 180,
+    note: 'A strip of colour negative: an orange base in multiply and frames that invert. As a plain PNG the frames are blank white; with Vitral they show the backdrop as a negative.' },
+  { id: 'blinds', label: 'Blinds', w: 380, h: 260,
+    note: 'Sunlight through blinds, in screen. As a plain PNG the light can only fog the backdrop; with Vitral it brightens it. Try it in dark mode.' },
+  { id: 'tape', label: 'Tape', w: 340, h: 240,
+    note: 'Two strips of striped paper tape in multiply. As a plain PNG they are opaque stickers; with Vitral the backdrop shows through the paper.' },
+  { id: 'cup', label: 'Coffee ring', w: 300, h: 300,
+    note: 'The ring a cup leaves on paper, in multiply. As a plain PNG it is a brown outline; with Vitral it stains whatever it lands on.' },
 ];
 const BACKDROPS = [
   { id: 'pattern', label: 'Colour grid' },
@@ -984,11 +994,11 @@ for (const which of ['black', 'white', 'transparent']) {
 }
 
 render();
-const source = (which) => `samples/sources/poster-over-${which}.png`;
+const source = (which) => `samples/sources/lens-over-${which}.png`;
 const kinds = ['black', 'white', 'transparent'];
 const blobs = await Promise.all(kinds.map(async (k) => (await fetch(source(k))).blob()));
 kinds.forEach((k, i) => {
-  inputs[k] = { blob: blobs[i], name: `poster-over-${k}.png` };
+  inputs[k] = { blob: blobs[i], name: `lens-over-${k}.png` };
   document.getElementById(`${k}-preview`).src = URL.createObjectURL(blobs[i]);
 });
 await runEncoder();
