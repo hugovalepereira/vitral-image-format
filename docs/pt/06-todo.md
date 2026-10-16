@@ -14,6 +14,17 @@ PR #1 (out/2026). Os itens maiores da fase 2.5 continuam no
   - Correção: o CRC trata os pixels com alfa 0 como (0, 0, 0, 0)
     (SPEC §4.4).
 
+- [ ] **Difference, darken e lighten exatos** (pedido do autor, out/2026, a
+  fazer noutro thread). Na v0.1 cada pixel reage ao fundo em linha reta entre
+  K e W, e estes modos dobram: o difference (|fundo − cor|) dobra quando o
+  fundo é igual à cor.
+  - Caso medido pelo autor no plugin do Figma: um quadrado em difference com
+    RGB 248 193 91, sobre RGB 245 245 245, dá 17 67 161 com o Vitral e
+    3 52 154 no Figma. Sobre preto e branco é exato.
+  - Caminho: o "nível 2" da v2 ([plano](04-plano.md), fase 5), que guarda essas
+    camadas com o seu próprio modo. O difference é dos modos mais usados, por
+    isso vale a pena dar-lhe prioridade dentro da v2.
+
 ## Cor
 
 - [x] **Verificar o espaço de cor em todos os comandos** (decisão D13). Todos

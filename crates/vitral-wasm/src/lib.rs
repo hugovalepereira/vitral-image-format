@@ -123,6 +123,95 @@ pub fn decode_planes(bytes: &[u8]) -> Result<Planes, JsError> {
     })
 }
 
+/// The three blend-mode layers of a file as PNG files, for design tools that
+/// place them as image layers (difference → screen → multiply) and blend in
+/// their document's colour space, as Figma does.
+#[wasm_bindgen]
+pub struct LayerPngs {
+    width: u32,
+    height: u32,
+    status: String,
+    uses_difference: bool,
+    difference: Vec<u8>,
+    screen: Vec<u8>,
+    multiply: Vec<u8>,
+}
+
+#[wasm_bindgen]
+impl LayerPngs {
+    #[wasm_bindgen(getter)]
+    pub fn width(&self) -> u32 {
+        self.width
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn height(&self) -> u32 {
+        self.height
+    }
+
+    /// Same codes as `Planes.status`. Anything but `"ok"` means: place the
+    /// file as a plain image; the layers are then empty.
+    #[wasm_bindgen(getter)]
+    pub fn status(&self) -> String {
+        self.status.clone()
+    }
+
+    /// False when the bottom (difference) layer would be black everywhere and
+    /// can be left out.
+    #[wasm_bindgen(getter, js_name = usesDifference)]
+    pub fn uses_difference(&self) -> bool {
+        self.uses_difference
+    }
+
+    pub fn difference(&self) -> Vec<u8> {
+        self.difference.clone()
+    }
+
+    pub fn screen(&self) -> Vec<u8> {
+        self.screen.clone()
+    }
+
+    pub fn multiply(&self) -> Vec<u8> {
+        self.multiply.clone()
+    }
+}
+
+/// Decodes a file into its three layers as PNG files in `colour_space`
+/// (`"srgb"`, the default, or `"display-p3"`), tagged with it. Converting a
+/// file to another space than its own is exact over black and white and close
+/// elsewhere (SPEC §7.2).
+#[wasm_bindgen(js_name = decodeLayerPngs)]
+pub fn decode_layer_pngs(bytes: &[u8], colour_space: Option<String>) -> Result<LayerPngs, JsError> {
+    let space = parse_space(colour_space)?;
+    let decoded = vitral::decode(bytes).map_err(js_err)?;
+    let status = status_code(&decoded.status);
+    let Some(image) = decoded.vitral.filter(|_| status == "ok") else {
+        return Ok(LayerPngs {
+            width: decoded.fallback.width,
+            height: decoded.fallback.height,
+            status,
+            uses_difference: false,
+            difference: Vec::new(),
+            screen: Vec::new(),
+            multiply: Vec::new(),
+        });
+    };
+    let planes = image.to_colour_space(space).render_planes();
+    let png = |data: Vec<u8>| {
+        let layer = RgbaImage::new(planes.width, planes.height, data).map_err(js_err)?;
+        vitral::write_rgba8_in(&layer, space).map_err(js_err)
+    };
+    Ok(LayerPngs {
+        width: planes.width,
+        height: planes.height,
+        status,
+        uses_difference: planes.uses_difference,
+        difference: png(planes.difference.clone())?,
+        screen: png(planes.screen.clone())?,
+        multiply: png(planes.multiply.clone())?,
+    })
+}
+
 fn parse_space(name: Option<String>) -> Result<RgbSpace, JsError> {
     match name.as_deref() {
         None | Some("srgb") => Ok(RgbSpace::Srgb),

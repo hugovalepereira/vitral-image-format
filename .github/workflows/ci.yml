@@ -50,3 +50,17 @@ jobs:
         run: node web/test/demo.mjs
         env:
           VITRAL_BROWSERS: chromium,firefox,webkit
+      # The committed ui.html must come from the current UI source; the test
+      # then runs on a fresh build, which is also what the artifact holds.
+      - name: Figma plugin
+        run: |
+          ./figma/build.sh --check
+          ./figma/build.sh
+          node figma/test/plugin.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: vitral-figma-plugin
+          path: |
+            figma/manifest.json
+            figma/code.js
+            figma/ui.html
