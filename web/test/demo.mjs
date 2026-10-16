@@ -119,7 +119,7 @@ for (const engine of engines) {
 
     await page.waitForSelector('#try-above:not([hidden])', { timeout: 15000 });
     await page.click('#try-above');
-    await noteStarting('lens.vitral.png, 640 × 640 px.');
+    await noteStarting('ring.vitral.png, 640 × 640 px.');
     await settled('ok');
     check('encoder result opens in the stages', true);
 

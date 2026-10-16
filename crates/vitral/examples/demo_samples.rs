@@ -5,10 +5,11 @@
 //! Each image is authored as a stack of blend-mode layers, like in a design
 //! tool, and flattened into a `.vitral.png`. Only modes Vitral 0.1 keeps
 //! exactly are used: normal, multiply, screen and inversion (difference with
-//! white). Images are drawn at twice the size the page shows them. The lens,
+//! white). Images are drawn at twice the size the page shows them. The ring,
 //! which opens the page, is also written as the three exports a designer
 //! would make (over black, over white and over transparency): the demo's
-//! encoder section starts from them.
+//! encoder section starts from them, and the page shows the transparent one
+//! as the plain PNG next to the Vitral.
 
 use std::f32::consts::PI;
 use std::fs;
@@ -24,29 +25,34 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../web/samples");
     fs::create_dir_all(root.join("sources"))?;
 
-    let images: [(&str, VitralImage); 8] = [
-        ("lens", lens()),
+    let images: [(&str, VitralImage); 12] = [
+        ("ring", ring()),
+        ("overprint", overprint()),
         ("highlighter", highlighter()),
         ("sunglasses", sunglasses()),
         ("film", film()),
         ("blinds", blinds()),
         ("tape", tape()),
         ("cup", cup()),
-        ("overprint", overprint()),
+        ("set-square", set_square()),
+        ("halftone", halftone()),
+        ("neon", neon()),
+        ("postmark", postmark()),
     ];
     for (name, img) in images {
-        if name == "lens" {
+        if name == "ring" {
             let (w, h) = (img.width, img.height);
+            fs::write(root.join("ring.png"), vitral::write_rgba8(&img.native)?)?;
             fs::write(
-                root.join("sources/lens-over-black.png"),
+                root.join("sources/ring-over-black.png"),
                 vitral::write_rgb8(w, h, &img.black)?,
             )?;
             fs::write(
-                root.join("sources/lens-over-white.png"),
+                root.join("sources/ring-over-white.png"),
                 vitral::write_rgb8(w, h, &img.white)?,
             )?;
             fs::write(
-                root.join("sources/lens-over-transparent.png"),
+                root.join("sources/ring-over-transparent.png"),
                 vitral::write_rgba8(&img.native)?,
             )?;
         }
@@ -64,32 +70,35 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 // ---------------------------------------------------------------- samples ---
 
-/// The object dropped on the page at the top: a disc of fine bands that
-/// invert, a smaller disc of ink in multiply, and the soft shadow both cast,
-/// also in multiply, so it reads as lying on top of the page.
-fn lens() -> VitralImage {
+/// The object dropped on the page at the top: a letter O of horizontal bands
+/// that invert, thin at the top and thick at the bottom, a disc of ink in
+/// multiply caught in its counter, and the soft shadow the two cast, also in
+/// multiply, so it reads as lying on top of the page.
+fn ring() -> VitralImage {
     let (w, h) = (640, 640);
-    let (bx, by, br) = (290.0, 280.0, 230.0);
-    let (dx, dy, dr) = (470.0, 455.0, 120.0);
+    let o = |x: f32, y: f32| {
+        let outer = circle(x, y, 300.0, 300.0, 250.0);
+        let counter = circle(x, y, 336.0, 304.0, 118.0);
+        outer.min(-counter)
+    };
+    let (dx, dy, dr) = (410.0, 392.0, 86.0);
     let shadow = paint(w, h, |x, y| {
-        let soft = |cx: f32, cy: f32, r: f32| smooth(circle(x, y, cx + 18.0, cy + 26.0, r), 34.0);
-        // The shadow falls only around the discs, not through them.
-        let under = coverage(circle(x, y, bx, by, br)).max(coverage(circle(x, y, dx, dy, dr)));
-        rgba(
-            [70, 72, 86],
-            soft(bx, by, br).max(soft(dx, dy, dr)) * 0.45 * (1.0 - under),
-        )
+        let cast = smooth(o(x - 18.0, y - 26.0), 34.0)
+            .max(smooth(circle(x, y, dx + 18.0, dy + 26.0, dr), 34.0));
+        let under = coverage(o(x, y)).max(coverage(circle(x, y, dx, dy, dr)));
+        rgba([70, 72, 86], cast * 0.45 * (1.0 - under))
     });
     let ink = paint(w, h, |x, y| {
         rgba(ULTRAMARINE, coverage(circle(x, y, dx, dy, dr)))
     });
     let bands = paint(w, h, |x, y| {
-        // Bands 56 px apart, 28 px thick, inside the disc.
-        let band = coverage(14.0 - ((y - by + 14.0).rem_euclid(56.0) - 28.0).abs());
-        rgba(WHITE, band * coverage(circle(x, y, bx, by, br)))
+        // Bands every 32 px, from 6 px thick at the top to 26 px at the bottom.
+        let t = 6.0 + 20.0 * ((y - 50.0) / 500.0).clamp(0.0, 1.0);
+        let band = coverage(t / 2.0 - ((y - 50.0).rem_euclid(32.0) - 16.0).abs());
+        rgba(WHITE, band * coverage(o(x, y)))
     });
     let rim = paint(w, h, |x, y| {
-        let d = circle(x, y, bx, by, br);
+        let d = o(x, y);
         rgba(INK, coverage(d + 1.5) * coverage(1.5 - d))
     });
     VitralImage::from_layers(
@@ -127,34 +136,52 @@ fn highlighter() -> VitralImage {
     VitralImage::from_layers(w, h, &[Layer::new(layer, BlendMode::Multiply)]).unwrap()
 }
 
-/// Sunglasses: tinted lenses in multiply, darker at the top, in a black
-/// frame.
+/// Round sunglasses: lenses tinted in multiply, two glints of light in
+/// screen across each lens, and a thin black frame.
 fn sunglasses() -> VitralImage {
     let (w, h) = (720, 300);
-    let lenses = [(200.0, 150.0), (520.0, 150.0)];
+    let lenses = [(210.0, 160.0), (510.0, 160.0)];
+    let r = 112.0;
     let lens_d = move |x: f32, y: f32| {
         lenses
             .iter()
-            .map(|&(cx, cy)| -boxd(x, y, cx, cy, 130.0, 95.0, 0.0, 70.0))
+            .map(|&(cx, cy)| circle(x, y, cx, cy, r))
             .fold(f32::MIN, f32::max)
     };
     let tint = paint(w, h, move |x, y| {
-        let t = (y - 55.0) / 190.0;
-        let shade = 0.25 + 0.35 * t.clamp(0.0, 1.0);
-        let c = [70.0, 54.0, 40.0].map(|v: f32| v / 255.0 + shade * 0.6);
-        [c[0], c[1], c[2], coverage(lens_d(x, y) - 2.0)]
+        let t = ((y - 48.0) / 224.0).clamp(0.0, 1.0);
+        let c = [44.0, 70.0, 120.0].map(|v: f32| (v + 120.0 * t) / 255.0);
+        [c[0], c[1], c[2], coverage(lens_d(x, y))]
+    });
+    let glint = paint(w, h, move |x, y| {
+        // Two diagonal bands per lens, 18 and 8 px wide.
+        let u = x + y;
+        let band = |c: f32, half: f32| coverage(half - (u - c).abs());
+        let a = lenses
+            .iter()
+            .map(|&(cx, cy)| {
+                let o = cx + cy;
+                band(o - 70.0, 9.0).max(band(o - 36.0, 4.0))
+                    * coverage(circle(x, y, cx, cy, r - 14.0))
+            })
+            .fold(0.0, f32::max);
+        rgba(WHITE, a * 0.75)
     });
     let frame = paint(w, h, move |x, y| {
         let d = lens_d(x, y);
-        let rim = coverage(d + 14.0) * coverage(2.0 - d);
-        let bridge = coverage(-boxd(x, y, 360.0, 112.0, 40.0, 9.0, 0.0, 9.0));
-        rgba(INK, rim.max(bridge))
+        let rim = coverage(d + 8.0) * coverage(1.0 - d);
+        let br = ((x - 360.0).powi(2) + (y - 168.0).powi(2)).sqrt();
+        let bridge = coverage(4.0 - (br - 52.0).abs()) * coverage(150.0 - y);
+        let temples = coverage(-boxd(x, y, 52.0, 118.0, 52.0, 4.0, 0.0, 4.0))
+            .max(coverage(-boxd(x, y, 668.0, 118.0, 52.0, 4.0, 0.0, 4.0)));
+        rgba(INK, rim.max(bridge).max(temples))
     });
     VitralImage::from_layers(
         w,
         h,
         &[
             Layer::new(tint, BlendMode::Multiply),
+            Layer::new(glint, BlendMode::Screen),
             Layer::new(frame, BlendMode::Normal),
         ],
     )
@@ -262,6 +289,102 @@ fn cup() -> VitralImage {
     VitralImage::from_layers(w, h, &[Layer::new(ring, BlendMode::Multiply)]).unwrap()
 }
 
+/// A transparent set square: a tinted triangle in multiply with a triangle
+/// cut out of it and a scale printed along one edge.
+fn set_square() -> VitralImage {
+    let (w, h) = (600, 440);
+    let outer = [(40.0, 400.0), (560.0, 400.0), (40.0, 60.0)];
+    let inner = [(120.0, 350.0), (380.0, 350.0), (120.0, 180.0)];
+    let body = paint(w, h, move |x, y| {
+        let a = coverage(triangle(x, y, outer)) * (1.0 - coverage(triangle(x, y, inner)));
+        rgba([150, 214, 200], a * 0.9)
+    });
+    let scale = paint(w, h, |x, y| {
+        // Ticks every 10 px, longer every 50 px, along the bottom edge.
+        let i = ((x - 50.0) / 10.0).round();
+        let len = if i as i32 % 5 == 0 { 26.0 } else { 12.0 };
+        let tick = coverage(1.5 - (x - 50.0 - i * 10.0).abs())
+            * coverage(y - (396.0 - len))
+            * coverage(396.0 - y);
+        let inside = if (0.0..=48.0).contains(&i) { 1.0 } else { 0.0 };
+        rgba([30, 40, 60], tick * inside)
+    });
+    VitralImage::from_layers(
+        w,
+        h,
+        &[
+            Layer::new(body, BlendMode::Multiply),
+            Layer::new(scale, BlendMode::Multiply),
+        ],
+    )
+    .unwrap()
+}
+
+/// A disc of halftone dots in multiply, large in the middle and fading to
+/// nothing at the edge, on a screen turned by 15 degrees.
+fn halftone() -> VitralImage {
+    let (w, h) = (600, 600);
+    let dots = paint(w, h, |x, y| {
+        let (u, v) = local(x, y, 300.0, 300.0, 15.0);
+        let (cu, cv) = ((u / 24.0).round() * 24.0, (v / 24.0).round() * 24.0);
+        let tone = (1.0 - (cu * cu + cv * cv).sqrt() / 280.0).clamp(0.0, 1.0);
+        let d = 13.0 * tone.sqrt() - ((u - cu).powi(2) + (v - cv).powi(2)).sqrt();
+        rgba([236, 40, 132], coverage(d))
+    });
+    VitralImage::from_layers(w, h, &[Layer::new(dots, BlendMode::Multiply)]).unwrap()
+}
+
+/// A neon sign of two tubes, a ring and a bar, in screen: each tube has a
+/// bright core and a soft glow.
+fn neon() -> VitralImage {
+    let (w, h) = (720, 400);
+    let tube = |d: f32, colour: [u8; 3]| {
+        let core = coverage(5.0 - d.abs());
+        let glow = (-(d / 26.0).powi(2)).exp() * 0.75;
+        let hot = core * 0.6;
+        let c = colour.map(|v| v as f32 / 255.0 * (1.0 - hot) + hot);
+        [c[0], c[1], c[2], core.max(glow)]
+    };
+    let ring = paint(w, h, move |x, y| {
+        let r = ((x - 210.0).powi(2) + (y - 200.0).powi(2)).sqrt();
+        tube(r - 120.0, [255, 70, 150])
+    });
+    let bar = paint(w, h, move |x, y| {
+        tube(
+            boxd(x, y, 520.0, 200.0, 130.0, 0.0, 0.0, 0.0),
+            [60, 210, 255],
+        )
+    });
+    VitralImage::from_layers(
+        w,
+        h,
+        &[
+            Layer::new(ring, BlendMode::Screen),
+            Layer::new(bar, BlendMode::Screen),
+        ],
+    )
+    .unwrap()
+}
+
+/// A postmark in one ink, in multiply: a double ring and wavy cancellation
+/// lines.
+fn postmark() -> VitralImage {
+    let (w, h) = (600, 400);
+    let ink = paint(w, h, |x, y| {
+        let r = ((x - 170.0).powi(2) + (y - 200.0).powi(2)).sqrt();
+        let rings = coverage(4.0 - (r - 128.0).abs()).max(coverage(2.0 - (r - 112.0).abs()));
+        let waves = (0..5)
+            .map(|i| {
+                let base = 128.0 + 36.0 * i as f32;
+                let wave = base + 9.0 * ((x - 300.0) / 46.0 * 2.0 * PI).sin();
+                coverage(3.0 - (y - wave).abs()) * coverage(x - 300.0) * coverage(580.0 - x)
+            })
+            .fold(0.0, f32::max);
+        rgba([36, 40, 52], rings.max(waves) * 0.88)
+    });
+    VitralImage::from_layers(w, h, &[Layer::new(ink, BlendMode::Multiply)]).unwrap()
+}
+
 /// Three discs of process ink in multiply, overprinted like a risograph.
 fn overprint() -> VitralImage {
     let (w, h) = (680, 640);
@@ -343,4 +466,20 @@ fn boxd(x: f32, y: f32, cx: f32, cy: f32, hw: f32, hh: f32, deg: f32, radius: f3
     let qy = v.abs() - hh + radius;
     let outside = (qx.max(0.0).powi(2) + qy.max(0.0).powi(2)).sqrt();
     outside + qx.max(qy).min(0.0) - radius
+}
+
+/// Signed distance to a triangle (positive inside), from its three corners.
+fn triangle(x: f32, y: f32, p: [(f32, f32); 3]) -> f32 {
+    let (cx, cy) = (
+        (p[0].0 + p[1].0 + p[2].0) / 3.0,
+        (p[0].1 + p[1].1 + p[2].1) / 3.0,
+    );
+    (0..3)
+        .map(|i| {
+            let ((ax, ay), (bx, by)) = (p[i], p[(i + 1) % 3]);
+            let len = ((bx - ax).powi(2) + (by - ay).powi(2)).sqrt();
+            let side = |px: f32, py: f32| ((bx - ax) * (py - ay) - (by - ay) * (px - ax)) / len;
+            side(x, y) * side(cx, cy).signum()
+        })
+        .fold(f32::MAX, f32::min)
 }

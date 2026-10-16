@@ -157,13 +157,16 @@ header.hero {
 @media (prefers-reduced-motion: no-preference) {
   .beats .cell i { transition: transform 700ms cubic-bezier(0.2, 0.7, 0.2, 1), background-color 700ms; transition-delay: var(--delay, 0ms); }
 }
-/* The lens lies off the 6 x 4 grid behind it, so it reads as put on top.
-   40% wide and square: 60% of the scene's height. */
-.scene .drop { position: absolute; width: 40%; left: 46%; top: 9%; visibility: hidden; }
-.scene.landed .drop { visibility: visible; }
+/* Two copies of the same artwork lie off the 6 x 4 grid behind them, so
+   they read as put on top: on the left an ordinary PNG with transparency, on
+   the right the Vitral. Each is 36% wide and square, 54% of the height. */
+.scene .a { --x: 7%; --y: 25%; }
+.scene .b { --x: 55%; --y: 13%; }
+.scene .drop { position: absolute; width: 36%; left: var(--x); top: var(--y); visibility: hidden; }
+.scene.landed-a .drop.a, .scene.landed-b .drop.b { visibility: visible; }
 .scene .drop img { display: block; width: 100%; height: auto; }
 .file-chip {
-  position: absolute; left: 46%; top: 9%; width: 40%; aspect-ratio: 1;
+  position: absolute; left: var(--x); top: var(--y); width: 36%; aspect-ratio: 1;
   display: grid; place-items: end start; padding: 0.6rem;
   font: 500 0.7rem/1 var(--mono); color: #141416;
   border: 1.5px dashed #141416; background: rgb(255 255 255 / 0.55);
@@ -175,21 +178,23 @@ header.hero {
   clip-path: polygon(0 0, 0 100%, 30% 72%, 52% 100%, 66% 92%, 45% 64%, 85% 64%);
 }
 @media (prefers-reduced-motion: no-preference) {
-  .scene:not(.landed) .file-chip { animation: carry 1.5s cubic-bezier(0.3, 0.6, 0.2, 1) 0.3s both; }
+  .scene:not(.landed-a) .file-chip.a { animation: carry-in 1.4s cubic-bezier(0.3, 0.6, 0.2, 1) 0.3s both; --from: -70%; }
+  .scene:not(.landed-b) .file-chip.b { animation: carry-in 1.4s cubic-bezier(0.3, 0.6, 0.2, 1) 1.5s both; --from: 70%; }
 }
-@keyframes carry {
-  0% { opacity: 0; transform: translate(-70%, -60%) scale(0.5) rotate(-6deg); }
+@keyframes carry-in {
+  0% { opacity: 0; transform: translate(var(--from), -60%) scale(0.5) rotate(-6deg); }
   20% { opacity: 1; }
-  80% { opacity: 1; transform: translate(0, 0) scale(1) rotate(0); }
-  100% { opacity: 1; transform: translate(0, 0) scale(1) rotate(0); }
+  80%, 100% { opacity: 1; transform: translate(0, 0) scale(1) rotate(0); }
 }
-/* Once dropped, the file keeps its name, like a selected layer. */
+/* Once dropped, each file keeps its name, like a selected layer. */
 .file-tag {
-  position: absolute; left: 46%; top: 9%; margin-top: -1.6rem;
+  /* Next to the O, which starts 8% into its square. */
+  position: absolute; left: calc(var(--x) + 2.9%); top: calc(var(--y) + 4.3%); margin-top: -1.6rem;
   font: 500 0.68rem/1 var(--mono); color: #fff; background: #141416; padding: 0.3rem 0.45rem;
   visibility: hidden;
 }
-.scene.landed .file-tag { visibility: visible; }
+.file-tag.b { background: var(--accent); }
+.scene.landed-a .file-tag.a, .scene.landed-b .file-tag.b { visibility: visible; }
 .show figcaption { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 0.6rem 1rem; font-size: var(--step--1); color: var(--muted); }
 .show figcaption code { color: var(--fg); }
 .show .tools { display: flex; gap: 0.4rem; }
@@ -240,12 +245,18 @@ header.hero {
 #samples button[data-id="blinds"] { --sw: #2a2a2e url(samples/blinds.vitral.png) center / cover no-repeat; }
 #samples button[data-id="tape"] { --sw: #fff url(samples/tape.vitral.png) center / contain no-repeat; }
 #samples button[data-id="cup"] { --sw: #fff url(samples/cup.vitral.png) center / contain no-repeat; }
+#samples button[data-id="set-square"] { --sw: #fff url(samples/set-square.vitral.png) center / contain no-repeat; }
+#samples button[data-id="halftone"] { --sw: #fff url(samples/halftone.vitral.png) center / contain no-repeat; }
+#samples button[data-id="neon"] { --sw: #141416 url(samples/neon.vitral.png) center / contain no-repeat; }
+#samples button[data-id="postmark"] { --sw: #fff url(samples/postmark.vitral.png) center / contain no-repeat; }
 #samples button[data-id="own"] { --sw: repeating-conic-gradient(var(--check-a) 0 25%, var(--check-b) 0 50%) 0 0 / 8px 8px; }
-#backdrops button[data-id="text"] { --sw: repeating-linear-gradient(#f4f1e8 0 3px, #8f8a7e 3px 4px); }
-#backdrops button[data-id="blocks"] { --sw: linear-gradient(90deg, #e8b931 0 40%, #2f4bd8 40% 100%); }
-#backdrops button[data-id="gradient"] { --sw: linear-gradient(135deg, #ffd166, #ff8a5b 45%, #7f9cff); }
-#backdrops button[data-id="dark"] { --sw: linear-gradient(#26272e 0 30%, #15161a 30%); }
 #backdrops button[data-id="pattern"] { --sw: url(samples/grid.svg) center / 100% 100%; }
+#backdrops button[data-id="text"] { --sw: repeating-linear-gradient(#f4f1e8 0 3px, #8f8a7e 3px 4px); }
+#backdrops button[data-id="type"] { --sw: #f2eee4 url(samples/type.svg) left center / cover; }
+#backdrops button[data-id="website"] { --sw: #fff url(samples/website.svg) center / cover; }
+#backdrops button[data-id="kraft"] { --sw: url(samples/kraft.svg) center / cover; }
+#backdrops button[data-id="stripes"] { --sw: linear-gradient(#e8b931 0 33%, #2f4bd8 33% 66%, #e5531a 66%); }
+#backdrops button[data-id="dark"] { --sw: linear-gradient(#26272e 0 30%, #15161a 30%); }
 
 /* Stages */
 .stages { display: grid; gap: 1.25rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr)); }
@@ -282,20 +293,13 @@ figure { margin: 0; display: grid; gap: 0.6rem; min-width: 0; }
 #sample-note.error { border-left-color: var(--ruby); }
 
 /* Backdrops are imagery, not theme colours: they stay the same in both themes. */
-.bd-blocks {
-  background:
-    linear-gradient(#141416, #141416) 0 72% / 40% 8% no-repeat,
-    linear-gradient(#e5531a, #e5531a) 100% 100% / 60% 45% no-repeat,
-    linear-gradient(#2f4bd8, #2f4bd8) 100% 0 / 60% 55% no-repeat,
-    linear-gradient(#e8b931, #e8b931) 0 0 / 40% 100% no-repeat,
-    #f1eee7;
-}
-.bd-gradient {
-  background:
-    radial-gradient(60% 80% at 12% 8%, #ffd166, transparent 70%),
-    radial-gradient(55% 75% at 88% 18%, #ff8a5b, transparent 70%),
-    radial-gradient(80% 90% at 45% 112%, #7f9cff, transparent 70%),
-    #f3ede4;
+.bd-type { background: #f2eee4 url(samples/type.svg) center / cover; }
+.bd-website { background: #fff url(samples/website.svg) center / cover; }
+.bd-kraft { background: #c69c6d url(samples/kraft.svg) center / cover; }
+.bd-stripes {
+  background: repeating-linear-gradient(90deg,
+    #e8b931 0 12.5%, #f1eee7 12.5% 25%, #2f4bd8 25% 37.5%, #141416 37.5% 50%,
+    #e5531a 50% 62.5%, #f1eee7 62.5% 75%, #2b8fb3 75% 87.5%, #c23b5a 87.5% 100%);
 }
 .bd-dark {
   background:
@@ -440,13 +444,15 @@ footer a { color: var(--fg); }
     <figure class="show">
       <div class="scene" id="scene">
         <div class="beats" id="beats" aria-hidden="true"></div>
-        <div class="drop"><img id="hero-img" src="samples/lens.vitral.png" alt="A disc of fine bands that invert and a blue disc in multiply, casting a soft shadow on a page of changing shapes"></div>
-        <div class="file-tag" id="hero-tag" aria-hidden="true">lens.vitral.png</div>
-        <div class="file-chip" aria-hidden="true"><span>lens.vitral.png</span></div>
+        <div class="drop a"><img src="samples/ring.png" alt="The artwork as an ordinary PNG: a letter O of white bands with a blue disc, lying flat on the shapes"></div>
+        <div class="drop b"><img id="hero-img" src="samples/ring.vitral.png" alt="The same artwork as a Vitral: its bands invert the shapes passing underneath and its blue disc darkens them"></div>
+        <div class="file-tag a" aria-hidden="true">ring.png</div>
+        <div class="file-tag b" aria-hidden="true">ring.vitral.png</div>
+        <div class="file-chip a" aria-hidden="true"><span>ring.png</span></div>
+        <div class="file-chip b" aria-hidden="true"><span>ring.vitral.png</span></div>
       </div>
       <figcaption>
         <span class="tools">
-          <button type="button" class="small-button" id="hero-png" aria-pressed="false">Plain PNG</button>
           <button type="button" class="small-button" id="hero-pause" aria-pressed="false">Pause</button>
         </span>
       </figcaption>
@@ -509,8 +515,8 @@ footer a { color: var(--fg); }
           <img id="transparent-preview" alt="Artwork exported over a transparent background">
         </div>
         <div class="slot result">
-          <span class="eyebrow">Result, over a gradient</span>
-          <div class="stage bd-gradient" id="result-stage"></div>
+          <span class="eyebrow">Result, over the colour grid</span>
+          <div class="stage bd-pattern" id="result-stage"></div>
           <p class="status" id="encode-status">Encoding…</p>
           <a class="download" id="download" hidden>Download</a>
           <button type="button" class="try" id="try-above" hidden>Try it on the backdrops above</button>
@@ -529,7 +535,7 @@ footer a { color: var(--fg); }
       <blockquote class="handoff">“It's a PNG. Add one script tag and it blends like it did in Figma.”<span>What to tell your developer.</span></blockquote>
       <div class="code">
         <div class="bar"><span class="eyebrow">HTML</span><button type="button" id="copy-snippet">Copy</button></div>
-        <pre id="snippet"><code>&lt;img src="lens.vitral.png" alt="Lens"&gt;
+        <pre id="snippet"><code>&lt;img src="ring.vitral.png" alt="Ring"&gt;
 &lt;script type="module" src="vitral.js"&gt;&lt;/script&gt;</code></pre>
       </div>
       <div class="prose">
@@ -595,13 +601,12 @@ footer a { color: var(--fg); }
 </footer>
 
 <script type="module">
-// The opening scene: the file is carried in and dropped, then the shapes
-// behind it change on a steady beat. The image itself never moves.
-import { upgrade, downgrade } from './vitral.js';
+// The opening scene: the same artwork is dropped twice, as a PNG and as a
+// Vitral, then the shapes behind them change on a steady beat. The images
+// themselves never move.
 
 const scene = document.getElementById('scene');
 const beats = document.getElementById('beats');
-const heroImg = document.getElementById('hero-img');
 const COLS = 6;
 const ROWS = 4;
 const INKS = ['#141416', '#e5531a', '#2f4bd8', '#e8b931', '#b9b4aa'];
@@ -642,15 +647,16 @@ for (const cell of cells) dress(cell, t);
 const play = () => { timer ??= setInterval(() => step(++t), 1400); };
 const stop = () => { clearInterval(timer); timer = null; };
 step(t);
-const land = () => {
-  if (scene.classList.contains('landed')) return;
-  scene.classList.add('landed');
-  if (!still) play();
+const land = (which) => {
+  scene.classList.add(`landed-${which}`);
+  if (which === 'b' && !still) play();
 };
-if (still) land();
+if (still) { land('a'); land('b'); }
 else {
-  scene.querySelector('.file-chip').addEventListener('animationend', land);
-  setTimeout(land, 2500); // in case the animation never runs
+  for (const which of ['a', 'b']) {
+    scene.querySelector(`.file-chip.${which}`).addEventListener('animationend', () => land(which));
+  }
+  setTimeout(() => { land('a'); land('b'); }, 3600); // in case the animation never runs
 }
 
 const pause = document.getElementById('hero-pause');
@@ -662,13 +668,6 @@ pause.addEventListener('click', () => {
   if (paused) stop(); else play();
 });
 
-const plain = document.getElementById('hero-png');
-plain.addEventListener('click', () => {
-  const on = plain.getAttribute('aria-pressed') !== 'true';
-  plain.setAttribute('aria-pressed', String(on));
-  document.getElementById('hero-tag').textContent = on ? 'lens.vitral.png, as a plain PNG' : 'lens.vitral.png';
-  if (on) downgrade(heroImg); else upgrade(heroImg);
-});
 </script>
 
 <script type="module">
@@ -681,21 +680,31 @@ const SAMPLES = [
   { id: 'highlighter', label: 'Highlighter', w: 360, h: 220,
     note: 'Highlighter strokes in multiply. As a plain PNG they paint over the text; with Vitral the text stays readable under the ink.' },
   { id: 'sunglasses', label: 'Sunglasses', w: 360, h: 150,
-    note: 'Tinted lenses in multiply in a black frame. As a plain PNG the lenses are flat brown; with Vitral you see through them.' },
+    note: 'Round lenses tinted in multiply, with glints of light in screen. As a plain PNG the lenses are flat blue; with Vitral you see through them.' },
+  { id: 'set-square', label: 'Set square', w: 300, h: 220,
+    note: 'A transparent set square: tinted plastic and its scale in multiply. As a plain PNG it is a flat green triangle; with Vitral you see what it lies on.' },
   { id: 'film', label: 'Negative', w: 380, h: 180,
     note: 'A strip of colour negative: an orange base in multiply and frames that invert. As a plain PNG the frames are blank white; with Vitral they show the backdrop as a negative.' },
+  { id: 'halftone', label: 'Halftone', w: 300, h: 300,
+    note: 'A disc of halftone dots in multiply. As a plain PNG it is a pink pattern on top; with Vitral it prints onto the backdrop.' },
+  { id: 'neon', label: 'Neon', w: 360, h: 200,
+    note: 'A neon sign in screen: bright tubes and their glow. As a plain PNG the glow is a coloured haze; with Vitral it lights up the backdrop. Try it in dark mode.' },
   { id: 'blinds', label: 'Blinds', w: 380, h: 260,
-    note: 'Sunlight through blinds, in screen. As a plain PNG the light can only fog the backdrop; with Vitral it brightens it. Try it in dark mode.' },
+    note: 'Sunlight through blinds, in screen. As a plain PNG the light can only fog the backdrop; with Vitral it brightens it.' },
   { id: 'tape', label: 'Tape', w: 340, h: 240,
     note: 'Two strips of striped paper tape in multiply. As a plain PNG they are opaque stickers; with Vitral the backdrop shows through the paper.' },
+  { id: 'postmark', label: 'Postmark', w: 300, h: 200,
+    note: 'A postmark in one ink, in multiply. As a plain PNG it covers the stamp; with Vitral it is printed on it.' },
   { id: 'cup', label: 'Coffee ring', w: 300, h: 300,
     note: 'The ring a cup leaves on paper, in multiply. As a plain PNG it is a brown outline; with Vitral it stains whatever it lands on.' },
 ];
 const BACKDROPS = [
   { id: 'pattern', label: 'Colour grid' },
-  { id: 'blocks', label: 'Colour fields' },
   { id: 'text', label: 'Page' },
-  { id: 'gradient', label: 'Gradient' },
+  { id: 'type', label: 'Type' },
+  { id: 'website', label: 'Website' },
+  { id: 'kraft', label: 'Kraft paper' },
+  { id: 'stripes', label: 'Stripes' },
   { id: 'dark', label: 'Dark mode' },
 ];
 const PAGE_TEXT = `
@@ -988,11 +997,11 @@ for (const which of ['black', 'white', 'transparent']) {
 }
 
 render();
-const source = (which) => `samples/sources/lens-over-${which}.png`;
+const source = (which) => `samples/sources/ring-over-${which}.png`;
 const kinds = ['black', 'white', 'transparent'];
 const blobs = await Promise.all(kinds.map(async (k) => (await fetch(source(k))).blob()));
 kinds.forEach((k, i) => {
-  inputs[k] = { blob: blobs[i], name: `lens-over-${k}.png` };
+  inputs[k] = { blob: blobs[i], name: `ring-over-${k}.png` };
   document.getElementById(`${k}-preview`).src = URL.createObjectURL(blobs[i]);
 });
 await runEncoder();
