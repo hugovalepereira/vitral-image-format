@@ -120,7 +120,7 @@ header.hero {
 .hero .text { display: grid; gap: 1.4rem; }
 .hero .claim { font: 500 clamp(1.5rem, 2.6vw, 2.1rem)/1.12 var(--display); letter-spacing: -0.025em; max-width: 26rem; }
 .hero .lede { color: var(--muted); font-size: clamp(1.02rem, 1.3vw, 1.12rem); line-height: 1.55; max-width: 31rem; }
-.hero .ctas { display: flex; flex-wrap: wrap; gap: 0.6rem; }
+.ctas { display: flex; flex-wrap: wrap; gap: 0.6rem; }
 .button {
   display: inline-flex; align-items: center; gap: 0.55rem;
   font: 600 var(--step--1)/1 var(--body); text-decoration: none;
@@ -405,7 +405,7 @@ footer a { color: var(--fg); }
 <main id="top">
   <header class="hero">
     <div class="text">
-      <p class="eyebrow">Image format · draft 0.1</p>
+      <p class="eyebrow">Image format · open proposal · draft 0.1</p>
       <h1 aria-label="Vitral"><span class="dot">.</span>vitral</h1>
       <p class="claim">Blend modes that survive export.</p>
       <p class="lede">A PNG that keeps its multiply, screen and difference. Export it from Figma, Illustrator or Photoshop, and it blends on the web the way it did in your design, over whatever is behind it.</p>
@@ -416,7 +416,7 @@ footer a { color: var(--fg); }
       <ul class="facts">
         <li>Still a valid PNG</li>
         <li>One script tag</li>
-        <li>Open specification</li>
+        <li>Open proposal, help welcome</li>
       </ul>
     </div>
     <figure class="show">
@@ -551,6 +551,22 @@ footer a { color: var(--fg); }
           <p class="hint">The full format is in the <a href="https://github.com/hugovalepereira/vitral-image-format/blob/main/SPEC.md">specification</a>.</p>
         </div>
       </details>
+    </div>
+  </section>
+
+  <section class="section split" id="join" aria-labelledby="join-title">
+    <div class="head">
+      <p class="eyebrow"><span class="num">05</span>Help shape it</p>
+      <h2 id="join-title">An experiment, in the open</h2>
+    </div>
+    <div class="body">
+      <div class="prose">
+        <p>Vitral is a proposal, not a finished standard. Draft 0.1 covers multiply, screen and their relatives; the aim is to solve more of the problems designers hit at export, such as overlay, soft light and background blur. If you design with blend modes or build image tools and browsers, your examples, doubts and ideas will make it better.</p>
+      </div>
+      <div class="ctas">
+        <a class="button primary" href="https://github.com/hugovalepereira/vitral-image-format/issues">Open an issue</a>
+        <a class="button" href="https://github.com/hugovalepereira/vitral-image-format">Source on GitHub</a>
+      </div>
     </div>
   </section>
 </main>
