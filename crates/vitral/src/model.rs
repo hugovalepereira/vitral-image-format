@@ -2,8 +2,10 @@
 //! plus the image's native appearance where there is no backdrop.
 
 use crate::blend::{flatten, rgb_of, Layer};
+use crate::colour::{convert_pixels, convert_rgba, RgbSpace};
 use crate::fallback::least_squares_native;
 use crate::math::{composite, mul255, to_u8};
+use crate::pngio::read_rgba8_in_space;
 use crate::{Error, RgbaImage};
 
 /// A Vitral image in canonical form.
@@ -19,6 +21,9 @@ pub struct VitralImage {
     /// pixel's own colour. It is also the PNG image that software without
     /// Vitral support displays.
     pub native: RgbaImage,
+    /// The colour space of K, W and the native appearance. Blending happens
+    /// on their encoded values in this space (SPEC §4.1).
+    pub colour_space: RgbSpace,
 }
 
 /// Three RGBA8 layers that reproduce a Vitral image with blend modes that every
@@ -68,6 +73,7 @@ impl VitralImage {
             black,
             white,
             native,
+            colour_space: RgbSpace::Srgb,
         })
     }
 
@@ -93,6 +99,7 @@ impl VitralImage {
             black: vec![0; n],
             white: vec![255; n],
             native: RgbaImage::filled(width, height, [0, 0, 0, 0]),
+            colour_space: RgbSpace::Srgb,
         }
     }
 
@@ -124,6 +131,43 @@ impl VitralImage {
         )
     }
 
+    /// Builds a Vitral image from PNG files exported by a design tool: the
+    /// artwork over black, over white and, optionally, over nothing (its
+    /// native look). Each export may be sRGB or Display P3; if they differ,
+    /// all are converted to Display P3, whose gamut holds both.
+    pub fn from_exports(
+        black: &[u8],
+        white: &[u8],
+        transparent: Option<&[u8]>,
+    ) -> Result<Self, Error> {
+        let read = |bytes: &[u8], what: &str| {
+            read_rgba8_in_space(bytes).map_err(|e| {
+                let reason = match e {
+                    Error::InvalidInput(reason) => reason,
+                    other => other.to_string(),
+                };
+                Error::InvalidInput(format!("{what}: {reason}"))
+            })
+        };
+        let mut exports = vec![
+            read(black, "export over black")?,
+            read(white, "export over white")?,
+        ];
+        if let Some(bytes) = transparent {
+            exports.push(read(bytes, "transparent export")?);
+        }
+        let space = RgbSpace::widest(exports.iter().map(|(_, s)| *s));
+        let mut exports = exports
+            .into_iter()
+            .map(|(img, from)| convert_rgba(&img, from, space));
+        let (over_black, over_white) = (exports.next().unwrap(), exports.next().unwrap());
+        let mut img = VitralImage::from_renders(&over_black, &over_white)?.in_colour_space(space);
+        if let Some(native) = exports.next() {
+            img = img.with_native(native)?;
+        }
+        Ok(img)
+    }
+
     /// Builds a Vitral image from a stack of layers (bottom first), as a design
     /// tool would composite them over black, over white and over nothing.
     ///
@@ -144,7 +188,32 @@ impl VitralImage {
             black: rgb_of(&flatten(width, height, layers, [0.0, 0.0, 0.0, 1.0])),
             white: rgb_of(&flatten(width, height, layers, [1.0, 1.0, 1.0, 1.0])),
             native: RgbaImage::new(width, height, flatten(width, height, layers, [0.0; 4]))?,
+            colour_space: RgbSpace::Srgb,
         })
+    }
+
+    /// Declares the colour space the image's values are in, without changing
+    /// them. Use it when the inputs (exports or layers) were in that space.
+    pub fn in_colour_space(mut self, space: RgbSpace) -> Self {
+        self.colour_space = space;
+        self
+    }
+
+    /// The same image converted to another colour space: K, W and the native
+    /// colours are converted, clipping what falls outside the target gamut.
+    ///
+    /// Over black and over white the result is the same colour; over other
+    /// backdrops it is an approximation, because blending the encoded values
+    /// of two spaces gives different results. Renderers that blend in a
+    /// different space than the image's (CSS usually blends in sRGB) use this
+    /// before building the render planes (SPEC §7.2).
+    pub fn to_colour_space(&self, space: RgbSpace) -> VitralImage {
+        let mut out = self.clone();
+        convert_pixels(&mut out.black, 3, self.colour_space, space);
+        convert_pixels(&mut out.white, 3, self.colour_space, space);
+        out.native = convert_rgba(&self.native, self.colour_space, space);
+        out.colour_space = space;
+        out
     }
 
     /// Reference compositing (normative): places the image with its top-left
@@ -325,6 +394,33 @@ mod tests {
             }
         }
         assert!(worst <= 2, "worst error {worst}");
+    }
+
+    #[test]
+    fn converting_keeps_the_look_over_black_and_white() {
+        let img = red_multiply().in_colour_space(RgbSpace::DisplayP3);
+        let srgb = img.to_colour_space(RgbSpace::Srgb);
+        assert_eq!(srgb.colour_space, RgbSpace::Srgb);
+        let mut k = img.black.clone();
+        convert_pixels(&mut k, 3, RgbSpace::DisplayP3, RgbSpace::Srgb);
+        assert_eq!(srgb.black, k);
+        let back = srgb.to_colour_space(RgbSpace::Srgb);
+        assert_eq!(back, srgb, "converting to the same space changes nothing");
+    }
+
+    #[test]
+    fn exports_in_mixed_colour_spaces_become_display_p3() {
+        let black = RgbaImage::filled(1, 1, [255, 0, 0, 255]);
+        let white = RgbaImage::filled(1, 1, [255, 255, 255, 255]);
+        let img = VitralImage::from_exports(
+            &crate::write_rgba8(&black).unwrap(),
+            &crate::write_rgba8_in(&white, RgbSpace::DisplayP3).unwrap(),
+            None,
+        )
+        .unwrap();
+        assert_eq!(img.colour_space, RgbSpace::DisplayP3);
+        assert_eq!(img.black, [234, 51, 35], "sRGB red, converted to P3");
+        assert_eq!(img.white, [255, 255, 255]);
     }
 
     #[test]

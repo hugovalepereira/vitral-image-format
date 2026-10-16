@@ -122,6 +122,14 @@ for (const engine of engines) {
     await noteStarting('lens.vitral.png, 640 × 640 px.');
     await settled('ok');
     check('encoder result opens in the stages', true);
+
+    // Display P3 exports give a Display P3 file, not one converted to sRGB.
+    for (const which of ['black', 'white', 'transparent']) {
+      await page.setInputFiles(`#${which}-input`, join(root, `examples/sources/p3-neon-over-${which}.png`));
+    }
+    await page.waitForFunction(() => document.querySelector('#encode-status').textContent.includes('Display P3'),
+      null, { timeout: 15000 });
+    check('Display P3 exports stay Display P3', true);
   } catch (e) {
     check('demo', false, e.message.split('\n')[0]);
   }

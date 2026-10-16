@@ -104,11 +104,12 @@ podem voltar a ser consideradas.
 * **Seguintes**: Illustrator (script, sem blur de fundo possível), After Effects,
   Photoshop.
 
-## D7 — Espaço de cor: **sRGB codificado**
+## D7 — Espaço de cor: **valores codificados** (não lineares)
 
 * **Decisão**: a mistura é feita sobre valores codificados (não lineares), como CSS
   Compositing nível 1, Canvas 2D, Figma e Photoshop por omissão. Assim o que o
   designer vê é o que a web mostra.
+* Começou só em sRGB; desde D13 também em Display P3.
 * **Para a v2**: uma flag de mistura em luz linear (útil em vídeo e jogos).
 
 ## D8 — Língua da documentação
@@ -192,6 +193,7 @@ podem voltar a ser consideradas.
     perfil ICC com as do sRGB) e recusa as que não são sRGB.
   * A demo deixa o browser converter.
 * **Para depois**: conversão automática no CLI e suporte a Display P3 (v2).
+* **Substituída por D13** (out/2026): o Display P3 passou a ser aceite.
 
 ## D12 — CRC da imagem principal: **ignora a cor dos pixels invisíveis**
 
@@ -205,3 +207,31 @@ podem voltar a ser consideradas.
   * Um ficheiro feito antes desta mudança, com cor guardada em pixels
     transparentes, passa a ser lido como PNG normal. Os exemplos do repositório
     não têm esse caso e continuam válidos.
+
+## D13 — Espaço de cor: **sRGB ou Display P3; luz linear fica de fora**
+
+* **Contexto**:
+  * No Figma, um ficheiro em Display P3 guarda valores P3 e mistura-os nesse
+    espaço (deduzido; não confirmado com o Figma).
+  * Os browsers misturam os blend modes do CSS num espaço que escolhem. O Chromium
+    testado mistura em sRGB, mesmo com um ecrã P3 simulado; há browsers no Mac
+    que misturam em P3 quando o ecrã o permite ([discussão no W3C][fxtf]).
+  * A mesma mistura feita em P3 ou em sRGB difere em média 3 a 7 níveis (em 255)
+    e muito mais em cores saturadas: não é um detalhe.
+* **Decisão**:
+  * O ficheiro guarda o espaço de cor da arte, declarado como em qualquer PNG
+    (perfil ICC e `cICP` para P3). K, W e a cor nativa ficam nesse espaço, e a
+    mistura é feita lá (SPEC §2.4).
+  * Exportações em espaços diferentes são convertidas para Display P3, que
+    contém o sRGB.
+  * Quem mistura noutro espaço converte K e W para o seu antes de montar as 3
+    camadas. O polyfill assume sRGB: é exato sobre preto e branco e aproximado
+    no resto, como o próprio `mix-blend-mode` entre ecrãs diferentes.
+  * **Luz linear fica de fora.** Nem o Figma nem o CSS misturam em luz linear;
+    só algumas ferramentas de vídeo e 3D. Ficheiros marcados como lineares
+    (`gAMA` 1,0, curva ICC de gama 1, `cICP` com transferência 8) são recusados
+    com uma mensagem clara. Volta a ser estudada com o After Effects (v2).
+* **Consequência**: um Vitral feito num ficheiro P3 é exato no Figma em P3 (com o
+  plugin), no compositor de referência e nos browsers que misturam em P3.
+
+[fxtf]: https://lists.w3.org/Archives/Public/public-fxtf-archive/2023Jul/0007.html
