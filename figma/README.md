@@ -70,8 +70,8 @@ file:
   the screen. **File scale** sets how many image pixels make one Figma pixel;
   a name with `@2x` picks 2x for you.
 * **Drag a `.vitral.png` onto the canvas while the panel is open.** It is
-  rebuilt where it lands, inside the frame you drop it on. Other files are left
-  to Figma.
+  rebuilt where it lands, inside the frame you drop it on (checked in Figma).
+  Other files are left to Figma.
 * **Select a Vitral that Figma placed as a flat image** (dragged in while the
   plugin was closed). The panel offers **Rebuild**, which swaps the image for
   the layers at the same size and place (checked in Figma: it keeps the
@@ -98,7 +98,6 @@ with Figma to confirm:
   assumes when it keeps those exports in P3.
 * That Figma reads the colour profile of imported layers in a Display P3
   document as the plugin expects.
-* That Figma hands files dropped on the canvas to the plugin.
 
 ## Files
 
