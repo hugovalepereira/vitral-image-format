@@ -405,10 +405,10 @@ footer a { color: var(--fg); }
 <main id="top">
   <header class="hero">
     <div class="text">
-      <p class="eyebrow">Image format · open proposal · draft 0.1</p>
+      <p class="eyebrow">Image format · draft 0.1</p>
       <h1 aria-label="Vitral"><span class="dot">.</span>vitral</h1>
       <p class="claim">Blend modes that survive export.</p>
-      <p class="lede">A PNG that keeps its multiply, screen and difference. Export it from Figma, Illustrator or Photoshop, and it blends on the web the way it did in your design, over whatever is behind it.</p>
+      <p class="lede">An experimental proposal for an image format that carries its own blend modes. What multiplies in Figma, Illustrator or Photoshop keeps multiplying on the website, without anyone rebuilding it.</p>
       <div class="ctas">
         <a class="button primary" href="#demo">Try it</a>
         <a class="button" href="https://github.com/hugovalepereira/vitral-image-format/blob/main/SPEC.md">Read the specification</a>
@@ -439,7 +439,7 @@ footer a { color: var(--fg); }
     <div class="head">
       <p class="eyebrow"><span class="num">01</span>Try it</p>
       <h2 id="demo-title">Same file, two viewers</h2>
-      <div class="prose"><p>Pick an image and a backdrop. On the left, how any PNG viewer shows the file today; on the right, the same file with Vitral.</p></div>
+      <div class="prose"><p>A blend mode lives in the design tool, not in the file. Export a multiply layer and you get a flat PNG that looks grey on a new background, so someone rebuilds it by hand, or it gets flattened over one background and breaks when that changes.</p><p>Pick an image and a backdrop. Same file, same backdrop: on the left, what any PNG viewer shows; on the right, Vitral.</p></div>
     </div>
     <div class="controls">
       <div class="control">
@@ -472,7 +472,7 @@ footer a { color: var(--fg); }
     </div>
     <div class="body">
       <div class="prose">
-        <p>Put a black background behind your artwork and export a PNG, then switch it to white and export again. Blend modes act on that background, so the two exports carry the blending. An optional third export over transparency is what software without Vitral will show. The example below is loaded with the exports of the window at the top of the page.</p>
+        <p>Export your artwork over black, over white and once with no background, and drop the three files here. Blend modes act on the background, so the black and white exports carry the blending; the one with no background is what software without Vitral will show. The example below is loaded with the exports of the window at the top of the page.</p>
       </div>
       <div class="maker">
         <div class="slot">
@@ -515,7 +515,7 @@ footer a { color: var(--fg); }
 &lt;script type="module" src="vitral.js"&gt;&lt;/script&gt;</code></pre>
       </div>
       <div class="prose">
-        <p>Without the script, or in any other app, the file opens as an ordinary PNG, so nothing gets worse than today. With it, every <code>&lt;img&gt;</code> whose file ends in <code>.vitral.png</code> blends with what is behind it on the page.</p>
+        <p>With the script, every <code>&lt;img&gt;</code> whose file ends in <code>.vitral.png</code> blends with what is behind it on the page. It works on websites with the script today, and in Figma with the plugin next. Everywhere else it shows the PNG you would export today, never worse.</p>
       </div>
     </div>
   </section>
@@ -541,10 +541,9 @@ footer a { color: var(--fg); }
             <table>
               <thead><tr><th>Blend mode</th><th>In draft 0.1</th></tr></thead>
               <tbody>
-                <tr><td>Normal, multiply, screen, hard light, exclusion, inversion</td><td><span class="pill exact">exact</span></td></tr>
-                <tr><td>Add (plus-lighter), linear burn, darken, lighten, difference</td><td><span class="pill">exact over black and white, a straight line between</span></td></tr>
-                <tr><td>Overlay, soft light, colour dodge and burn, hue, saturation, colour, luminosity</td><td><span class="pill">planned for v2</span></td></tr>
-                <tr><td>Background blur, refraction</td><td><span class="pill">planned for v2</span></td></tr>
+                <tr><td>Normal, multiply, screen, hard light, exclusion, inversion</td><td><span class="pill exact">exact, mixed per pixel and stacked</span></td></tr>
+                <tr><td>Add (plus-lighter), linear burn, darken, lighten, difference</td><td><span class="pill">approximate: exact over black and white, a straight line between</span></td></tr>
+                <tr><td>Overlay, soft light, colour dodge and burn, hue, saturation, colour, luminosity, background blur</td><td><span class="pill">not yet</span></td></tr>
               </tbody>
             </table>
           </div>
@@ -561,11 +560,11 @@ footer a { color: var(--fg); }
     </div>
     <div class="body">
       <div class="prose">
-        <p>Vitral is a proposal, not a finished standard. Draft 0.1 covers multiply, screen and their relatives; the aim is to solve more of the problems designers hit at export, such as overlay, soft light and background blur. If you design with blend modes or build image tools and browsers, your examples, doubts and ideas will make it better.</p>
+        <p>Vitral is an experiment, published so that people who care about this problem can try it, break it and help improve it. Open an issue with your own exports, a case where you had to rebuild a blend by hand, or an idea for overlay, soft light or background blur.</p><p>PNG has transparency. Vitral has light and filter.</p>
       </div>
       <div class="ctas">
         <a class="button primary" href="https://github.com/hugovalepereira/vitral-image-format/issues">Open an issue</a>
-        <a class="button" href="https://github.com/hugovalepereira/vitral-image-format">Source on GitHub</a>
+        <a class="button" href="https://github.com/hugovalepereira/vitral-image-format/blob/main/SPEC.md">Read the specification</a>
       </div>
     </div>
   </section>
