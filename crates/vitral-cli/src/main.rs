@@ -3,7 +3,10 @@ use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
 use clap::{Parser, Subcommand};
-use vitral::{BlendMode, ColourSpace, Fidelity, Layer, RgbaImage, VitralImage, VitralStatus};
+use vitral::{
+    convert_rgba, BlendMode, ColourSpace, Fidelity, Layer, RgbSpace, RgbaImage, VitralImage,
+    VitralStatus,
+};
 
 /// Create, inspect and render Vitral images (.vitral.png): images that carry
 /// their own blend behaviour.
@@ -17,7 +20,8 @@ struct Cli {
 #[derive(Subcommand)]
 enum Command {
     /// Build a Vitral image from two exports of the same artwork, one over a
-    /// black background and one over a white background.
+    /// black background and one over a white background. Exports may be sRGB
+    /// or Display P3; the file keeps their colour space.
     Encode {
         #[arg(long)]
         black: PathBuf,
@@ -28,8 +32,9 @@ enum Command {
         /// shows. If omitted, an approximation is computed.
         #[arg(long)]
         transparent: Option<PathBuf>,
-        /// Use the samples as sRGB even if a file declares another colour
-        /// space (e.g. Display P3). Colours and blending will be off.
+        /// Use the samples as sRGB even if a file declares a colour space
+        /// Vitral does not take (e.g. Adobe RGB or linear light). Colours and
+        /// blending will be off.
         #[arg(long)]
         assume_srgb: bool,
         #[arg(short, long)]
@@ -84,6 +89,10 @@ enum Command {
         /// Show what software without Vitral support would display.
         #[arg(long)]
         legacy: bool,
+        /// Blend in this colour space instead of the image's own, as a host
+        /// that blends there would (CSS usually blends in srgb).
+        #[arg(long, value_parser = parse_space)]
+        blend_space: Option<RgbSpace>,
         #[arg(short, long)]
         output: PathBuf,
     },
@@ -120,20 +129,34 @@ fn run(command: Command) -> Result<()> {
             assume_srgb,
             output,
         } => {
-            for path in [Some(&black), Some(&white), transparent.as_ref()]
-                .into_iter()
-                .flatten()
-            {
-                check_srgb(path, assume_srgb)?;
-            }
-            let mut img = VitralImage::from_renders(&read_png(&black)?, &read_png(&white)?)?;
-            match transparent {
-                Some(path) => img = img.with_native(read_png(&path)?)?,
-                None => eprintln!(
+            if transparent.is_none() {
+                eprintln!(
                     "note: no --transparent export given; the look over transparent areas \
                      and in software without Vitral support is approximated"
-                ),
+                );
             }
+            let img = if assume_srgb {
+                for path in [Some(&black), Some(&white), transparent.as_ref()]
+                    .into_iter()
+                    .flatten()
+                {
+                    warn_if_not_srgb(path)?;
+                }
+                let mut img = VitralImage::from_renders(&read_png(&black)?, &read_png(&white)?)?;
+                if let Some(path) = &transparent {
+                    img = img.with_native(read_png(path)?)?;
+                }
+                img
+            } else {
+                let transparent = transparent.as_deref().map(read_bytes).transpose()?;
+                VitralImage::from_exports(
+                    &read_bytes(&black)?,
+                    &read_bytes(&white)?,
+                    transparent.as_deref(),
+                )
+                .map_err(|e| format!("{e}. Export in sRGB or Display P3, or pass --assume-srgb"))?
+            };
+            report_space(img.colour_space);
             write(&output, &vitral::encode(&img)?)
         }
         Command::FromImage {
@@ -143,62 +166,65 @@ fn run(command: Command) -> Result<()> {
             force,
             output,
         } => {
-            let image = read_png(&input)?;
+            let (image, space) = read_input(&input)?;
             let (w, h) = (image.width, image.height);
             check_fidelity(mode, force)?;
             let layer = Layer::new(image, mode).with_opacity(opacity);
-            write(
-                &output,
-                &vitral::encode(&VitralImage::from_layers(w, h, &[layer])?)?,
-            )
+            let img = VitralImage::from_layers(w, h, &[layer])?.in_colour_space(space);
+            report_space(space);
+            write(&output, &vitral::encode(&img)?)
         }
         Command::Compose {
             layers,
             force,
             output,
         } => {
-            let layers = layers
+            let specs = layers
                 .iter()
                 .map(|spec| parse_layer(spec))
                 .collect::<Result<Vec<_>>>()?;
-            for layer in &layers {
-                check_fidelity(layer.mode, force)?;
+            for (_, mode, _) in &specs {
+                check_fidelity(*mode, force)?;
             }
+            let inputs = specs
+                .iter()
+                .map(|(file, _, _)| read_input(Path::new(file)))
+                .collect::<Result<Vec<_>>>()?;
+            // Layers in different colour spaces are converted to the widest.
+            let space = RgbSpace::widest(inputs.iter().map(|(_, s)| *s));
+            let layers: Vec<Layer> = specs
+                .iter()
+                .zip(inputs)
+                .map(|((_, mode, opacity), (image, from))| {
+                    Layer::new(convert_rgba(&image, from, space), *mode).with_opacity(*opacity)
+                })
+                .collect();
             let (w, h) = (layers[0].image.width, layers[0].image.height);
-            write(
-                &output,
-                &vitral::encode(&VitralImage::from_layers(w, h, &layers)?)?,
-            )
+            let img = VitralImage::from_layers(w, h, &layers)?.in_colour_space(space);
+            report_space(space);
+            write(&output, &vitral::encode(&img)?)
         }
         Command::Decode { input, out_dir } => {
             let decoded = vitral::decode(&fs::read(&input)?)?;
             report_status(&decoded.status);
             let img = decoded.image();
             fs::create_dir_all(&out_dir)?;
+            // Every output is in the image's colour space: the planes are
+            // meant for a host that blends in that space.
+            let space = img.colour_space;
             let planes = img.render_planes();
-            let rgba = |data: Vec<u8>| RgbaImage::new(img.width, img.height, data);
+            let rgba = |data: Vec<u8>| -> Result<Vec<u8>> {
+                let layer = RgbaImage::new(img.width, img.height, data)?;
+                Ok(vitral::write_rgba8_in(&layer, space)?)
+            };
+            let rgb = |data: &[u8]| vitral::write_rgb8_in(img.width, img.height, data, space);
             let files: [(&str, Vec<u8>); 6] = [
-                (
-                    "black.png",
-                    vitral::write_rgb8(img.width, img.height, &img.black)?,
-                ),
-                (
-                    "white.png",
-                    vitral::write_rgb8(img.width, img.height, &img.white)?,
-                ),
-                ("native.png", vitral::write_rgba8(&img.native)?),
-                (
-                    "plane-1-difference.png",
-                    vitral::write_rgba8(&rgba(planes.difference)?)?,
-                ),
-                (
-                    "plane-2-screen.png",
-                    vitral::write_rgba8(&rgba(planes.screen)?)?,
-                ),
-                (
-                    "plane-3-multiply.png",
-                    vitral::write_rgba8(&rgba(planes.multiply)?)?,
-                ),
+                ("black.png", rgb(&img.black)?),
+                ("white.png", rgb(&img.white)?),
+                ("native.png", vitral::write_rgba8_in(&img.native, space)?),
+                ("plane-1-difference.png", rgba(planes.difference)?),
+                ("plane-2-screen.png", rgba(planes.screen)?),
+                ("plane-3-multiply.png", rgba(planes.multiply)?),
             ];
             for (name, bytes) in files {
                 write(&out_dir.join(name), &bytes)?;
@@ -212,10 +238,12 @@ fn run(command: Command) -> Result<()> {
             x,
             y,
             legacy,
+            blend_space,
             output,
         } => {
             let decoded = vitral::decode(&fs::read(&input)?)?;
             report_status(&decoded.status);
+            let image = decoded.image();
             let img = if legacy {
                 // What a plain PNG viewer shows: the fallback, normally blended.
                 VitralImage::from_layers(
@@ -223,19 +251,26 @@ fn run(command: Command) -> Result<()> {
                     decoded.fallback.height,
                     &[Layer::new(decoded.fallback.clone(), BlendMode::Normal)],
                 )?
+                .in_colour_space(image.colour_space)
             } else {
-                decoded.image()
+                image
             };
-            let mut canvas = match (backdrop, color) {
-                (Some(path), _) => read_png(&path)?,
+            let (backdrop, backdrop_space) = match (backdrop, color) {
+                (Some(path), _) => read_input(&path)?,
                 (None, Some(hex)) => {
                     let [r, g, b] = parse_hex(&hex)?;
-                    RgbaImage::filled(img.width, img.height, [r, g, b, 255])
+                    let fill = RgbaImage::filled(img.width, img.height, [r, g, b, 255]);
+                    (fill, RgbSpace::Srgb)
                 }
                 (None, None) => return Err("give --backdrop FILE or --color #rrggbb".into()),
             };
-            img.composite_onto(&mut canvas, x, y);
-            write(&output, &vitral::write_rgba8(&canvas)?)
+            // Blend in the image's colour space (or the one asked for), then
+            // bring the result back to the backdrop's.
+            let space = blend_space.unwrap_or(img.colour_space);
+            let mut canvas = convert_rgba(&backdrop, backdrop_space, space);
+            img.to_colour_space(space).composite_onto(&mut canvas, x, y);
+            let result = convert_rgba(&canvas, space, backdrop_space);
+            write(&output, &vitral::write_rgba8_in(&result, backdrop_space)?)
         }
         Command::Inspect { input } => {
             let bytes = fs::read(&input)?;
@@ -252,6 +287,7 @@ fn run(command: Command) -> Result<()> {
                 bytes.len()
             );
             println!("status:      {}", status_text(&decoded.status));
+            println!("colour:      {}", space_text(&decoded.colour_space));
             println!("pixels:");
             println!("  transparent      {:6.2}%", pct(stats.identity));
             println!("  plain (PNG-like) {:6.2}%", pct(stats.normal));
@@ -294,24 +330,46 @@ fn run(command: Command) -> Result<()> {
     }
 }
 
-/// Vitral 0.1 blends sRGB values; refuse exports in other colour spaces.
-fn check_srgb(path: &Path, assume_srgb: bool) -> Result<()> {
-    let bytes = fs::read(path).map_err(|e| format!("{}: {e}", path.display()))?;
-    match vitral::colour_space(&bytes) {
-        ColourSpace::Other(what) if assume_srgb => {
-            eprintln!(
-                "warning: {} declares {what}; using its values as sRGB",
-                path.display()
-            );
-            Ok(())
-        }
-        ColourSpace::Other(what) => Err(format!(
-            "{} declares {what}, but Vitral 0.1 needs sRGB. Export in sRGB \
-             (in Figma: export settings, colour profile sRGB), or pass --assume-srgb",
-            path.display()
-        )
-        .into()),
-        _ => Ok(()),
+/// With --assume-srgb: warn about inputs that are not sRGB.
+fn warn_if_not_srgb(path: &Path) -> Result<()> {
+    let space = vitral::colour_space(&read_bytes(path)?);
+    if !space.is_srgb() {
+        eprintln!(
+            "warning: {} declares {}; using its values as sRGB",
+            path.display(),
+            space_text(&space)
+        );
+    }
+    Ok(())
+}
+
+/// Reads an input image and the colour space it declares; refuses colour
+/// spaces Vitral cannot carry.
+fn read_input(path: &Path) -> Result<(RgbaImage, RgbSpace)> {
+    let bytes = read_bytes(path)?;
+    Ok(vitral::read_rgba8_in_space(&bytes).map_err(|e| format!("{}: {e}", path.display()))?)
+}
+
+fn report_space(space: RgbSpace) {
+    if space == RgbSpace::DisplayP3 {
+        eprintln!("note: Display P3 input; the file is Display P3 and blends there");
+    }
+}
+
+fn space_text(space: &ColourSpace) -> String {
+    match space {
+        ColourSpace::Srgb => "sRGB".into(),
+        ColourSpace::DisplayP3 => "Display P3".into(),
+        ColourSpace::Unspecified => "not declared (taken as sRGB)".into(),
+        ColourSpace::Other(what) => what.clone(),
+    }
+}
+
+fn parse_space(text: &str) -> std::result::Result<RgbSpace, String> {
+    match text {
+        "srgb" => Ok(RgbSpace::Srgb),
+        "display-p3" => Ok(RgbSpace::DisplayP3),
+        _ => Err(format!("colour space '{text}' must be srgb or display-p3")),
     }
 }
 
@@ -342,7 +400,7 @@ fn check_fidelity(mode: BlendMode, force: bool) -> Result<()> {
 }
 
 /// Parses FILE:MODE[:OPACITY], splitting from the right so paths may contain ':'.
-fn parse_layer(spec: &str) -> Result<Layer> {
+fn parse_layer(spec: &str) -> Result<(String, BlendMode, f32)> {
     let err = || format!("layer '{spec}' must be FILE:MODE[:OPACITY]");
     let (rest, last) = spec.rsplit_once(':').ok_or_else(err)?;
     let (file, mode, opacity) = match last.parse::<f32>() {
@@ -352,7 +410,7 @@ fn parse_layer(spec: &str) -> Result<Layer> {
         }
         Err(_) => (rest, last, 1.0),
     };
-    Ok(Layer::new(read_png(Path::new(file))?, mode.parse::<BlendMode>()?).with_opacity(opacity))
+    Ok((file.to_string(), mode.parse::<BlendMode>()?, opacity))
 }
 
 /// Accepts a number from 0 to 1 (rejects NaN, infinities and out-of-range values).
@@ -373,8 +431,12 @@ fn parse_hex(hex: &str) -> Result<[u8; 3]> {
     Ok([channel(0)?, channel(2)?, channel(4)?])
 }
 
+fn read_bytes(path: &Path) -> Result<Vec<u8>> {
+    Ok(fs::read(path).map_err(|e| format!("{}: {e}", path.display()))?)
+}
+
 fn read_png(path: &Path) -> Result<RgbaImage> {
-    let bytes = fs::read(path).map_err(|e| format!("{}: {e}", path.display()))?;
+    let bytes = read_bytes(path)?;
     Ok(vitral::read_rgba8(&bytes).map_err(|e| format!("{}: {e}", path.display()))?)
 }
 

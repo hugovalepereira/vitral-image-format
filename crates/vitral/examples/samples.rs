@@ -10,7 +10,7 @@ use std::f32::consts::PI;
 use std::fs;
 use std::path::Path;
 
-use vitral::{BlendMode, Layer, RgbaImage, VitralImage};
+use vitral::{convert_rgba, BlendMode, Layer, RgbSpace, RgbaImage, VitralImage};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../examples");
@@ -19,30 +19,36 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let backdrop = scene(640, 400);
     fs::write(root.join("backdrop.png"), vitral::write_rgba8(&backdrop)?)?;
 
-    let samples: [(&str, VitralImage); 4] = [
+    let samples: [(&str, VitralImage); 5] = [
         ("stained-glass", stained_glass()),
         ("glass-badge", glass_badge()),
         ("light-leak", light_leak()),
         ("invert-ring", invert_ring()),
+        ("p3-neon", p3_neon()),
     ];
     fs::create_dir_all(root.join("sources"))?;
     for (name, img) in samples {
-        if name == "stained-glass" {
+        if name == "stained-glass" || name == "p3-neon" {
             // The exports a designer would make to author this file: over
             // black, over white and over a transparent background.
-            let (w, h) = (img.width, img.height);
-            fs::write(
-                root.join("sources/stained-glass-over-black.png"),
-                vitral::write_rgb8(w, h, &img.black)?,
-            )?;
-            fs::write(
-                root.join("sources/stained-glass-over-white.png"),
-                vitral::write_rgb8(w, h, &img.white)?,
-            )?;
-            fs::write(
-                root.join("sources/stained-glass-over-transparent.png"),
-                vitral::write_rgba8(&img.native)?,
-            )?;
+            let (w, h, space) = (img.width, img.height, img.colour_space);
+            let source = |kind: &str| root.join(format!("sources/{name}-over-{kind}.png"));
+            let (black, white, native) = if space == RgbSpace::Srgb {
+                (
+                    vitral::write_rgb8(w, h, &img.black)?,
+                    vitral::write_rgb8(w, h, &img.white)?,
+                    vitral::write_rgba8(&img.native)?,
+                )
+            } else {
+                (
+                    vitral::write_rgb8_in(w, h, &img.black, space)?,
+                    vitral::write_rgb8_in(w, h, &img.white, space)?,
+                    vitral::write_rgba8_in(&img.native, space)?,
+                )
+            };
+            fs::write(source("black"), black)?;
+            fs::write(source("white"), white)?;
+            fs::write(source("transparent"), native)?;
         }
         let bytes = vitral::encode(&img)?;
         fs::write(root.join(format!("{name}.vitral.png")), &bytes)?;
@@ -51,16 +57,22 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let decoded = vitral::decode(&bytes)?;
         let x = (backdrop.width as i64 - img.width as i64) / 2;
         let y = (backdrop.height as i64 - img.height as i64) / 2;
-        let mut legacy = backdrop.clone();
+        // Composite in the image's colour space; the renders are sRGB.
+        let space = img.colour_space;
+        let mut legacy = convert_rgba(&backdrop, RgbSpace::Srgb, space);
         let fallback = Layer::new(decoded.fallback.clone(), BlendMode::Normal);
         VitralImage::from_layers(img.width, img.height, &[fallback])?.composite_onto(
             &mut legacy,
             x,
             y,
         );
-        let mut vitral_view = backdrop.clone();
+        let mut vitral_view = convert_rgba(&backdrop, RgbSpace::Srgb, space);
         decoded.image().composite_onto(&mut vitral_view, x, y);
-        let pair = side_by_side(&legacy, &vitral_view, 16);
+        let pair = side_by_side(
+            &convert_rgba(&legacy, space, RgbSpace::Srgb),
+            &convert_rgba(&vitral_view, space, RgbSpace::Srgb),
+            16,
+        );
         fs::write(
             root.join(format!("renders/{name}.png")),
             vitral::write_rgba8(&pair)?,
@@ -238,6 +250,45 @@ fn invert_ring() -> VitralImage {
         rgba([255, 255, 255], ring.max(star))
     });
     VitralImage::from_layers(w, h, &[Layer::new(shape, BlendMode::Difference)]).unwrap()
+}
+
+/// Authored in a Display P3 document: neon tubes in screen mode and a tinted
+/// bar in multiply, with colours outside the sRGB gamut.
+fn p3_neon() -> VitralImage {
+    let (w, h) = (320, 220);
+    let tube = |colour: [u8; 3], f: fn(f32, f32) -> f32| {
+        paint(w, h, move |x, y| {
+            let d = f(x, y);
+            let glow = (-(d * d) / 180.0).exp() * 0.85 + coverage(4.0 - d.abs()) * 0.15;
+            rgba(colour, glow.min(1.0))
+        })
+    };
+    let ring = |x: f32, y: f32| ((x - 110.0).powi(2) + (y - 110.0).powi(2)).sqrt() - 70.0;
+    // Vertical distance to a zigzag between x = 150 and 300, with rounded ends.
+    let zigzag = |x: f32, y: f32| {
+        let xc = x.clamp(150.0, 300.0);
+        let t = ((xc - 150.0) / 30.0).rem_euclid(2.0);
+        let line = 60.0 + 100.0 * (1.0 - (t - 1.0).abs());
+        ((y - line).powi(2) + (x - xc).powi(2)).sqrt()
+    };
+    let bar = paint(w, h, |x, y| {
+        rgba(
+            [255, 40, 30],
+            coverage(rounded_rect(x, y, 160.0, 190.0, 140.0, 14.0, 14.0)),
+        )
+    });
+    // Values are Display P3: pure P3 green and magenta are outside sRGB.
+    VitralImage::from_layers(
+        w,
+        h,
+        &[
+            Layer::new(bar, BlendMode::Multiply),
+            Layer::new(tube([0, 255, 60], ring), BlendMode::Screen),
+            Layer::new(tube([255, 0, 200], zigzag), BlendMode::Screen),
+        ],
+    )
+    .unwrap()
+    .in_colour_space(RgbSpace::DisplayP3)
 }
 
 /// A busy backdrop: sunset with a sun, a hue ramp, and black/white stripes.

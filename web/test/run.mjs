@@ -35,6 +35,7 @@ const samples = {
   'glass-badge': [360, 260],
   'light-leak': [420, 280],
   'invert-ring': [260, 260],
+  'p3-neon': [320, 220],
 };
 
 const types = { '.html': 'text/html', '.js': 'text/javascript', '.wasm': 'application/wasm', '.png': 'image/png' };
@@ -83,8 +84,11 @@ for (const engine of engines) {
     const shot = join(out, `${engine}-${name}-browser.png`);
     const ref = join(out, `${name}-reference.png`);
     await writeFile(shot, await page.screenshot({ clip: { x: 0, y: 0, width: 640, height: 400 } }));
+    // The page blends in sRGB, so a Display P3 sample is compared with the
+    // reference blended in sRGB too.
     execFileSync(cli, ['render', join(root, `examples/${name}.vitral.png`), '--backdrop',
-      join(root, 'examples/backdrop.png'), `--x=${x}`, `--y=${y}`, '-o', ref], { stdio: 'ignore' });
+      join(root, 'examples/backdrop.png'), `--x=${x}`, `--y=${y}`, '--blend-space=srgb', '-o', ref],
+    { stdio: 'ignore' });
     try {
       const report = execFileSync(cli, ['diff', shot, ref, '--tolerance', String(TOLERANCE)], { stdio: 'pipe' });
       console.log(`ok   ${label}: ${report.toString().trim()}`);

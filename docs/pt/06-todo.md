@@ -16,12 +16,15 @@ PR #1 (out/2026). Os itens maiores da fase 2.5 continuam no
 
 ## Cor
 
-- [ ] **Verificar o espaço de cor em todos os comandos.** Hoje só o
-  `vitral encode` recusa exportações em Display P3; o `from-image` e o `compose`
-  aceitam-nas sem aviso.
-- [ ] **Detetar imagens em luz linear.** Um PNG pode declarar que guarda valores
-  "lineares" (chunk `gAMA`, ou um perfil ICC com gama 1,0). Hoje passa como sRGB,
-  e as misturas sairiam com cores erradas.
+- [x] **Verificar o espaço de cor em todos os comandos** (decisão D13). Todos
+  os comandos aceitam sRGB e Display P3 e mantêm o espaço de cor no ficheiro.
+- [x] **Detetar imagens em luz linear** (decisão D13). Os ficheiros marcados
+  como lineares (chunk `gAMA`, perfil ICC com gama 1,0 ou `cICP`) são recusados
+  com uma mensagem clara.
+- [ ] **Polyfill em browsers que misturam em P3.** O polyfill monta as camadas
+  para mistura em sRGB. Num browser que mistura em P3, um ficheiro P3 seria
+  exato se as camadas fossem P3, mas o JavaScript não consegue saber em que
+  espaço o browser mistura. Testar no Safari de um Mac com ecrã P3.
 
 ## Polyfill (rever depois de analisar a demo online)
 
@@ -76,3 +79,28 @@ Já corrigido na mesma revisão:
   um erro.
 - [ ] **Eficiência:** o codificador comprime a imagem principal duas vezes (uma
   por cada forma de guardar o residual). Basta comprimi-la uma vez.
+
+## Promoção
+
+- [ ] **Responder nos fóruns onde se perguntou "como exporto isto com o
+  multiply?"**, quando o Vitral estiver pronto para ser experimentado por
+  designers (idealmente com o plugin do Figma).
+  - Uma resposta por tópico, a dizer que o autor é o próprio, que é uma
+    proposta, que modos cobre (multiply, screen e companhia, não
+    overlay nem soft light) e onde funciona (sites com o script, Figma com o
+    plugin). Ligação para a demo e para as *issues*.
+  - Vários tópicos estão fechados a respostas. Nesses, responder num tópico
+    aberto parecido, ou abrir um tópico novo que os cite.
+
+  | Tópico | Data | Estado |
+  |---|---|---|
+  | [Adobe Illustrator: exportar um PNG com multiply](https://community.adobe.com/t5/illustrator-discussions/can-you-export-a-png-file-to-have-the-multiply-blend-setting/m-p/12211270) (logótipo para Canva e Google Slides, onde o Vitral não vai funcionar) | jul 2021 | Verificar |
+  | [Adobe Photoshop: modos perdidos ao exportar PNG](https://community.adobe.com/questions-712/losing-blend-modes-when-merging-or-exporting-as-png-1141626) (PNG para o site de um cliente) | 2022–2024 | Fechado |
+  | [Adobe Photoshop: exportar um light leak em Lighten](https://community.adobe.com/t5/photoshop-ecosystem-discussions/how-to-export-lighten-blending-mode-to-transparent-png/td-p/12628477) (há também um pedido de funcionalidade ligado) | jan 2022 | Verificar |
+  | [Figma: PNG exportado ignora o modo](https://forum.figma.com/ask-the-community-7/why-cant-i-export-a-png-with-added-effects-on-27802) | ago 2023 | Fechado |
+  | [Figma: modos numa app Android](https://forum.figma.com/ask-the-community-7/figma-design-real-world-app-layer-blend-mode-android-app-implementation-questions-35029) (o Vitral ainda não tem suporte nativo) | jul 2024 | Fechado |
+  | [Figma: "How to flatten a logo with blend modes?"](https://forum.figma.com/t/flatten-blend-mode-on-export/37186) | sem data | Verificar |
+  | [Figma: pass through vs `mix-blend-mode`](https://forum.figma.com/t/what-is-the-corresponding-value-of-pass-through-in-figma-blend-mode-to-css-mix-blend-mode/47057) | 2023–2024 | Fechado |
+
+  A análise completa, com as fontes e as frases sugeridas, está no documento
+  privado do autor "Vitral: posicionamento para designers" (out/2026).

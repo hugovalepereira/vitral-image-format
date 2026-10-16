@@ -15,6 +15,7 @@
 //! nothing behind it), which is also what software without Vitral support
 //! shows: the fallback.
 
+use crate::colour::{colour_space, ColourSpace, RgbSpace};
 use crate::math::mul255;
 use crate::pngio::{chunks, read_rgb8_exact, read_rgba8_with_info, write_rgb8, write_with_chunk};
 use crate::{Error, RgbaImage, VitralImage};
@@ -54,15 +55,20 @@ pub struct Decoded {
     /// The Vitral image, when `status` is `Ok`.
     pub vitral: Option<VitralImage>,
     pub status: VitralStatus,
+    /// The colour space the file declares.
+    pub colour_space: ColourSpace,
 }
 
 impl Decoded {
     /// The Vitral image if present, otherwise the fallback interpreted as a
     /// plain normal-blended image. Always usable for rendering.
     pub fn image(&self) -> VitralImage {
-        self.vitral
-            .clone()
-            .unwrap_or_else(|| from_fallback(&self.fallback))
+        self.vitral.clone().unwrap_or_else(|| {
+            // Another colour space than the two Vitral carries: the
+            // values are taken as sRGB, as most viewers would.
+            let space = self.colour_space.rgb_space().unwrap_or_default();
+            from_fallback(&self.fallback).in_colour_space(space)
+        })
     }
 }
 
@@ -134,6 +140,7 @@ fn encode_with(img: &VitralImage, storage: Storage) -> Result<Vec<u8>, Error> {
 
     write_with_chunk(
         fallback,
+        img.colour_space,
         Some((png::chunk::ChunkType(CHUNK_TYPE), &payload)),
     )
 }
@@ -142,6 +149,7 @@ fn encode_with(img: &VitralImage, storage: Storage) -> Result<Vec<u8>, Error> {
 /// problems with the Vitral data are reported through [`Decoded::status`].
 pub fn decode(bytes: &[u8]) -> Result<Decoded, Error> {
     let (fallback, source) = read_rgba8_with_info(bytes)?;
+    let declared = colour_space(bytes);
     let mut found = None;
     let mut count = 0;
     for (kind, data, crc_ok) in chunks(bytes) {
@@ -156,12 +164,20 @@ pub fn decode(bytes: &[u8]) -> Result<Decoded, Error> {
         (Some((_, false)), _) => VitralStatus::Corrupt("viTr chunk CRC mismatch".into()),
         _ if source.bit_depth_16 => VitralStatus::Unsupported("16-bit images".into()),
         _ if source.animated => VitralStatus::Unsupported("animated PNG".into()),
+        _ if declared.rgb_space().is_none() => {
+            let ColourSpace::Other(what) = &declared else {
+                unreachable!()
+            };
+            VitralStatus::Unsupported(format!("colour space: {what}"))
+        }
         (Some((payload, true)), _) => match parse_payload(payload, &fallback) {
             Ok(img) => {
+                let space = declared.rgb_space().unwrap_or_default();
                 return Ok(Decoded {
                     fallback,
-                    vitral: Some(img),
+                    vitral: Some(img.in_colour_space(space)),
                     status: VitralStatus::Ok,
+                    colour_space: declared,
                 });
             }
             Err(status) => status,
@@ -171,6 +187,7 @@ pub fn decode(bytes: &[u8]) -> Result<Decoded, Error> {
         fallback,
         vitral: None,
         status,
+        colour_space: declared,
     })
 }
 
@@ -207,6 +224,7 @@ fn parse_payload(payload: &[u8], fallback: &RgbaImage) -> Result<VitralImage, Vi
             black: top.to_vec(),
             white: bottom.to_vec(),
             native: fallback.clone(),
+            colour_space: RgbSpace::Srgb,
         });
     }
     let mut black = vec![0u8; pixels * 3];
@@ -226,6 +244,7 @@ fn parse_payload(payload: &[u8], fallback: &RgbaImage) -> Result<VitralImage, Vi
         black,
         white,
         native: fallback.clone(),
+        colour_space: RgbSpace::Srgb,
     })
 }
 
@@ -267,6 +286,7 @@ fn from_fallback(fallback: &RgbaImage) -> VitralImage {
         black,
         white,
         native: fallback.clone(),
+        colour_space: RgbSpace::Srgb,
     }
 }
 
@@ -337,6 +357,32 @@ mod tests {
     }
 
     #[test]
+    fn display_p3_round_trip_keeps_the_colour_space() {
+        let img = sample().in_colour_space(RgbSpace::DisplayP3);
+        let decoded = decode(&encode(&img).unwrap()).unwrap();
+        assert_eq!(decoded.colour_space, ColourSpace::DisplayP3);
+        assert_eq!(decoded.vitral.unwrap(), img);
+    }
+
+    #[test]
+    fn other_colour_spaces_are_unsupported() {
+        let bytes = encode(&sample()).unwrap();
+        // Replace the sRGB chunk with a cICP chunk declaring BT.2020 PQ.
+        let pos = bytes.windows(4).position(|w| w == b"sRGB").unwrap() - 4;
+        let mut chunk = vec![0, 0, 0, 4];
+        chunk.extend_from_slice(b"cICP");
+        chunk.extend_from_slice(&[9, 16, 0, 1]);
+        chunk.extend_from_slice(&crc32fast::hash(&chunk[4..]).to_be_bytes());
+        let file = [&bytes[..pos], &chunk, &bytes[pos + 13..]].concat();
+        let decoded = decode(&file).unwrap();
+        assert!(
+            matches!(&decoded.status, VitralStatus::Unsupported(what) if what.starts_with("colour space")),
+            "{:?}",
+            decoded.status
+        );
+    }
+
+    #[test]
     fn plain_png_is_reported_as_not_vitral() {
         let png = write_rgba8(&RgbaImage::filled(3, 2, [1, 2, 3, 4])).unwrap();
         let decoded = decode(&png).unwrap();
@@ -358,8 +404,12 @@ mod tests {
             .unwrap()
             .1
             .to_vec();
-        let tampered =
-            write_with_chunk(&main, Some((png::chunk::ChunkType(CHUNK_TYPE), &payload))).unwrap();
+        let tampered = write_with_chunk(
+            &main,
+            RgbSpace::Srgb,
+            Some((png::chunk::ChunkType(CHUNK_TYPE), &payload)),
+        )
+        .unwrap();
         let decoded = decode(&tampered).unwrap();
         assert_eq!(decoded.status, VitralStatus::FallbackMismatch);
         assert!(decoded.vitral.is_none());
@@ -384,8 +434,12 @@ mod tests {
             .unwrap()
             .1
             .to_vec();
-        let cleaned =
-            write_with_chunk(&main, Some((png::chunk::ChunkType(CHUNK_TYPE), &payload))).unwrap();
+        let cleaned = write_with_chunk(
+            &main,
+            RgbSpace::Srgb,
+            Some((png::chunk::ChunkType(CHUNK_TYPE), &payload)),
+        )
+        .unwrap();
         let decoded = decode(&cleaned).unwrap();
         assert_eq!(decoded.status, VitralStatus::Ok);
         let vitral = decoded.vitral.unwrap();
@@ -427,6 +481,7 @@ mod tests {
         let fallback = read_rgba8(&bytes).unwrap();
         let file = write_with_chunk(
             &fallback,
+            RgbSpace::Srgb,
             Some((png::chunk::ChunkType(CHUNK_TYPE), &payload)),
         )
         .unwrap();
@@ -469,8 +524,12 @@ mod tests {
         // Patch the embedded IHDR width/height (bytes 16..24 of the PNG).
         big[HEADER_LEN + 16..HEADER_LEN + 24].copy_from_slice(&[0, 1, 0, 0, 0, 1, 0, 0]);
         for p in [payload, big] {
-            let file =
-                write_with_chunk(&fallback, Some((png::chunk::ChunkType(CHUNK_TYPE), &p))).unwrap();
+            let file = write_with_chunk(
+                &fallback,
+                RgbSpace::Srgb,
+                Some((png::chunk::ChunkType(CHUNK_TYPE), &p)),
+            )
+            .unwrap();
             assert!(matches!(
                 decode(&file).unwrap().status,
                 VitralStatus::Corrupt(_)

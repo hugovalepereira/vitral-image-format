@@ -102,17 +102,30 @@ carry a blend mode, so it shows the native appearance, as design tools do.
 
 ### 2.4 Colour space
 
-K, W and the native appearance are **sRGB-encoded** values. Blending operates on
-encoded values, as in CSS Compositing and Blending Level 1, the Canvas 2D API and
-the default settings of common design tools, so renderers SHOULD NOT convert to
-linear light before applying the transfer function.
+K, W and the native appearance are encoded values in the **image's colour space**,
+which the main PNG image declares in the usual way. Version 0.1 defines two:
 
-* Encoders SHOULD write an `sRGB` chunk and MUST NOT write colour chunks that
-  declare another colour space.
-* Encoders MUST convert inputs that declare another colour space (an ICC profile
-  with other primaries, `cICP`, `cHRM`), such as Display P3 exports, to sRGB, or
-  refuse them. Inputs without colour information are taken as sRGB.
-* Wide-gamut and linear-light blending are future work (§12).
+| Colour space | Declared by |
+|---|---|
+| **sRGB** | an `sRGB` chunk, an ICC profile with sRGB primaries, `cICP` 1/13, or no colour chunk at all |
+| **Display P3** | an ICC profile with Display P3 primaries, or `cICP` 12/13 (P3 D65 primaries, sRGB transfer function) |
+
+Blending operates on the encoded values of the image's colour space (sRGB
+transfer function, not linear light). That is what design tools do in a document
+of that colour space, and what CSS Compositing and Blending Level 1 and the Canvas
+2D API do in sRGB, so an image keeps the look it had where it was made.
+
+* Encoders MUST tag the main image with its colour space. For Display P3 they
+  MUST write an ICC profile (`iCCP`) and SHOULD also write `cICP` 12, 13, 0, 1.
+* Encoders MUST NOT take samples in one colour space as values in another. Inputs
+  in different supported colour spaces are converted to one of them (the
+  reference encoder uses Display P3, whose gamut contains sRGB); inputs in other
+  colour spaces, or holding linear-light values (`cICP` transfer 8, an ICC tone
+  curve or `gAMA` of 1.0), are converted by the encoder or refused.
+* Decoders MUST ignore the `viTr` chunk of a file that declares another colour
+  space (§6).
+* Hosts blend in their own working space (§7.2), which may differ from the
+  image's. Linear-light blending is future work (§12).
 
 ---
 
@@ -277,7 +290,8 @@ exactly, so their residual is zero.
 1. Decode the main image and normalise it to RGBA8 (§4.1). If this fails, the file
    is not a usable PNG.
 2. Find the `viTr` chunk. If there is none, more than one, or its chunk CRC is
-   wrong, treat the file as a plain PNG.
+   wrong, treat the file as a plain PNG. Determine the image's colour space
+   (§2.4); if it is neither sRGB nor Display P3, treat the file as a plain PNG.
 3. Apply the version, model and flag rules (§4.3) and the restrictions of §4.1.
 4. Compare the fallback CRC (§4.4). On mismatch, treat the file as a plain PNG.
 5. Decode the residual (§4.5). On any error, treat the file as a plain PNG.
@@ -312,6 +326,9 @@ between two integers. Integer form: `r = (255·K + (W − K)·B + 127) div 255`.
 Over a backdrop pixel that is not opaque, apply §2.3 in real arithmetic and
 round the straight colour and the alpha to the nearest 8-bit value. A result
 with alpha 0 has colour 0.
+
+*B* is in the image's colour space (§2.4). A backdrop in another colour space is
+converted to it first, and the result back.
 
 ### 7.2 Blend-mode stack (recommended)
 
@@ -349,6 +366,14 @@ transfer function of §2.1.
   appearance of §2.3. Web pages always have an opaque backdrop; in design tools,
   place Vitral images over a filled background, or use a renderer that
   implements §7.1.
+* The host blends in its own working space: a design tool in its document's
+  colour space; CSS in an implementation-defined space, sRGB by default and the
+  display's on some systems. When that differs from the image's colour space,
+  the renderer converts K and W to the working space (as colours, clipping what
+  falls outside its gamut) before computing the layers. The result is then exact
+  over black and white backdrops and close elsewhere: blending the encoded values
+  of two colour spaces gives different results, as CSS blend modes themselves do
+  on different displays. The reference polyfill assumes sRGB.
 
 ### 7.3 Alternative stack (informative)
 
@@ -376,6 +401,9 @@ export is first composited over that export's background.
 
 Then export the artwork with a transparent background. That export is the native
 appearance N. Without it, the encoder approximates N (§5.1).
+
+Export all three in the document's colour space (sRGB or Display P3); the file
+keeps it (§2.4).
 
 ### 8.2 From layers
 
@@ -438,6 +466,8 @@ the three layers; `vitral render` applies §7.1; `vitral diff` compares renders.
   light, HSL modes), each composited by the host.
 * **Backdrop effects**: per-pixel masks for backdrop blur and refraction (in CSS:
   `backdrop-filter`).
-* 16-bit samples, wide gamut, HDR and a linear-light flag.
+* 16-bit samples, colour spaces wider than Display P3, HDR, and a flag for
+  blending in linear light (as some video and 3D tools do; neither CSS nor the
+  common design tools blend that way).
 * Animation (APNG) and video.
 * Public chunk registration.
